@@ -1,0 +1,10 @@
+{
+     // Dành cho các plugin hỗ trợ đọc trực tiếp file custom rules (như Continue.dev hoặc Cline)
+     "codex.customInstructionsPath": ".ai/master_prompt.md",
+     
+     // Dành cho các plugin yêu cầu truyền thẳng nội dung text vào settings
+     "codex.systemPrompt": "You are an expert Software Architect working on RebateMailer-V3. Strictly follow rules in .ai/rules/ and guidelines in .ai/master_prompt.md.",
+     
+     // Định dạng của một số plugin OpenAI wrapper khác
+     "openai.customPrompt": "Read local file .cursorrules for project instructions before answering."
+   }
