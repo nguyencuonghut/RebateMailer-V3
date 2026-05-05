@@ -30,9 +30,10 @@ class ImportsPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Imports/Index')
                 ->where('title', 'Import dữ liệu')
+                ->where('canManageImports', true)
                 ->where('uploadPolicy.acceptedExtension', '.xlsx')
                 ->where('toast.summary', 'Khu vực import đã sẵn sàng')
-                ->where('toast.detail', 'Bạn có thể bắt đầu với bước chọn file Excel chiết khấu tháng.')
+                ->where('toast.detail', 'Bạn có thể chọn file Excel cục bộ. Bước upload thật sẽ được mở ở lát cắt tiếp theo.')
             );
     }
 
@@ -43,6 +44,9 @@ class ImportsPageTest extends TestCase
         $this->actingAs($guest)
             ->get(route('imports.index'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('Imports/Index'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Imports/Index')
+                ->where('canManageImports', false)
+            );
     }
 }

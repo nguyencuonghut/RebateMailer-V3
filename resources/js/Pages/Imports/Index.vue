@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { PageProps } from '@/types';
 import type { ImportPageProps } from '@/Services/imports/useImportsIndexPage';
+import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
 import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { Head, usePage } from '@inertiajs/vue3';
+import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
 import AppLayout from '@/layout/AppLayout.vue';
-import Button from 'primevue/button';
 import Card from 'primevue/card';
 import Message from 'primevue/message';
 import Tag from 'primevue/tag';
@@ -14,6 +15,9 @@ const props = defineProps<ImportPageProps>();
 
 const page = usePage<PageProps>();
 const { acceptedSheetTags, uploadReadinessItems, disabledActionMessage } = useImportsIndexPage(props);
+const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, clearSelection, onFileChange } = useImportUploadCard(
+    props.uploadPolicy.acceptedExtension,
+);
 </script>
 
 <template>
@@ -39,7 +43,7 @@ const { acceptedSheetTags, uploadReadinessItems, disabledActionMessage } = useIm
                         </div>
 
                         <Message severity="info" :closable="false">
-                            Màn hình import đã được mở đường để thay thế placeholder cũ. Chức năng upload thật sẽ được bật ở các lát cắt tiếp theo.
+                            Màn hình import đã thay thế placeholder cũ. Người dùng có quyền thao tác đã có thể chọn file cục bộ; bước upload thật sẽ được mở ở lát cắt tiếp theo.
                         </Message>
 
                         <div class="rounded-[1.6rem] border p-5" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
@@ -90,20 +94,19 @@ const { acceptedSheetTags, uploadReadinessItems, disabledActionMessage } = useIm
                         Khung thao tác upload
                     </template>
                     <template #content>
-                        <div class="space-y-4">
-                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                Đây là shell UI của khu vực import. Logic chọn file và submit sẽ được mở ở lát cắt tiếp theo.
-                            </p>
-
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <Button label="Chọn file Excel" icon="pi pi-file-excel" disabled outlined />
-                                <Button label="Tải file lên" icon="pi pi-upload" disabled />
-                            </div>
-
-                            <div class="rounded-[1.2rem] border border-dashed p-4 text-sm" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
-                                {{ disabledActionMessage }}
-                            </div>
-                        </div>
+                        <ImportUploadCard
+                            :can-manage-imports="canManageImports"
+                            :accepted-extension="uploadPolicy.acceptedExtension"
+                            :accepted-mime-label="uploadPolicy.acceptedMimeLabel"
+                            :input-id="inputId"
+                            :selected-file="selectedFile"
+                            :formatted-file-size="formattedFileSize"
+                            :inline-error="inlineError"
+                            :disabled-action-message="disabledActionMessage"
+                            @open="openFileDialog"
+                            @clear="clearSelection"
+                            @select="onFileChange"
+                        />
                     </template>
                 </Card>
             </div>

@@ -11,6 +11,7 @@ export type ImportPageToast = {
 export type ImportPageProps = {
     title: string;
     description: string;
+    canManageImports: boolean;
     uploadPolicy: {
         acceptedExtension: string;
         acceptedMimeLabel: string;
@@ -40,7 +41,10 @@ export const useImportsIndexPage = (props: ImportPageProps) => {
     ]);
 
     const disabledActionMessage = computed(
-        () => `Tính năng chọn file sẽ được mở trong ${props.nextSlice.code}.`,
+        () =>
+            props.canManageImports
+                ? `Tính năng chọn file sẽ được mở trong ${props.nextSlice.code}.`
+                : 'Tài khoản hiện tại chỉ có quyền xem khu vực import, chưa được thao tác tải file lên.',
     );
 
     onMounted(() => {
