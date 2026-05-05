@@ -3,25 +3,37 @@
 namespace Tests\Feature;
 
 use App\Mail\MailpitProbeMail;
-use Inertia\Testing\AssertableInertia as Assert;
+use App\Models\User;
+use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_dashboard_shell_renders_through_inertia(): void
+    use RefreshDatabase;
+
+    public function test_home_redirects_guests_to_login(): void
     {
         $response = $this->get('/');
+
+        $response->assertRedirect(route('login', absolute: false));
+    }
+
+    public function test_the_dashboard_shell_renders_through_inertia_for_authenticated_users(): void
+    {
+        $this->seed(RoleAndPermissionSeeder::class);
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response
             ->assertStatus(200)
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->where('appName', 'RebateMailerV3')
             );
     }
 

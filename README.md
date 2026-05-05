@@ -15,6 +15,9 @@ Trang thai hien tai:
 - PrimeVue v4 da duoc wired vao app.
 - Dashboard shell da duoc nang cap theo cau truc layout Sakai (topbar, sidebar, content).
 - Mailpit da duoc cau hinh lam SMTP local de kiem thu luong gui mail.
+- RBAC da duoc cai dat bang Spatie Laravel Permission voi 3 role mac dinh: Admin, Nguoi dung, Khach.
+- Dang nhap da duoc scaffold bang Laravel Breeze va noi vao dashboard PrimeVue hien co.
+- Dang ky cong khai da bi tat; user moi duoc tao boi Admin trong man hinh quan ly nguoi dung.
 
 ## Yeu cau moi truong
 
@@ -62,6 +65,18 @@ mailpit
 php artisan mailpit:probe
 ```
 
+7. Seed role, permission va user mac dinh:
+
+```bash
+php artisan db:seed
+```
+
+8. Dang nhap vao he thong:
+
+- Mo `/login`
+- Dung mot trong cac tai khoan seed ben duoi
+- Sau khi dang nhap, sidebar va route se tu dong mo/khoa theo permission
+
 ## Cau hinh mac dinh
 
 `.env.example` dang tro toi stack cuc bo sau:
@@ -72,3 +87,21 @@ php artisan mailpit:probe
 - Mailpit UI: `http://127.0.0.1:8025`
 
 Neu PostgreSQL hoac Redis cua may dung cong/credential khac, sua lai bien moi truong trong `.env`.
+
+## Phan quyen mac dinh
+
+- `Admin`: toan quyen tren tat ca permission.
+- `Nguoi dung`: duoc tat ca nghiep vu, tru nhom CRUD User.
+- `Khach`: chi duoc xem nghiep vu import va gui mail.
+
+Tai khoan seed mac dinh:
+
+- `admin@rebatemailer.test` / `password`
+- `user@rebatemailer.test` / `password`
+- `guest@rebatemailer.test` / `password`
+
+## Ghi chu van hanh
+
+- Route `/` se tu dong chuyen huong ve `login` neu chua dang nhap, hoac `dashboard` neu da co session.
+- Khu vuc `/users` chi mo cho `Admin`.
+- `Khach` chi xem duoc `/imports` va `/mail`.

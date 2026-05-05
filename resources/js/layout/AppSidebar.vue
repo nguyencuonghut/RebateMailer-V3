@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import type { PageProps } from '@/types';
+import { Link, usePage } from '@inertiajs/vue3';
 import AppLogo from './AppLogo.vue';
+
+type MenuItem = {
+    label: string;
+    icon: string;
+    routeName: string;
+    permission?: string;
+};
 
 type MenuSection = {
     label: string;
-    items: Array<{
-        label: string;
-        icon: string;
-        href?: string;
-        active?: boolean;
-    }>;
+    items: MenuItem[];
 };
 
 defineProps<{
@@ -20,20 +23,45 @@ const emit = defineEmits<{
     close: [];
 }>();
 
+const page = usePage<PageProps>();
+
+const user = page.props.auth.user;
+
+const hasPermission = (permission?: string): boolean => {
+    if (!permission) {
+        return true;
+    }
+
+    return user?.permissions.includes(permission) ?? false;
+};
+
+const handleNavigation = (): void => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        emit('close');
+    }
+};
+
 const menuSections: MenuSection[] = [
     {
         label: 'Trang chính',
         items: [
-            { label: 'Tổng quan', icon: 'pi pi-home', href: '/', active: true },
+            { label: 'Tổng quan', icon: 'pi pi-home', routeName: 'dashboard' },
         ],
     },
     {
         label: 'Nền tảng',
         items: [
-            { label: 'Import dữ liệu', icon: 'pi pi-upload' },
-            { label: 'Thiết kế mẫu email', icon: 'pi pi-pencil' },
-            { label: 'Điều phối gửi mail', icon: 'pi pi-send' },
-            { label: 'Theo dõi và gửi lại', icon: 'pi pi-sync' },
+            { label: 'Import dữ liệu', icon: 'pi pi-upload', routeName: 'imports.index', permission: 'imports.view' },
+            { label: 'Thiết kế mẫu email', icon: 'pi pi-pencil', routeName: 'templates.index', permission: 'templates.view' },
+            { label: 'Điều phối gửi mail', icon: 'pi pi-send', routeName: 'mail.index', permission: 'mail.view' },
+            { label: 'Theo dõi và gửi lại', icon: 'pi pi-sync', routeName: 'tracking.index', permission: 'tracking.view' },
+        ],
+    },
+    {
+        label: 'Quản trị',
+        items: [
+            { label: 'Người dùng', icon: 'pi pi-users', routeName: 'users.index', permission: 'users.view' },
+            { label: 'Hồ sơ cá nhân', icon: 'pi pi-user', routeName: 'profile.edit' },
         ],
     },
 ];
@@ -47,7 +75,7 @@ const menuSections: MenuSection[] = [
     />
 
     <aside
-        class="fixed inset-y-0 left-0 z-40 w-[17rem] border-r px-4 py-5 transition-transform duration-200 lg:w-[18rem] lg:px-4 lg:py-6"
+        class="fixed inset-y-0 left-0 z-40 flex w-[17rem] flex-col border-r px-4 py-5 transition-transform duration-200 lg:w-[18rem] lg:px-4 lg:py-6"
         :class="open ? 'translate-x-0' : '-translate-x-full'"
         :style="{
             background: 'var(--dashboard-sidebar-bg)',
@@ -82,25 +110,31 @@ const menuSections: MenuSection[] = [
                 </p>
 
                 <div class="mt-3 space-y-1.5">
-                    <template v-for="item in section.items" :key="item.label">
+                    <template v-for="item in section.items.filter((entry) => hasPermission(entry.permission))" :key="item.label">
                         <Link
-                            v-if="item.href"
-                            :href="item.href"
+                            :href="route(item.routeName)"
                             class="sakai-sidebar-link"
-                            :class="{ 'sakai-sidebar-link-active': item.active }"
-                            @click="emit('close')"
+                            :class="{ 'sakai-sidebar-link-active': route().current(item.routeName) }"
+                            @click="handleNavigation"
                         >
                             <i :class="item.icon" class="text-sm" />
                             <span class="font-medium">{{ item.label }}</span>
                         </Link>
-
-                        <div v-else class="sakai-sidebar-link opacity-70">
-                            <i :class="item.icon" class="text-sm" />
-                            <span class="font-medium">{{ item.label }}</span>
-                        </div>
                     </template>
                 </div>
             </section>
         </nav>
+
+        <div class="mt-auto px-2 pt-8">
+            <Link
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="sakai-sidebar-link w-full text-left"
+            >
+                <i class="pi pi-sign-out text-sm" />
+                <span class="font-medium">Đăng xuất</span>
+            </Link>
+        </div>
     </aside>
 </template>

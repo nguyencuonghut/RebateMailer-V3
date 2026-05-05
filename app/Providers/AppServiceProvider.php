@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Support\Authorization\RoleName;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +24,42 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Vite::prefetch(concurrency: 3);
+
+        ResetPassword::toMailUsing(function (object $notifiable, string $token) {
+            $resetUrl = url(route('password.reset', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ], false));
+
+            return (new \Illuminate\Notifications\Messages\MailMessage)
+                ->subject(__('Đặt lại mật khẩu'))
+                ->view('mail.auth.reset-password', [
+                    'appName' => Config::get('app.name'),
+                    'resetUrl' => $resetUrl,
+                    'expireMinutes' => (int) Config::get(
+                        'auth.passwords.'.Config::get('auth.defaults.passwords').'.expire'
+                    ),
+                    'recipientName' => $notifiable->name,
+                    'supportEmail' => Config::get('mail.from.address'),
+                ])
+                ->text('mail.auth.reset-password-text', [
+                    'appName' => Config::get('app.name'),
+                    'resetUrl' => $resetUrl,
+                    'expireMinutes' => (int) Config::get(
+                        'auth.passwords.'.Config::get('auth.defaults.passwords').'.expire'
+                    ),
+                    'recipientName' => $notifiable->name,
+                    'supportEmail' => Config::get('mail.from.address'),
+                ]);
+        });
+
+        Gate::before(function ($user): bool|null {
+            if ($user->hasRole(RoleName::Admin->value)) {
+                return true;
+            }
+
+            return null;
+        });
     }
 }

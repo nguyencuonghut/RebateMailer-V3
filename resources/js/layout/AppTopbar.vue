@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { PageProps } from '@/types';
+import { usePage } from '@inertiajs/vue3';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import AppLogo from './AppLogo.vue';
@@ -13,6 +15,14 @@ const emit = defineEmits<{
 }>();
 
 const { isDarkMode, toggleTheme } = useLayout();
+const page = usePage<PageProps>();
+const user = page.props.auth.user;
+const userInitials = user?.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') ?? 'RM';
 </script>
 
 <template>
@@ -43,10 +53,10 @@ const { isDarkMode, toggleTheme } = useLayout();
                             </div>
 
                             <div class="min-w-0">
-                                <p class="truncate text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-400">
+                                <p class="truncate text-[11px] font-semibold uppercase tracking-[0.32em]" style="color: var(--dashboard-muted-text)">
                                     Bảng điều khiển
                                 </p>
-                                <h1 class="truncate text-base font-semibold tracking-tight text-slate-950 sm:text-lg">
+                                <h1 class="truncate text-base font-semibold tracking-tight sm:text-lg" :style="{ color: 'var(--dashboard-strong-text)' }">
                                     {{ appName }}
                                 </h1>
                             </div>
@@ -54,6 +64,15 @@ const { isDarkMode, toggleTheme } = useLayout();
                     </div>
 
                     <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+                        <div class="hidden text-right md:block">
+                            <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                {{ user?.name ?? 'Người dùng' }}
+                            </p>
+                            <p class="text-xs" style="color: var(--dashboard-muted-text)">
+                                {{ user?.roles?.[0] ?? 'Nội bộ' }}
+                            </p>
+                        </div>
+
                         <Button
                             :icon="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"
                             rounded
@@ -63,7 +82,7 @@ const { isDarkMode, toggleTheme } = useLayout();
                             @click="toggleTheme"
                         />
 
-                        <Avatar label="RM" shape="circle" class="bg-slate-900 text-white" />
+                        <Avatar :label="userInitials" shape="circle" class="bg-slate-900 text-white" />
                     </div>
                 </div>
             </div>
