@@ -12,6 +12,8 @@ Trang thai hien tai:
 - InertiaJS da duoc noi vao Laravel.
 - Frontend entry da chay voi Vue 3 va TypeScript.
 - Route `/` dang render mot trang Inertia de xac minh stack end-to-end.
+- PrimeVue v4 da duoc wired vao app.
+- Dashboard shell da duoc nang cap theo cau truc layout Sakai (topbar, sidebar, content).
 
 ## Yeu cau moi truong
 
