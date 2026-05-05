@@ -21,11 +21,16 @@
 * **Task 0.4:** Cấu hình Mailpit để kiểm thử luồng gửi mail cục bộ [cite: 237].
 
 ### Giai đoạn 1: Slice 1 - Ingestion & Data Aggregator
-* **Mục tiêu:** Upload file Excel và hiển thị dữ liệu đã gộp (Aggregated) lên bảng [cite: 1, 2].
-* **Task 1.1 (Backend):** Xây dựng `ExcelService` sử dụng Laravel Excel để đọc theo Chunk.
-* **Task 1.2 (Logic):** Viết thuật toán Aggregator để merge dữ liệu từ 4 sheet (`Tổng hợp`, `Khoán NPP`, `Cám cá`, `Key Account`) dựa trên Mã số khách hàng [cite: 6, 7, 13].
-* **Task 1.3 (Validation):** Sử dụng Zod/Laravel Validation để lọc các dòng lỗi hoặc thiếu Email [cite: 5, 25].
-* **Task 1.4 (Frontend):** Tạo giao diện Upload và DataTable hiển thị Preview dữ liệu sau khi parse [cite: 2].
+* **Mục tiêu:** Triển khai luồng import theo các lát cắt nhỏ có thể test ngay trên UI, bắt đầu từ upload + preview tối thiểu, sau đó mở rộng dần parser cho từng sheet và cuối cùng mới hợp nhất dữ liệu [cite: 1, 2].
+* **Task 1.1 (UI Shell + Upload):** Tạo giao diện import tối thiểu gồm chọn file, upload, hiển thị trạng thái xử lý, và khung preview rỗng để có thể test end-to-end luồng upload ngay từ đầu.
+* **Task 1.2 (Workbook Boundary):** Xây dựng `ExcelService` dùng Laravel Excel để đọc workbook theo chunk, chỉ nhận đúng 4 sheet import (`Tổng hợp`, `Khoán NPP`, `Cám cá`, `Key Account`) và trả metadata parse cơ bản.
+* **Task 1.3 (Parser - Sheet Tổng hợp):** Parse riêng sheet `Tổng hợp`, chuẩn hóa cột cố định + cột động theo tháng, rồi hiển thị preview dữ liệu `Tổng hợp` trên UI.
+* **Task 1.4 (Parser - Sheet Khoán NPP):** Parse riêng sheet `Khoán NPP`, normalize block `Nội dung CT n | SL | đ/kg | Thành tiền`, rồi mở rộng preview để xem được dữ liệu khoán theo từng khách.
+* **Task 1.5 (Parser - Sheet Cám cá):** Parse riêng sheet `Cám cá`, tách rõ cột rời rạc và cặp `CTn | Thành tiền`, rồi hiển thị preview cho case khách chỉ có dữ liệu `Cám cá`.
+* **Task 1.6 (Parser - Sheet Key Account):** Parse riêng sheet `Key Account`, chuẩn hóa nhóm cột rời rạc + block chương trình, rồi hiển thị preview cho khách `Key Account`.
+* **Task 1.7 (Aggregator):** Viết thuật toán gom dữ liệu từ 4 sheet theo `Mã số`, đồng thời giữ đúng quy tắc phân loại `Khách thường` và `Key Account` [cite: 6, 7, 13].
+* **Task 1.8 (Validation):** Sử dụng Laravel Validation và Zod-style contracts để đánh dấu lỗi/cảnh báo như thiếu email, xung đột `Key Account`, header không hợp lệ, hoặc dữ liệu bất thường [cite: 5, 25].
+* **Task 1.9 (Unified Preview):** Nâng cấp DataTable preview để hiển thị dữ liệu đã gộp hoàn chỉnh, filter theo loại khách, trạng thái hợp lệ, và chỉ cho phép đi tiếp khi không có lỗi chặn.
 
 ### Giai đoạn 2: Slice 2 - Visual Template Builder
 * **Mục tiêu:** Cho phép người dùng thiết kế mẫu mail bằng kéo thả và phân cấp cha/con [cite: 4, 70].
@@ -44,7 +49,11 @@
 ---
 
 ## 3. Quản lý rủi ro & Kiểm thử (Quality Assurance)
-* **Data Integrity:** Kiểm thử thuật toán Aggregator với các bộ dữ liệu Excel biên (Khách chỉ có ở sheet Cám cá, Khách tham gia nhiều chương trình khoán) [cite: 11, 12].
+* **Data Integrity:** Kiểm thử parser và thuật toán Aggregator với các bộ dữ liệu Excel biên:
+  * Khách chỉ có ở sheet `Cám cá`
+  * Khách tham gia nhiều chương trình khoán
+  * Khách `Key Account` không được trùng với khách thường
+  * Header động thay đổi theo tháng nhưng vẫn parse đúng [cite: 11, 12]
 * **Security:** Sanitize toàn bộ dữ liệu từ Excel trước khi đưa vào Template để ngăn chặn XSS trong email.
 * **Performance:** Kiểm tra tốc độ xử lý khi file Excel lên tới >5000 dòng.
 

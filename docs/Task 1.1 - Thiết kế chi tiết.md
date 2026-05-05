@@ -1,545 +1,321 @@
 # Task 1.1 - Thiết kế chi tiết
 
 **Hạng mục:** Slice 1 - Ingestion & Data Aggregator  
-**Task:** 1.1 (Backend) - Xây dựng `ExcelService` sử dụng Laravel Excel để đọc theo Chunk  
+**Task:** 1.1 (UI Shell + Upload) - Tạo giao diện import tối thiểu để test end-to-end luồng upload  
 **Ngày cập nhật:** 05/05/2026  
 **Trạng thái:** Draft để triển khai
 
 ## 1. Mục tiêu
 
-Thiết kế backend ingestion layer để:
+`Task 1.1` phải tạo ra một lát cắt hoàn chỉnh có thể test ngay trên UI, dù backend parse workbook đầy đủ chưa xong.
 
-- nhận file Excel `.xlsx` từ người dùng có quyền thao tác import;
-- đọc workbook theo chunk để tránh vượt bộ nhớ;
-- nhận diện và parse đúng 4 sheet nghiệp vụ:
-  - `Tổng hợp`
-  - `Khoán NPP`
-  - `Cám cá`
-  - `Key Account`
-- chuẩn hóa dữ liệu thô thành một contract trung gian ổn định cho `Task 1.2` xử lý merge theo `Mã số`;
-- trả về metadata parse, warnings, errors và sample rows để phục vụ preview ở `Task 1.4`.
+Kết quả mong muốn:
+
+- người dùng có quyền vào được màn `Import dữ liệu`;
+- người dùng chọn file `.xlsx` và bấm upload;
+- hệ thống gửi request upload thật lên backend;
+- UI hiển thị được các trạng thái cơ bản:
+  - chưa chọn file
+  - đang upload
+  - upload thành công
+  - upload thất bại
+- UI có khung preview tối thiểu để chuẩn bị cho `Task 1.2+`;
+- toàn bộ luồng có thể test bằng thao tác thật trên trình duyệt.
 
 ## 2. Nguồn tham chiếu
 
 - Nguồn tham chiếu gốc:
   - [Mô tả phần mềm.txt](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/Mô%20tả%20phần%20mềm.txt:1)
   - workbook mẫu `data/Data import chuẩn_Final.xlsx`
-    - lưu ý: file mẫu có thêm sheet `Template Mail` chỉ để tham chiếu nội dung template, không thuộc input contract của luồng import
+    - lưu ý: file mẫu có thêm sheet `Template Mail` chỉ để tham chiếu nội dung template, không thuộc input contract của import
 - Nguồn đối chiếu bổ sung:
-  - [SRS.md](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/SRS.md:1)
   - [Kế hoạch Triển khai (Implementat.md](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/Kế hoạch%20Triển%20khai%20%28Implementat.md:1)
+  - [SRS.md](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/SRS.md:1)
   - [.ai/master_prompt.md](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/.ai/master_prompt.md:1)
-  - skill `.ai/rules/engineering/zoom-out/SKILL.md`
 
 ## 3. Phạm vi
 
 ### 3.1. Trong phạm vi
 
-- Validate file upload ở mức kỹ thuật: loại file, khả năng đọc workbook, cấu trúc sheet.
-- Đọc file bằng `Laravel Excel` theo chunk.
-- Chuẩn hóa tên sheet, header và raw rows theo từng sheet strategy.
-- Tách block cột lặp `Nội dung CT n / SL / đ/kg / Thành tiền` thành dữ liệu có cấu trúc.
-- Tạo payload trung gian để bước sau dùng lại mà không phải parse workbook lần nữa.
-- Tạo lỗi và cảnh báo kỹ thuật để UI preview hiển thị.
+- thay placeholder `/imports` hiện tại bằng một page import thật;
+- tạo form chọn file và submit file `.xlsx`;
+- validate file ở mức UI và request boundary:
+  - có chọn file
+  - đúng extension hoặc MIME cơ bản
+- gọi endpoint upload thật từ frontend;
+- hiển thị status message, loading state và flash/error message bằng tiếng Việt;
+- render khung preview tối thiểu với dữ liệu giả lập hoặc metadata tối thiểu từ backend;
+- chuẩn bị shape dữ liệu UI đủ để `Task 1.2` nối tiếp mà không phải đập lại layout.
 
 ### 3.2. Ngoài phạm vi
 
-- Merge dữ liệu giữa các sheet theo `Mã số`.
-- Áp quy tắc business loại trừ giữa `Key Account` và khách thường ở mức kết luận cuối cùng.
-- Loại bỏ các khoản `null` hoặc `0` khỏi cây dữ liệu cuối cùng.
-- Validation business hoàn chỉnh như thiếu email, trùng mã giữa `Key Account` và `Tổng hợp`.
-- Render DataTable preview ở frontend.
-- Lưu template mail, render mail hoặc enqueue gửi mail.
+- đọc workbook theo chunk;
+- parse 4 sheet import;
+- merge dữ liệu theo `Mã số`;
+- validation business;
+- DataTable preview hoàn chỉnh;
+- lưu lịch sử import;
+- cho phép gửi mail.
 
 ## 4. Actor và phân quyền
 
-- `Admin`: được upload và parse file.
-- `Người dùng`: được upload và parse file.
-- `Khách`: chỉ xem khu vực import, không được upload/parse.
+- `Admin`: được upload file.
+- `Người dùng`: được upload file.
+- `Khách`: chỉ được xem menu import nếu cần, nhưng không được upload.
 
-Quyền đề xuất:
+Quyền áp dụng:
 
 - `GET /imports`: `imports.view`
-- `POST /imports/preview`: `imports.manage`
+- `POST /imports/upload`: `imports.manage`
 
-## 5. Quy tắc nghiệp vụ cần giữ ở Task 1.1
+## 5. Quy tắc nghiệp vụ áp dụng ở Task 1.1
 
-- Chỉ chấp nhận file `.xlsx`.
-- Chỉ coi 4 sheet `Tổng hợp`, `Khoán NPP`, `Cám cá`, `Key Account` là nguồn dữ liệu nghiệp vụ.
-- Input contract của luồng import chỉ gồm 4 sheet nghiệp vụ `Tổng hợp`, `Khoán NPP`, `Cám cá`, `Key Account`.
-- Nếu file mẫu có thêm `Template Mail`, sheet này chỉ được xem như tài liệu tham chiếu, không được tính là sheet import.
-- Tất cả dữ liệu của 4 sheet nghiệp vụ đều bắt đầu từ line `1`.
-- Hệ thống có 2 loại khách hàng:
-  - `Khách thường`
+- file upload mục tiêu là `.xlsx`;
+- dữ liệu import nghiệp vụ về sau chỉ gồm 4 sheet:
+  - `Tổng hợp`
+  - `Khoán NPP`
+  - `Cám cá`
   - `Key Account`
-- `Key Account` và `Khách thường` là 2 tập khách hàng loại trừ lẫn nhau.
-- Nếu một khách xuất hiện trong sheet `Key Account` thì không được xuất hiện trong `Tổng hợp`, `Khoán NPP`, `Cám cá`.
-- `Tổng hợp` là sheet nền của `Khách thường`, nhưng có trường hợp một `Khách thường` chỉ bán `cám cá` nên chỉ có dữ liệu ở sheet `Cám cá`.
-- `Khoán NPP` là sheet bổ sung, chỉ xuất hiện khi `Khách thường` tham gia chương trình khoán.
-- Mỗi sheet dùng schema riêng; không ép dùng một schema phẳng chung cho cả workbook.
-- Dữ liệu phải được đọc theo chunk. Mốc khởi tạo đề xuất: `500 rows/chunk`.
-- `Task 1.1` chỉ xử lý validation kỹ thuật và structural validation, chưa xử lý validation business sâu.
+- nhưng ở `Task 1.1`, UI chưa cần parse hay hiển thị nội dung 4 sheet;
+- mục tiêu của bước này là dựng xong “vỏ thao tác” để người dùng upload thật và thấy hệ thống phản hồi thật.
 
-## 6. Quan sát từ workbook mẫu
+## 6. Thiết kế UX
 
-### 6.1. Input contract của dữ liệu import
+### 6.1. Màn hình
 
-- `Tổng hợp`
-- `Khoán NPP`
-- `Cám cá`
-- `Key Account`
+Trang `/imports` nên thay `ModulePage` bằng page thật, ví dụ `Imports/Index.vue`.
 
-### 6.2. Ghi chú về file mẫu
+Các khối chính:
 
-File mẫu hiện có thêm sheet `Template Mail` để diễn giải subject/body mail. Sheet này không thuộc phạm vi import dữ liệu rebate và không tham gia contract parse của `Task 1.1`.
+- `PageHeader`
+  - tiêu đề: `Import dữ liệu`
+  - mô tả ngắn: nêu rõ chỉ nhận file Excel chiết khấu tháng
+- `UploadCard`
+  - chọn file
+  - tên file đã chọn
+  - kích thước file
+  - nút `Tải file lên`
+  - nút `Xóa lựa chọn`
+- `UploadStatus`
+  - spinner khi đang upload
+  - thông báo thành công/thất bại
+- `PreviewShell`
+  - card rỗng hoặc bảng placeholder
+  - các ô summary tối thiểu như:
+    - tên file
+    - thời điểm upload
+    - trạng thái parse
+    - ghi chú “chi tiết preview sẽ được mở rộng ở Task 1.2+”
 
-### 6.3. Đặc điểm schema
+### 6.2. Trạng thái UI
 
-- `Tổng hợp`: gồm cột cố định và cột thay đổi theo tháng.
-  - cột cố định:
-    - `STT`
-    - `Tháng`
-    - `Mã số`
-    - `Mã & tên khách hàng`
-    - `Tên khách hàng`
-    - `Email`
-    - `Địa chỉ`
-    - `Thức ăn chăn nuôi`
-    - `Tổng sản lượng (gồm cám thủy sản)`
-    - `Doanh thu (gồm cám thủy sản)`
-    - `Tiền chiết khấu theo Hóa đơn`
-    - `Thưởng cam kết tháng`
-    - `Chiết khấu cám cá`
-    - `Chiết khấu khác ( Không thể hiện trên hóa đơn)`
-    - `Tổng cộng`
-    - `Bằng chữ`
-- `Khoán NPP`: gồm cột cố định và nhóm cột động lặp theo chương trình.
-  - cột cố định:
-    - `STT`
-    - `Tháng`
-    - `Mã số`
-    - `Mã & tên khách hàng`
-    - `Email`
-    - `Địa chỉ`
-    - `Thức ăn chăn nuôi`
-    - `Tổng cộng`
-    - `Bằng chữ`
-  - nhóm cột động:
-    - `Nội dung CT n`
-    - `SL`
-    - `đ/kg`
-    - `Thành tiền`
-- `Cám cá`: gồm cột cố định và 2 loại cột thay đổi.
-  - cột cố định:
-    - `STT`
-    - `Tháng`
-    - `Mã số`
-    - `Mã & tên khách hàng`
-    - `Email`
-    - `Địa chỉ`
-    - `Thức ăn chăn nuôi`
-    - `Tổng sản lượng`
-    - `Doanh thu`
-    - `Tiền chiết khấu theo Hóa đơn`
-    - `Chiết khấu khác ( Không thể hiện trên hóa đơn)`
-    - `Tổng cộng`
-    - `Bằng chữ`
-  - nhóm cột thay đổi loại 1:
-    - các cột rời rạc, không ràng buộc với nhau, thay đổi theo tháng
-  - nhóm cột thay đổi loại 2:
-    - các cặp `CTn` + `Thành tiền`
-- `Key Account`: gồm cột cố định và 2 loại cột thay đổi.
-  - cột cố định:
-    - `STT`
-    - `Tháng`
-    - `Mã số`
-    - `Mã & tên khách hàng`
-    - `Email`
-    - `Địa chỉ`
-    - `Thức ăn chăn nuôi`
-    - `Tổng sản lượng`
-    - `Doanh thu`
-    - `Chiết khấu theo hóa đơn`
-    - `Tổng cộng`
-    - `Bằng chữ`
-  - nhóm cột thay đổi loại 1:
-    - các cột rời rạc, không ràng buộc với nhau, thay đổi theo tháng
-  - nhóm cột thay đổi loại 2:
-    - các block `Nội dung CT n / SL / đ/kg / Thành tiền`
-
-### 6.4. Đặc điểm dữ liệu ảnh hưởng thiết kế
-
-- `Mã số` không phải lúc nào cũng thuần số, ví dụ có dạng `90182TS`.
-- Có cả ô trống, ô `0`, giá trị âm và text dài.
-- Header chứa nhiều khoảng trắng đầu dòng và tên cột dài theo ngữ cảnh nghiệp vụ.
-- Nhiều cột động thay đổi theo tháng, nên parser không được hardcode toàn bộ danh sách cột động.
-- Với `Khoán NPP` và `Key Account`, nội dung chương trình có thể xuống nhiều dòng trong cùng một ô.
-- Với `Cám cá`, cần phân biệt rõ:
-  - cột rời rạc mang nghĩa business độc lập
-  - cặp cột `CTn / Thành tiền` mang nghĩa chương trình động
-- Không thấy nhu cầu tính formula tại bước này; có thể đọc giá trị đã lưu trong workbook.
-
-## 7. Quyết định thiết kế
-
-### 7.1. Boundary
-
-`ExcelService` chỉ phụ trách đọc và chuẩn hóa workbook thành raw structured payload.  
-Nó không chứa logic merge business của `Task 1.2`.
-
-### 7.2. Kiểu kiến trúc
-
-Dùng `sheet strategy` thay vì một parser chung:
-
-- `TongHopSheetParser`
-- `KhoanNppSheetParser`
-- `CamCaSheetParser`
-- `KeyAccountSheetParser`
-
-Lý do:
-
-- tên cột và nghĩa cột khác nhau rõ rệt;
-- `Khoán NPP` và `Key Account` có nhóm block lặp `Nội dung CT n / SL / đ/kg / Thành tiền`;
-- `Cám cá` có 2 loại cột động khác bản chất, không thể ép chung vào parser của `Tổng hợp`;
-- test từng sheet độc lập sẽ rõ và rẻ hơn.
-
-### 7.3. Chuẩn hóa header
-
-Mọi header phải được đi qua một lớp `HeaderNormalizer`:
-
-- trim khoảng trắng đầu/cuối;
-- gộp nhiều khoảng trắng liên tiếp;
-- chuẩn hóa khác biệt nhỏ về chữ hoa/thường;
-- map về canonical key nội bộ.
-
-Ví dụ:
-
-- `                    Mã & tên khách hàng` -> `customer_label`
-- `Tổng cộng` -> `grand_total`
-- `Bằng chữ` -> `amount_in_words`
-- `Chiết khấu theo hóa đơn` và `Tiền chiết khấu theo Hóa đơn` cần được map khác nhau theo ngữ cảnh sheet thay vì ép đồng nhất bằng tên hiển thị.
-
-### 7.4. Chuẩn hóa block động
-
-Với `Khoán NPP` và `Key Account`, không giữ dạng field phẳng `ct_1_content`, `ct_1_qty`, ... trong domain payload.  
-Thay vào đó normalize thành mảng:
+Đề xuất state machine tối thiểu:
 
 ```ts
-type ProgramDetail = {
-  order: number;
-  content: string | null;
-  quantity: string | null;
-  unitRate: string | null;
-  amount: string | null;
-};
+type ImportUploadState =
+  | 'idle'
+  | 'file_selected'
+  | 'uploading'
+  | 'uploaded'
+  | 'failed';
 ```
 
-Với `Cám cá`, cần tách 2 loại dynamic field:
+Quy tắc:
 
-```ts
-type FishFeedDynamicMetric = {
-  key: string;
-  label: string;
-  amount: string | null;
-};
+- `idle`: chưa chọn file
+- `file_selected`: đã chọn file, cho phép submit
+- `uploading`: disable input và button submit
+- `uploaded`: hiện metadata cơ bản từ backend
+- `failed`: hiện lỗi và cho phép upload lại
 
-type FishFeedProgramDetail = {
-  order: number;
-  content: string | null;
-  amount: string | null;
-};
+## 7. Thiết kế thành phần
+
+### 7.1. Frontend
+
+Đề xuất file:
+
+```text
+resources/js/Pages/Imports/Index.vue
+resources/js/Components/imports/ImportUploadCard.vue
+resources/js/Components/imports/ImportPreviewShell.vue
 ```
-
-Điều này giúp `Task 1.2`, `Task 1.4` và builder mail không phụ thuộc vào số lượng cột tối đa hay cách đặt tên chương trình theo tháng.
-
-## 8. Thiết kế thành phần
-
-### 8.1. Controller / Action
-
-Đề xuất endpoint backend:
-
-- `POST /imports/preview`
 
 Trách nhiệm:
 
-- nhận `UploadedFile`;
-- kiểm tra auth + permission `imports.manage`;
-- gọi `ExcelService`;
-- trả JSON preview payload hoặc Inertia partial payload;
-- không lưu vào database ở `Task 1.1`.
+- `Imports/Index.vue`
+  - điều phối state upload
+  - gọi `useForm` của Inertia
+  - hiển thị flash/message
+- `ImportUploadCard.vue`
+  - vùng chọn file và action buttons
+- `ImportPreviewShell.vue`
+  - vùng preview tối thiểu, chỉ hiển thị summary trong `Task 1.1`
 
-### 8.2. Service chính
+### 7.2. Backend
 
-Đề xuất interface:
+Đề xuất endpoint:
 
-```php
-interface ExcelService
-{
-    public function parseWorkbook(\Illuminate\Http\UploadedFile $file, ImportActor $actor): RawWorkbookPayload;
-}
+- `POST /imports/upload`
+
+Trách nhiệm của backend trong `Task 1.1`:
+
+- xác thực permission `imports.manage`
+- validate request file ở mức tối thiểu
+- nhận file upload
+- trả response thành công với metadata đơn giản
+- chưa parse workbook thật
+
+Đề xuất controller/action:
+
+```text
+app/Http/Controllers/ImportUploadController.php
 ```
 
-### 8.3. Thành phần phụ trợ
+## 8. Contract request/response
 
-- `WorkbookInspector`
-  - đọc workbook metadata, liệt kê sheet, xác định sheet hợp lệ.
-- `HeaderNormalizer`
-  - chuẩn hóa header từng sheet.
-- `SheetParserRegistry`
-  - map `sheet name -> parser`.
-- `BaseSheetParser`
-  - logic dùng chung: header row, empty row detection, row sample collection.
-- `SheetParseResultFactory`
-  - đóng gói rows, warnings, errors, counters.
+### 8.1. Request
 
-### 8.4. DTO nội bộ đề xuất
-
-```ts
-type RawWorkbookPayload = {
-  workbook: WorkbookSummary;
-  sheets: ParsedSheet[];
-  warnings: ParseWarning[];
-  errors: ParseError[];
-  canProceed: boolean;
-};
-
-type WorkbookSummary = {
-  originalFileName: string;
-  uploadedAt: string;
-  uploadedByUserId: number;
-  recognizedSheets: string[];
-  missingRequiredSheets: string[];
-};
-
-type ParsedSheet = {
-  sheetName: 'Tổng hợp' | 'Khoán NPP' | 'Cám cá' | 'Key Account';
-  rowCount: number;
-  headerMap: Record<string, string>;
-  samples: ParsedRow[];
-  rows: ParsedRow[];
-};
-
-type ParsedRow = {
-  rowNumber: number;
-  customerCode: string | null;
-  customerLabel: string | null;
-  customerType: 'regular' | 'key_account';
-  email: string | null;
-  address: string | null;
-  month: string | null;
-  brand: string | null;
-  metrics: Record<string, string | null>;
-  programDetails?: ProgramDetail[];
-  fishFeedProgramDetails?: FishFeedProgramDetail[];
-  dynamicMetrics?: FishFeedDynamicMetric[];
-  raw: Record<string, string | null>;
-};
-```
-
-Ghi chú:
-
-- `rows` là raw normalized rows cho backend nội bộ.
-- `customerType` được gán theo sheet nguồn ngay từ `Task 1.1` để hỗ trợ `Task 1.2` phát hiện xung đột giữa `regular` và `key_account`.
-- Khi trả cho frontend preview, có thể dùng payload rút gọn hơn để tránh response quá lớn.
-- Nếu cần giữ kết quả parse cho bước kế tiếp, nên cache payload bằng Redis theo `preview_token` ở `Task 1.2` hoặc `1.4`, không chốt ở tài liệu này.
-
-## 9. Luồng xử lý đề xuất
-
-### 9.1. Luồng chính
-
-1. Người dùng upload file tại màn import.
-2. Backend validate MIME, extension và size.
-3. `WorkbookInspector` đọc workbook metadata.
-4. Hệ thống xác định:
-   - sheet hợp lệ
-   - sheet thiếu
-5. Với từng sheet hợp lệ, parser tương ứng đọc theo chunk.
-6. Header row được normalize và map sang canonical keys.
-7. Mỗi row được chuyển thành `ParsedRow`, đồng thời gắn `customerType` theo sheet nguồn:
-   - `regular` cho `Tổng hợp`, `Khoán NPP`, `Cám cá`
-   - `key_account` cho `Key Account`
-8. Hệ thống thu thập:
-   - `rowCount`
-   - `samples`
-   - `warnings`
-   - `errors`
-9. Trả `RawWorkbookPayload`.
-
-### 9.2. Luồng lỗi
-
-- File không mở được: dừng ngay, trả `fatal error`.
-- Thiếu toàn bộ 4 sheet nghiệp vụ: dừng ngay, trả `fatal error`.
-- Thiếu một phần sheet: chưa dừng, trả `warning` hoặc `error` tùy sheet.
-- Header thiếu cột bắt buộc: đánh `error` cho sheet tương ứng.
-- Row lỗi đơn lẻ: giữ parse tiếp, đánh `warning` cho row đó.
-
-## 10. Chính sách lỗi và cảnh báo
-
-### 10.1. Fatal error
-
-- File không phải `.xlsx`
-- Workbook hỏng hoặc không thể đọc
-- Không tìm thấy parser cho sheet nghiệp vụ được yêu cầu
-- Thiếu cột định danh tối thiểu của một sheet:
-  - `Mã số`
-  - `Email`
-  - `Địa chỉ`
-  - hoặc cột bắt buộc tương đương theo schema sheet
-
-### 10.2. Error
-
-- Tên sheet nghiệp vụ bị sai
-- Header không map được hoàn chỉnh
-- Dòng có format email rõ ràng sai
-- Cột cố định bắt buộc của sheet không hiện diện ở dòng header số `1`
-
-### 10.3. Warning
-
-- Dòng trống xen kẽ
-- Ô tiền/sản lượng để trống
-- Giá trị âm cần review
-- `Mã số` và email có dấu hiệu không đồng nhất
-- Có sheet ngoài phạm vi 4 sheet import nghiệp vụ
-- Một cột động hoặc nhãn chương trình mới xuất hiện nhưng vẫn parse được theo rule động
-
-## 11. Thiết kế API đề xuất
-
-### 11.1. Request
-
-`POST /imports/preview`
+`POST /imports/upload`
 
 `multipart/form-data`
 
-- `file`: required, `.xlsx`
+- `file`: required
 
-### 11.2. Response thành công
+### 8.2. Response thành công
 
 ```json
 {
   "status": "ok",
-  "previewToken": "imp_prev_01J...",
-  "workbook": {
-    "recognizedSheets": ["Tổng hợp", "Khoán NPP", "Cám cá", "Key Account"],
-    "missingRequiredSheets": []
-  },
-  "sheets": [
-    {
-      "sheetName": "Tổng hợp",
-      "rowCount": 1250,
-      "sampleCount": 5,
-      "headers": ["month", "customer_code", "email", "grand_total"]
-    }
-  ],
-  "warnings": [],
-  "errors": [],
-  "canProceed": true
+  "message": "Tải file lên thành công.",
+  "data": {
+    "originalFileName": "Data import chuẩn_Final.xlsx",
+    "size": 15937026,
+    "uploadedAt": "2026-05-05T10:30:00+07:00",
+    "nextStep": "Sẵn sàng cho bước đọc workbook ở Task 1.2."
+  }
 }
 ```
 
-### 11.3. Response lỗi
+### 8.3. Response lỗi
 
 ```json
 {
   "status": "error",
-  "message": "Không thể đọc file Excel hoặc cấu trúc sheet không hợp lệ.",
-  "errors": [
-    {
-      "code": "excel.invalid_structure",
-      "sheet": "Khoán NPP",
-      "detail": "Thiếu cột bắt buộc: Mã số"
-    }
-  ]
+  "message": "Tệp tải lên không hợp lệ.",
+  "errors": {
+    "file": [
+      "Chỉ chấp nhận file Excel .xlsx."
+    ]
+  }
 }
 ```
 
-## 12. Cấu trúc thư mục đề xuất
+## 9. Route design
 
-```text
-app/
-├── Actions/Imports/
-│   └── PreviewImportAction.php
-├── Data/Imports/
-│   ├── RawWorkbookPayload.php
-│   ├── ParsedSheet.php
-│   ├── ParsedRow.php
-│   ├── ParseWarning.php
-│   └── ParseError.php
-├── Services/Imports/
-│   ├── ExcelService.php
-│   ├── WorkbookInspector.php
-│   ├── HeaderNormalizer.php
-│   └── SheetParserRegistry.php
-└── Services/Imports/Parsers/
-    ├── TongHopSheetParser.php
-    ├── KhoanNppSheetParser.php
-    ├── CamCaSheetParser.php
-    └── KeyAccountSheetParser.php
+Đề xuất cập nhật route:
+
+```php
+Route::get('/imports', [ImportUploadController::class, 'index'])
+    ->middleware('permission:imports.view')
+    ->name('imports.index');
+
+Route::post('/imports/upload', [ImportUploadController::class, 'store'])
+    ->middleware('permission:imports.manage')
+    ->name('imports.upload');
 ```
 
-## 13. Hiệu năng và vận hành
+## 10. Dữ liệu trả về cho preview shell
 
-- Chunk size đề xuất mặc định: `500`.
-- Sample preview mỗi sheet: `5-10` dòng đầu hợp lệ.
-- Không trả toàn bộ `rows` về frontend nếu file lớn; chỉ trả sample + summary.
-- Nếu frontend cần thao tác tiếp trên payload đầy đủ, nên lưu vào cache Redis bằng `previewToken`.
-- Ghi log các chỉ số:
-  - thời gian parse
-  - số sheet hợp lệ
-  - số dòng mỗi sheet
-  - số warnings/errors
+Trong `Task 1.1`, preview chưa phải preview dữ liệu nghiệp vụ.  
+Nó chỉ là `upload receipt`.
 
-## 14. TDD và kiểm thử
+Đề xuất shape:
 
-### 14.1. Unit tests
+```ts
+type ImportUploadReceipt = {
+  originalFileName: string;
+  size: number;
+  uploadedAt: string;
+  status: 'uploaded';
+  nextStep: string;
+};
+```
 
-- `HeaderNormalizerTest`
-- `WorkbookInspectorTest`
-- `TongHopSheetParserTest`
-- `KhoanNppSheetParserTest`
-- `CamCaSheetParserTest`
-- `KeyAccountSheetParserTest`
+Lý do:
 
-### 14.2. Feature tests
+- giữ đúng tinh thần vertical slice;
+- tránh giả vờ parse workbook khi backend parse chưa làm;
+- vẫn cho người dùng thấy hệ thống “đã hoạt động”;
+- không khóa UI vào contract backend sâu của `Task 1.2+`.
 
-- upload file hợp lệ và nhận preview summary
-- file không đúng định dạng bị chặn
-- workbook thiếu sheet bắt buộc
-- header lệch chuẩn nhưng vẫn normalize được
-- file chỉ được parse theo đúng 4 sheet import nghiệp vụ
+## 11. Nội dung hiển thị bằng tiếng Việt
 
-### 14.3. Test data cần có
+Toàn bộ text của page phải là tiếng Việt, gồm:
 
-- file chuẩn đủ 4 sheet
-- file thiếu `Key Account`
-- file có `Mã số` dạng text
-- file có giá trị âm
-- file có thêm sheet lạ
+- label input
+- button text
+- validation message
+- flash message
+- empty-state preview
+- loading text
 
-## 15. Tiêu chí hoàn thành của Task 1.1
+Ví dụ:
 
-- Có service đọc workbook `.xlsx` theo chunk.
-- Parse được 4 sheet nghiệp vụ bằng strategy riêng.
-- Chỉ parse đúng 4 sheet import nghiệp vụ.
-- Nhận diện được 2 loại khách hàng theo sheet nguồn:
-  - `regular`
-  - `key_account`
-- Tách đúng các nhóm cột động:
-  - `Khoán NPP`: block `Nội dung CT n / SL / đ/kg / Thành tiền`
-  - `Cám cá`: cột rời rạc + cặp `CTn / Thành tiền`
-  - `Key Account`: cột rời rạc + block `Nội dung CT n / SL / đ/kg / Thành tiền`
-- Trả được payload trung gian ổn định, có summary, warnings, errors và sample rows.
-- Có test bao phủ cho các case kỹ thuật chính.
-- Không trộn logic merge/validation business của `Task 1.2` và `Task 1.3`.
+- `Chọn file Excel`
+- `Tải file lên`
+- `Đang tải file lên...`
+- `Tải file lên thành công.`
+- `Vui lòng chọn file trước khi tiếp tục.`
+- `Chỉ chấp nhận file Excel .xlsx.`
 
-## 16. Rủi ro còn mở
+## 12. Kiểm thử
 
-- `Mô tả phần mềm.txt` và workbook mẫu là nguồn gốc để chốt nghiệp vụ import; nếu có khác biệt với `SRS.md` thì ưu tiên theo 2 nguồn này.
-- `SRS.md` hiện bị cắt ở phần DTO, nên canonical payload trên đây là đề xuất thiết kế để triển khai, chưa phải đặc tả DTO đã đóng băng.
-- Cần quyết định ở bước triển khai:
-  - có cache full payload bằng Redis ngay ở `Task 1.1` hay để sang `Task 1.4`;
-  - sheet nào là “bắt buộc tuyệt đối” và sheet nào là “tùy chọn có cảnh báo”;
-  - danh sách cột bắt buộc tối thiểu cho từng sheet.
+### 12.1. UI test thủ công
 
-## 17. Kết luận
+- vào `/imports` với user có quyền `imports.view`
+- chọn một file `.xlsx`
+- bấm upload
+- thấy loading state
+- nhận thông báo thành công
+- thấy preview shell hiện metadata upload
 
-`Task 1.1` nên được triển khai như một ingestion boundary rõ ràng: đọc workbook lớn an toàn, chuẩn hóa dữ liệu thô theo từng sheet, và phát ra contract trung gian sạch cho các task sau.  
-Nếu boundary này được giữ chặt, `Task 1.2` chỉ còn tập trung vào merge theo `Mã số`, còn `Task 1.4` chỉ việc dựng preview trên payload đã ổn định.
+### 12.2. Feature tests backend
+
+- user có `imports.manage` upload file hợp lệ thành công
+- user không có quyền bị chặn
+- upload thiếu file bị lỗi validation
+- upload file sai định dạng bị lỗi validation
+
+### 12.3. Frontend behavior tests
+
+- nút submit bị disable khi chưa chọn file
+- khi upload, nút submit bị disable
+- khi upload lỗi, message tiếng Việt hiển thị đúng
+- khi upload xong, preview shell nhận đúng metadata
+
+## 13. Tiêu chí hoàn thành
+
+- menu `/imports` dẫn tới page import thật, không còn là placeholder page;
+- upload `.xlsx` hoạt động được end-to-end;
+- UI có loading, success, error state rõ ràng;
+- response backend thật được hiển thị vào preview shell;
+- permission `imports.manage` được áp vào action upload;
+- toàn bộ text người dùng nhìn thấy là tiếng Việt;
+- có test backend tối thiểu cho upload;
+- page đủ ổn định để nối tiếp `Task 1.2`.
+
+## 14. Phụ thuộc sang Task 1.2
+
+`Task 1.1` phải để sẵn các điểm móc sau:
+
+- page `/imports` đã tồn tại thật;
+- form upload và endpoint upload đã nối thật;
+- preview shell đã có chỗ để gắn metadata parse;
+- response shape có thể mở rộng từ `ImportUploadReceipt` sang `WorkbookSummary`.
+
+`Task 1.2` chỉ việc thay phần “upload receipt” bằng “workbook metadata”.
+
+## 15. Kết luận
+
+`Task 1.1` không nên làm parser backend nữa.  
+Nó phải là lát cắt UI-first mỏng nhưng thật: người dùng upload được file, thấy hệ thống phản hồi, và có nền page import thật để các task parse sheet phía sau gắn vào dần.
