@@ -11,6 +11,10 @@ export type ImportPageToast = {
 export type ImportPageProps = {
     title: string;
     description: string;
+    currentSlice: {
+        code: string;
+        label: string;
+    };
     canManageImports: boolean;
     uploadPolicy: {
         acceptedExtension: string;
@@ -20,6 +24,14 @@ export type ImportPageProps = {
     nextSlice: {
         code: string;
         label: string;
+    };
+    analysisPrep: {
+        actionLabel: string;
+        helperText: string;
+        readyTitle: string;
+        readyDescription: string;
+        statusLabel: string;
+        toast: ImportPageToast;
     };
     toast: ImportPageToast;
 };
@@ -37,6 +49,7 @@ export const useImportsIndexPage = (props: ImportPageProps) => {
     const uploadReadinessItems = computed(() => [
         `Chỉ nhận file ${props.uploadPolicy.acceptedExtension}`,
         'Dữ liệu import nghiệp vụ gồm đúng 4 sheet',
+        `Lát cắt hiện tại: ${props.currentSlice.code} - ${props.currentSlice.label}`,
         `Bước kế tiếp: ${props.nextSlice.code} - ${props.nextSlice.label}`,
     ]);
 

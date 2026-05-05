@@ -30,10 +30,13 @@ class ImportsPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Imports/Index')
                 ->where('title', 'Import dữ liệu')
+                ->where('currentSlice.code', '1.2-C')
                 ->where('canManageImports', true)
                 ->where('uploadPolicy.acceptedExtension', '.xlsx')
+                ->where('analysisPrep.actionLabel', 'Đọc cấu trúc workbook')
+                ->where('nextSlice.code', '1.2-D')
                 ->where('toast.summary', 'Khu vực import đã sẵn sàng')
-                ->where('toast.detail', 'Bạn có thể chọn file Excel cục bộ. Bước upload thật sẽ được mở ở lát cắt tiếp theo.')
+                ->where('toast.detail', 'Bạn có thể tải file Excel lên và kiểm tra workbook có khớp đúng 4 sheet import hợp lệ hay không.')
             );
     }
 

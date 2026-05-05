@@ -2,6 +2,7 @@
 import type { PageProps } from '@/types';
 import type { ImportPageProps } from '@/Services/imports/useImportsIndexPage';
 import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
+import { useImportWorkbookBoundaryFlow } from '@/Services/imports/useImportWorkbookBoundaryFlow';
 import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
 import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { Head, usePage } from '@inertiajs/vue3';
@@ -21,8 +22,11 @@ const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, c
     props.uploadPolicy.acceptedExtension,
 );
 const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow();
+const { isAnalyzingWorkbook, workbookBoundary, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow();
 
 const submitUpload = async (): Promise<void> => {
+    resetWorkbookBoundary();
+
     const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
 
     if (errorMessage) {
@@ -31,6 +35,16 @@ const submitUpload = async (): Promise<void> => {
     }
 
     inlineError.value = '';
+};
+
+const prepareWorkbookBoundary = async (): Promise<void> => {
+    inlineError.value = '';
+
+    const errorMessage = await analyzeWorkbook(uploadReceipt.value, route('imports.analyze-workbook'));
+
+    if (errorMessage) {
+        inlineError.value = errorMessage;
+    }
 };
 </script>
 
@@ -46,7 +60,7 @@ const submitUpload = async (): Promise<void> => {
                     <div class="space-y-6">
                         <div class="space-y-4">
                             <p class="text-sm font-semibold uppercase tracking-[0.28em] text-teal-600">
-                                Slice 1.1-A
+                                Slice {{ currentSlice.code }}
                             </p>
                             <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl" :style="{ color: 'var(--dashboard-strong-text)' }">
                                 {{ title }}
@@ -57,7 +71,7 @@ const submitUpload = async (): Promise<void> => {
                         </div>
 
                         <Message severity="info" :closable="false">
-                            Màn hình import đã thay thế placeholder cũ. Người dùng có quyền thao tác đã có thể chọn file cục bộ; bước upload thật sẽ được mở ở lát cắt tiếp theo.
+                            {{ currentSlice.label }}. Sau khi có receipt upload, người dùng có quyền thao tác sẽ thấy rõ bước kế tiếp để chuyển sang đọc cấu trúc workbook.
                         </Message>
 
                         <div class="rounded-[1.6rem] border p-5" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
@@ -131,7 +145,15 @@ const submitUpload = async (): Promise<void> => {
                         Preview receipt upload
                     </template>
                     <template #content>
-                        <ImportPreviewShell :receipt="uploadReceipt" />
+                        <ImportPreviewShell
+                            :receipt="uploadReceipt"
+                            :can-manage-imports="canManageImports"
+                            :analysis-prep="analysisPrep"
+                            :workbook-boundary="workbookBoundary"
+                            :is-analyzing-workbook="isAnalyzingWorkbook"
+                            :analysis-status-text="analysisStatusText"
+                            @prepare-analysis="prepareWorkbookBoundary"
+                        />
                     </template>
                 </Card>
 

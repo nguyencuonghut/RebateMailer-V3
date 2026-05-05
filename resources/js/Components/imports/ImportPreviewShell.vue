@@ -1,9 +1,21 @@
 <script setup lang="ts">
+import type { ImportWorkbookBoundary, ImportWorkbookBoundaryActionConfig } from '@/Services/imports/useImportWorkbookBoundaryFlow';
 import type { ImportUploadReceipt } from '@/Services/imports/useImportUploadFlow';
+import Button from 'primevue/button';
+import Message from 'primevue/message';
 import Tag from 'primevue/tag';
 
 defineProps<{
     receipt: ImportUploadReceipt | null;
+    canManageImports: boolean;
+    analysisPrep: ImportWorkbookBoundaryActionConfig;
+    workbookBoundary: ImportWorkbookBoundary | null;
+    isAnalyzingWorkbook: boolean;
+    analysisStatusText: string;
+}>();
+
+const emit = defineEmits<{
+    prepareAnalysis: [];
 }>();
 </script>
 
@@ -39,6 +51,118 @@ defineProps<{
 
         <div class="rounded-[1.2rem] border border-dashed p-4 text-sm" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
             {{ receipt.nextStep }}
+        </div>
+
+        <div
+            v-if="canManageImports"
+            class="space-y-4 rounded-[1.4rem] border p-4"
+            :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
+        >
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div class="space-y-2">
+                    <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                        Bước tiếp theo sau receipt upload
+                    </p>
+                    <p class="text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                        {{ analysisPrep.readyTitle }}
+                    </p>
+                    <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                        {{ analysisPrep.helperText }}
+                    </p>
+                </div>
+
+                <Tag :value="analysisStatusText" :severity="workbookBoundary ? 'success' : 'warn'" rounded />
+            </div>
+
+            <Button
+                :label="analysisPrep.actionLabel"
+                icon="pi pi-arrow-right"
+                :loading="isAnalyzingWorkbook"
+                :disabled="isAnalyzingWorkbook"
+                @click="emit('prepareAnalysis')"
+            />
+
+            <Message v-if="workbookBoundary" severity="info" :closable="false">
+                {{ analysisPrep.readyDescription }}
+            </Message>
+
+            <div
+                v-if="workbookBoundary"
+                class="space-y-4 rounded-[1.2rem] border border-dashed p-4"
+                :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+            >
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-sm font-medium">Danh sách sheet đã nhận diện</p>
+                        <p class="mt-1 text-sm">
+                            Hệ thống đã đọc được {{ workbookBoundary.sheetCount }} sheet từ workbook đã tải lên.
+                        </p>
+                    </div>
+
+                    <Tag :value="`${workbookBoundary.sheetCount} sheet`" severity="contrast" rounded />
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <Tag
+                        v-for="sheet in workbookBoundary.detectedSheets"
+                        :key="sheet"
+                        :value="sheet"
+                        severity="info"
+                        rounded
+                    />
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-3">
+                    <div class="space-y-2">
+                        <p class="text-sm font-medium">4 sheet import hợp lệ</p>
+                        <div class="flex flex-wrap gap-2">
+                            <Tag
+                                v-for="sheet in workbookBoundary.expectedSheets"
+                                :key="`expected-${sheet}`"
+                                :value="sheet"
+                                severity="success"
+                                rounded
+                            />
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="text-sm font-medium">Sheet còn thiếu</p>
+                        <div v-if="workbookBoundary.missingSheets.length" class="flex flex-wrap gap-2">
+                            <Tag
+                                v-for="sheet in workbookBoundary.missingSheets"
+                                :key="`missing-${sheet}`"
+                                :value="sheet"
+                                severity="danger"
+                                rounded
+                            />
+                        </div>
+                        <p v-else class="text-sm">
+                            Không thiếu sheet import nào.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="text-sm font-medium">Sheet ngoài contract import</p>
+                        <div v-if="workbookBoundary.unexpectedSheets.length" class="flex flex-wrap gap-2">
+                            <Tag
+                                v-for="sheet in workbookBoundary.unexpectedSheets"
+                                :key="`unexpected-${sheet}`"
+                                :value="sheet"
+                                severity="warn"
+                                rounded
+                            />
+                        </div>
+                        <p v-else class="text-sm">
+                            Không có sheet ngoài contract import.
+                        </p>
+                    </div>
+                </div>
+
+                <p class="text-sm leading-6">
+                    {{ workbookBoundary.nextStep }}
+                </p>
+            </div>
         </div>
     </div>
 
