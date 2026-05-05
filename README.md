@@ -2,18 +2,22 @@
 
 Nen tang backend cho he thong tu dong gui mail chiet khau hang thang.
 
-## Task 0.1
+## Trang thai nen tang
 
 Trang thai hien tai:
 
 - Laravel 13 da duoc scaffold vao repo.
 - Database mac dinh la PostgreSQL.
 - Cache, session, va queue mac dinh da duoc cau hinh qua Redis.
+- InertiaJS da duoc noi vao Laravel.
+- Frontend entry da chay voi Vue 3 va TypeScript.
+- Route `/` dang render mot trang Inertia de xac minh stack end-to-end.
 
 ## Yeu cau moi truong
 
 - PHP 8.5+
 - Composer 2.9+
+- Node.js va npm
 - Redis PHP extension (`phpredis`)
 - PostgreSQL va Redis da duoc cai san va dang chay tren may
 
@@ -35,6 +39,12 @@ php artisan migrate
 
 ```bash
 php artisan serve
+```
+
+4. Chay frontend dev server:
+
+```bash
+npm run dev
 ```
 
 ## Cau hinh mac dinh
