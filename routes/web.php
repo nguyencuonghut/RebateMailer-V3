@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ImportPageController;
 use App\Http\Controllers\UserManagementController;
 use App\Support\Authorization\PermissionName;
 use Illuminate\Support\Facades\Route;
@@ -17,14 +18,9 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    Route::get('/imports', function () {
-        return Inertia::render('ModulePage', [
-            'title' => 'Import dữ liệu',
-            'description' => 'Khu vực tiếp nhận file Excel, chuẩn hóa dữ liệu đầu vào và theo dõi lịch sử import.',
-            'capability' => 'Xem và vận hành luồng import dữ liệu rebate.',
-            'status' => 'Sẵn sàng cho Slice 1',
-        ]);
-    })->middleware('permission:'.PermissionName::ImportsView->value)->name('imports.index');
+    Route::get('/imports', [ImportPageController::class, 'index'])
+        ->middleware('permission:'.PermissionName::ImportsView->value)
+        ->name('imports.index');
 
     Route::get('/templates', function () {
         return Inertia::render('ModulePage', [
