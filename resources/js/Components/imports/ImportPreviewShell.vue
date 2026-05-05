@@ -1,0 +1,48 @@
+<script setup lang="ts">
+import type { ImportUploadReceipt } from '@/Services/imports/useImportUploadFlow';
+import Tag from 'primevue/tag';
+
+defineProps<{
+    receipt: ImportUploadReceipt | null;
+}>();
+</script>
+
+<template>
+    <div v-if="receipt" class="space-y-4">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                    File đã tiếp nhận
+                </p>
+                <p class="mt-2 text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    {{ receipt.originalFileName }}
+                </p>
+            </div>
+
+            <Tag value="Upload thành công" severity="success" rounded />
+        </div>
+
+        <dl class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Dung lượng</dt>
+                <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    {{ receipt.size.toLocaleString('vi-VN') }} bytes
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Thời điểm upload</dt>
+                <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    {{ receipt.uploadedAt }}
+                </dd>
+            </div>
+        </dl>
+
+        <div class="rounded-[1.2rem] border border-dashed p-4 text-sm" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
+            {{ receipt.nextStep }}
+        </div>
+    </div>
+
+    <div v-else class="rounded-[1.2rem] border border-dashed p-4 text-sm" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
+        Chưa có receipt upload. Sau khi tải file thành công, khu vực này sẽ hiển thị thông tin file đã tiếp nhận.
+    </div>
+</template>

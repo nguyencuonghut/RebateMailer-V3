@@ -2,9 +2,11 @@
 import type { PageProps } from '@/types';
 import type { ImportPageProps } from '@/Services/imports/useImportsIndexPage';
 import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
+import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
 import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { Head, usePage } from '@inertiajs/vue3';
 import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
+import ImportPreviewShell from '@/Components/imports/ImportPreviewShell.vue';
 import AppLayout from '@/layout/AppLayout.vue';
 import Card from 'primevue/card';
 import Message from 'primevue/message';
@@ -18,6 +20,18 @@ const { acceptedSheetTags, uploadReadinessItems, disabledActionMessage } = useIm
 const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, clearSelection, onFileChange } = useImportUploadCard(
     props.uploadPolicy.acceptedExtension,
 );
+const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow();
+
+const submitUpload = async (): Promise<void> => {
+    const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
+
+    if (errorMessage) {
+        inlineError.value = errorMessage;
+        return;
+    }
+
+    inlineError.value = '';
+};
 </script>
 
 <template>
@@ -103,10 +117,38 @@ const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, c
                             :formatted-file-size="formattedFileSize"
                             :inline-error="inlineError"
                             :disabled-action-message="disabledActionMessage"
+                            :is-uploading="isUploading"
                             @open="openFileDialog"
                             @clear="clearSelection"
                             @select="onFileChange"
+                            @upload="submitUpload"
                         />
+                    </template>
+                </Card>
+
+                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                    <template #title>
+                        Preview receipt upload
+                    </template>
+                    <template #content>
+                        <ImportPreviewShell :receipt="uploadReceipt" />
+                    </template>
+                </Card>
+
+                <Card v-else class="sakai-panel rounded-[2rem] border-0">
+                    <template #title>
+                        Quyền truy cập hiện tại
+                    </template>
+                    <template #content>
+                        <div class="space-y-4">
+                            <Message severity="warn" :closable="false">
+                                Tài khoản hiện tại chỉ có quyền xem khu vực import dữ liệu.
+                            </Message>
+
+                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                Chức năng tải file lên và xem receipt upload chỉ mở cho người dùng được cấp quyền thao tác import.
+                            </p>
+                        </div>
                     </template>
                 </Card>
             </div>

@@ -13,12 +13,14 @@ defineProps<{
     formattedFileSize: string;
     inlineError: string;
     disabledActionMessage: string;
+    isUploading: boolean;
 }>();
 
 const emit = defineEmits<{
     open: [];
     clear: [];
     select: [event: Event];
+    upload: [];
 }>();
 </script>
 
@@ -41,6 +43,14 @@ const emit = defineEmits<{
                 <Button label="Chọn file Excel" icon="pi pi-file-excel" @click="emit('open')" />
                 <Button label="Xóa lựa chọn" icon="pi pi-times" outlined :disabled="!selectedFile" @click="emit('clear')" />
             </div>
+
+            <Button
+                label="Tải file lên"
+                icon="pi pi-upload"
+                :loading="isUploading"
+                :disabled="!selectedFile || isUploading"
+                @click="emit('upload')"
+            />
 
             <div class="rounded-[1.2rem] border border-dashed p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                 <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">

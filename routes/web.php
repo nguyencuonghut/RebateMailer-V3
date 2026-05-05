@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportPageController;
+use App\Http\Controllers\ImportUploadController;
 use App\Http\Controllers\UserManagementController;
 use App\Support\Authorization\PermissionName;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/imports', [ImportPageController::class, 'index'])
         ->middleware('permission:'.PermissionName::ImportsView->value)
         ->name('imports.index');
+    Route::post('/imports/upload', [ImportUploadController::class, 'store'])
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.upload');
 
     Route::get('/templates', function () {
         return Inertia::render('ModulePage', [
