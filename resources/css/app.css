@@ -29,6 +29,9 @@
     --dashboard-sidebar-active-bg: linear-gradient(135deg, rgba(20, 184, 166, 0.16), rgba(45, 212, 191, 0.08));
     --dashboard-sidebar-active-text: rgb(15 23 42);
     --dashboard-accent: #14b8a6;
+    --brand-logo-bg: rgba(20, 184, 166, 0.12);
+    --brand-logo-ring: rgba(20, 184, 166, 0.2);
+    --brand-logo-fg: rgb(13 148 136);
 }
 
 .app-dark {
@@ -47,6 +50,9 @@
     --dashboard-sidebar-hover-text: rgb(255 255 255);
     --dashboard-sidebar-active-bg: linear-gradient(135deg, rgba(20, 184, 166, 0.22), rgba(45, 212, 191, 0.08));
     --dashboard-sidebar-active-text: rgb(255 255 255);
+    --brand-logo-bg: rgba(20, 184, 166, 0.16);
+    --brand-logo-ring: rgba(45, 212, 191, 0.18);
+    --brand-logo-fg: rgb(94 234 212);
 }
 
 body {

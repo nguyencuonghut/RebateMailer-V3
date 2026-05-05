@@ -34,7 +34,7 @@ onMounted(() => {
 
             <div class="px-2 pb-6 sm:px-3 lg:px-4">
                 <div class="mx-auto w-full max-w-[96rem]">
-                    <AppFooter />
+                    <AppFooter :app-name="appName" />
                 </div>
             </div>
         </div>

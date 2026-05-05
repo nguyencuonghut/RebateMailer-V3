@@ -31,7 +31,14 @@ const { isDarkMode, toggleTheme } = useLayout();
                         />
 
                         <div class="flex min-w-0 items-center gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500/12 text-teal-600 ring-1 ring-teal-500/20">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                                :style="{
+                                    background: 'var(--brand-logo-bg)',
+                                    color: 'var(--brand-logo-fg)',
+                                    boxShadow: 'inset 0 0 0 1px var(--brand-logo-ring)',
+                                }"
+                            >
                                 <AppLogo class="h-6 w-6" />
                             </div>
 

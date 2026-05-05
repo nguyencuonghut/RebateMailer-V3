@@ -58,9 +58,9 @@ const menuSections: MenuSection[] = [
             <div
                 class="flex h-11 w-11 items-center justify-center rounded-2xl"
                 :style="{
-                    background: 'var(--dashboard-sidebar-icon-bg)',
-                    color: 'var(--dashboard-sidebar-brand-text)',
-                    boxShadow: 'inset 0 0 0 1px var(--dashboard-sidebar-icon-ring)',
+                    background: 'var(--brand-logo-bg)',
+                    color: 'var(--brand-logo-fg)',
+                    boxShadow: 'inset 0 0 0 1px var(--brand-logo-ring)',
                 }"
             >
                 <AppLogo class="h-6 w-6" />
