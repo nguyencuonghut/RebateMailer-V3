@@ -14,6 +14,7 @@ Trang thai hien tai:
 - Route `/` dang render mot trang Inertia de xac minh stack end-to-end.
 - PrimeVue v4 da duoc wired vao app.
 - Dashboard shell da duoc nang cap theo cau truc layout Sakai (topbar, sidebar, content).
+- Mailpit da duoc cau hinh lam SMTP local de kiem thu luong gui mail.
 
 ## Yeu cau moi truong
 
@@ -49,11 +50,25 @@ php artisan serve
 npm run dev
 ```
 
+5. Chay Mailpit tren may cua ban:
+
+```bash
+mailpit
+```
+
+6. Gui email kiem thu vao Mailpit:
+
+```bash
+php artisan mailpit:probe
+```
+
 ## Cau hinh mac dinh
 
 `.env.example` dang tro toi stack cuc bo sau:
 
 - PostgreSQL: database `rebate_mailer_v3`, user `rebate_mailer`, password `secret`
 - Redis: `127.0.0.1:6379`
+- Mailpit SMTP: `127.0.0.1:1025`
+- Mailpit UI: `http://127.0.0.1:8025`
 
 Neu PostgreSQL hoac Redis cua may dung cong/credential khac, sua lai bien moi truong trong `.env`.
