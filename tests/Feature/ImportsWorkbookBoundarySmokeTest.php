@@ -47,17 +47,19 @@ class ImportsWorkbookBoundarySmokeTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'ok');
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $analyzeResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $analyzeResponse
             ->assertOk()
             ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('data.importBatch.id', $importBatchId)
+            ->assertJsonPath('data.importBatch.status', 'workbook_analyzed')
             ->assertJsonPath('data.contract.version', '1.2-H')
             ->assertJsonPath('data.summary.detectedSheetCount', 5)
             ->assertJsonPath('data.summary.unexpectedSheetCount', 1)
@@ -81,12 +83,12 @@ class ImportsWorkbookBoundarySmokeTest extends TestCase
                 'file' => $brokenWorkbook,
             ]);
 
-        $brokenStoredPath = $brokenUploadResponse->json('data.storedPath');
+        $brokenImportBatchId = $brokenUploadResponse->json('data.importBatch.id');
 
         $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => $brokenStoredPath,
+                'importBatchId' => $brokenImportBatchId,
             ])
             ->assertUnprocessable()
             ->assertJsonPath('status', 'error')
@@ -106,12 +108,12 @@ class ImportsWorkbookBoundarySmokeTest extends TestCase
                 'file' => $validWorkbook,
             ]);
 
-        $validStoredPath = $validUploadResponse->json('data.storedPath');
+        $validImportBatchId = $validUploadResponse->json('data.importBatch.id');
 
         $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => $validStoredPath,
+                'importBatchId' => $validImportBatchId,
             ])
             ->assertOk()
             ->assertJsonPath('status', 'ok')

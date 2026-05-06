@@ -3,22 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Imports\AnalyzeWorkbookBoundaryRequest;
-use App\Services\Imports\AggregateImportPreviewService;
+use App\Services\Imports\PrepareAggregatePreviewService;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 class ImportAggregatePreviewController extends Controller
 {
     public function __construct(
-        private readonly AggregateImportPreviewService $aggregateImportPreviewService,
+        private readonly PrepareAggregatePreviewService $prepareAggregatePreviewService,
     ) {
     }
 
     public function store(AnalyzeWorkbookBoundaryRequest $request): JsonResponse
     {
         try {
-            $preview = $this->aggregateImportPreviewService->aggregate(
-                $request->string('storedPath')->toString(),
+            $preview = $this->prepareAggregatePreviewService->prepare(
+                $request->importBatch(),
             );
         } catch (RuntimeException $exception) {
             return response()->json([

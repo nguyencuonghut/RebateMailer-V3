@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,12 +39,12 @@ class ImportsWorkbookAnalysisTest extends TestCase
                 'file' => $uploadedWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $analysisResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $analysisResponse
@@ -51,6 +52,8 @@ class ImportsWorkbookAnalysisTest extends TestCase
             ->assertJsonPath('status', 'ok')
             ->assertJsonPath('message', 'Đã đọc cấu trúc workbook thành công.')
             ->assertJsonPath('toast.summary', 'Đọc workbook thành công')
+            ->assertJsonPath('data.importBatch.id', $importBatchId)
+            ->assertJsonPath('data.importBatch.status', 'workbook_analyzed')
             ->assertJsonPath('data.contract.version', '1.2-H')
             ->assertJsonPath('data.contract.stage', 'workbook-boundary')
             ->assertJsonPath('data.summary.detectedSheetCount', 5)
@@ -89,6 +92,15 @@ class ImportsWorkbookAnalysisTest extends TestCase
         $this->assertFalse($payload['sheets'][1]['isEmpty']);
         $this->assertFalse($payload['sheets'][2]['isEmpty']);
         $this->assertFalse($payload['sheets'][3]['isEmpty']);
+
+        $batch = ImportBatch::query()->findOrFail($importBatchId);
+
+        $this->assertSame('workbook_analyzed', $batch->status);
+        $this->assertIsArray($batch->workbook_summary);
+        $this->assertSame('1.2-H', $batch->workbook_summary['contract']['version']);
+        $this->assertSame(5, $batch->workbook_summary['summary']['detectedSheetCount']);
+        $this->assertSame(['Template Mail'], $batch->workbook_summary['unexpectedSheets']);
+        $this->assertCount(4, $batch->workbook_summary['sheets']);
     }
 
     public function test_guest_cannot_analyze_workbook_without_manage_permission(): void
@@ -98,7 +110,7 @@ class ImportsWorkbookAnalysisTest extends TestCase
         $this->actingAs($guest)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => 'imports/tmp/fake.xlsx',
+                'importBatchId' => 999999,
             ])
             ->assertForbidden();
     }
@@ -107,19 +119,38 @@ class ImportsWorkbookAnalysisTest extends TestCase
     {
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
 
+        $uploadedWorkbook = new UploadedFile(
+            base_path('data/Data import chuẩn_Final.xlsx'),
+            'Data import chuẩn_Final.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $uploadResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.upload'), [
+                'file' => $uploadedWorkbook,
+            ]);
+
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
+        $storedPath = $uploadResponse->json('data.storedPath');
+
+        Storage::disk('local')->delete($storedPath);
+
         $response = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => 'imports/tmp/missing.xlsx',
+                'importBatchId' => $importBatchId,
             ]);
 
         $response
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['storedPath']);
+            ->assertJsonValidationErrors(['importBatchId']);
 
         $this->assertSame(
-            'Không tìm thấy file upload tạm để đọc workbook.',
-            $response->json('errors.storedPath.0'),
+            'Không tìm thấy file upload tạm cho batch import này.',
+            $response->json('errors.importBatchId.0'),
         );
     }
 
@@ -138,12 +169,12 @@ class ImportsWorkbookAnalysisTest extends TestCase
                 'file' => $invalidWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $analysisResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.analyze-workbook'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $analysisResponse

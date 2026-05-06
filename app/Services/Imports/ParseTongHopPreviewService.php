@@ -107,7 +107,8 @@ class ParseTongHopPreviewService
                 continue;
             }
 
-            $record = $this->buildRecord($row, $headers, $dynamicHeaders, $sharedStrings);
+            $excelRowNumber = $this->extractRowNumber($row, $rowIndex + 1);
+            $record = $this->buildRecord($row, $headers, $dynamicHeaders, $sharedStrings, $excelRowNumber);
 
             if ($record === null) {
                 $rowIndex++;
@@ -137,6 +138,7 @@ class ParseTongHopPreviewService
         array $headers,
         array $dynamicHeaders,
         array $sharedStrings,
+        int $rowNumber,
     ): ?array {
         $indexedValues = $this->extractIndexedRowValues($row, $sharedStrings);
         $rowValues = [];
@@ -165,6 +167,7 @@ class ParseTongHopPreviewService
         }
 
         return [
+            'rowNumber' => $rowNumber,
             'stt' => $rowValues['STT'] ?? '',
             'month' => $rowValues['Tháng'] ?? '',
             'customerCode' => $rowValues['Mã số'] ?? '',
@@ -183,6 +186,13 @@ class ParseTongHopPreviewService
             'totalInWords' => $rowValues['Bằng chữ'] ?? '',
             'dynamicItems' => $dynamicItems,
         ];
+    }
+
+    private function extractRowNumber(SimpleXMLElement $row, int $fallback): int
+    {
+        $rowNumber = (int) ($row['r'] ?? 0);
+
+        return $rowNumber > 0 ? $rowNumber : $fallback;
     }
 
     private function resolveSheetPath(SimpleXMLElement $workbook, string $workbookRelsXml, string $sheetName): ?string

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Imports\AnalyzeWorkbookBoundaryRequest;
 use App\Services\Imports\AnalyzeWorkbookBoundaryService;
 use App\Services\Imports\BuildWorkbookBoundaryPayloadService;
+use App\Services\Imports\PersistWorkbookBoundaryToImportBatchService;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
@@ -13,6 +14,7 @@ class ImportWorkbookAnalysisController extends Controller
     public function __construct(
         private readonly AnalyzeWorkbookBoundaryService $analyzeWorkbookBoundaryService,
         private readonly BuildWorkbookBoundaryPayloadService $buildWorkbookBoundaryPayloadService,
+        private readonly PersistWorkbookBoundaryToImportBatchService $persistWorkbookBoundaryToImportBatchService,
     ) {
     }
 
@@ -20,9 +22,18 @@ class ImportWorkbookAnalysisController extends Controller
     {
         try {
             $analysis = $this->analyzeWorkbookBoundaryService->analyze(
-                $request->string('storedPath')->toString(),
+                $request->resolvedStoredPath(),
             );
             $workbookBoundary = $this->buildWorkbookBoundaryPayloadService->build($analysis);
+            $importBatch = $this->persistWorkbookBoundaryToImportBatchService->persist(
+                $request->importBatch(),
+                $workbookBoundary,
+            );
+            $workbookBoundary['importBatch'] = [
+                'id' => $importBatch->id,
+                'batchCode' => $importBatch->batch_code,
+                'status' => $importBatch->status,
+            ];
         } catch (RuntimeException $exception) {
             return response()->json([
                 'status' => 'error',

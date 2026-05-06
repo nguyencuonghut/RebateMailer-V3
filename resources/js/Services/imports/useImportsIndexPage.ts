@@ -1,3 +1,10 @@
+import type { AggregatePreview } from './useAggregatePreviewFlow';
+import type { CamCaPreview } from './useCamCaPreviewFlow';
+import type { ImportUploadReceipt } from './useImportUploadFlow';
+import type { ImportWorkbookBoundary } from './useImportWorkbookBoundaryFlow';
+import type { KeyAccountPreview } from './useKeyAccountPreviewFlow';
+import type { KhoanNppPreview } from './useKhoanNppPreviewFlow';
+import type { TongHopPreview } from './useTongHopPreviewFlow';
 import { computed, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 
@@ -34,6 +41,26 @@ export type ImportPageProps = {
         toast: ImportPageToast;
     };
     toast: ImportPageToast;
+    activeBatchId: number | null;
+    initialUploadReceipt: ImportUploadReceipt | null;
+    initialWorkbookBoundary: ImportWorkbookBoundary | null;
+    initialTongHopPreview: TongHopPreview | null;
+    initialKhoanNppPreview: KhoanNppPreview | null;
+    initialCamCaPreview: CamCaPreview | null;
+    initialKeyAccountPreview: KeyAccountPreview | null;
+    initialAggregatePreview: AggregatePreview | null;
+    importHistory: ImportHistoryItem[];
+};
+
+export type ImportHistoryItem = {
+    id: number;
+    batchCode: string;
+    originalFileName: string;
+    status: string;
+    uploadedBy: string;
+    uploadedAt: string | null;
+    parsedRecordCount: number;
+    aggregatedRecordCount: number;
 };
 
 export const useImportsIndexPage = (props: ImportPageProps) => {

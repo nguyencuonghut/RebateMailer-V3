@@ -52,10 +52,13 @@ type CamCaPreviewResponse = {
     errors?: Record<string, string[]>;
 };
 
-export const useCamCaPreviewFlow = (workbookBoundary: { value: ImportWorkbookBoundary | null }) => {
+export const useCamCaPreviewFlow = (
+    workbookBoundary: { value: ImportWorkbookBoundary | null },
+    initialPreview: CamCaPreview | null = null,
+) => {
     const toast = useToast();
     const isLoadingCamCaPreview = ref(false);
-    const camCaPreview = ref<CamCaPreview | null>(null);
+    const camCaPreview = ref<CamCaPreview | null>(initialPreview);
     const camCaErrorMessage = ref('');
 
     const canPreviewCamCa = computed(() =>
@@ -77,7 +80,7 @@ export const useCamCaPreviewFlow = (workbookBoundary: { value: ImportWorkbookBou
             const response = await axios.post<CamCaPreviewResponse>(
                 previewUrl,
                 {
-                    storedPath: receipt.storedPath,
+                    importBatchId: receipt.importBatch.id,
                 },
                 {
                     headers: {
@@ -99,7 +102,7 @@ export const useCamCaPreviewFlow = (workbookBoundary: { value: ImportWorkbookBou
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.storedPath?.[0]
+                    error.response?.data?.errors?.importBatchId?.[0]
                     ?? error.response?.data?.errors?.camCa?.[0]
                     ?? error.response?.data?.message;
 

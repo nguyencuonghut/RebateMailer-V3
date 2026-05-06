@@ -6,9 +6,14 @@ import type { LocalImportFile } from './useImportUploadCard';
 
 export type ImportUploadReceipt = {
     originalFileName: string;
-    size: number;
+    size: number | null;
     storedPath: string;
-    uploadedAt: string;
+    uploadedAt: string | null;
+    importBatch: {
+        id: number;
+        batchCode: string;
+        status: string;
+    };
     nextStep: string;
 };
 
@@ -19,10 +24,10 @@ type UploadResponse = {
     data: ImportUploadReceipt;
 };
 
-export const useImportUploadFlow = () => {
+export const useImportUploadFlow = (initialReceipt: ImportUploadReceipt | null = null) => {
     const toast = useToast();
     const isUploading = ref(false);
-    const uploadReceipt = ref<ImportUploadReceipt | null>(null);
+    const uploadReceipt = ref<ImportUploadReceipt | null>(initialReceipt);
 
     const uploadSelectedFile = async (file: LocalImportFile | null, uploadUrl: string): Promise<string | null> => {
         if (!file) {
@@ -53,7 +58,9 @@ export const useImportUploadFlow = () => {
             return null;
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                const backendMessage = error.response?.data?.errors?.file?.[0];
+                const backendMessage =
+                    error.response?.data?.errors?.file?.[0]
+                    ?? error.response?.data?.message;
 
                 if (backendMessage) {
                     toast.add({
@@ -64,6 +71,19 @@ export const useImportUploadFlow = () => {
                     });
 
                     return backendMessage;
+                }
+
+                if ((error.response?.status ?? 0) >= 500) {
+                    const serverFailureMessage = 'Máy chủ trả về lỗi nội bộ khi tải file lên. Vui lòng kiểm tra log hệ thống.';
+
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Không thể tải file',
+                        detail: serverFailureMessage,
+                        life: 4000,
+                    });
+
+                    return serverFailureMessage;
                 }
             }
 

@@ -21,6 +21,7 @@ class ImportPageController extends Controller
             'Imports/Index',
             $this->importPageService->getIndexPageData(
                 $request->user()?->can(PermissionName::ImportsManage->value) ?? false,
+                $request->integer('batch') ?: null,
             ),
         );
     }

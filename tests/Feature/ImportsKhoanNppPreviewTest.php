@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,12 +39,12 @@ class ImportsKhoanNppPreviewTest extends TestCase
                 'file' => $uploadedWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-khoan-npp'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -81,6 +82,19 @@ class ImportsKhoanNppPreviewTest extends TestCase
         $this->assertSame('', $quangRecord['programItems'][3]['quantity']);
         $this->assertSame('', $quangRecord['programItems'][3]['supportRate']);
         $this->assertSame('5000000', $quangRecord['programItems'][3]['amount']);
+        $this->assertSame(7, $quangRecord['rowNumber']);
+        $this->assertSame([7], $quangRecord['sourceRowNumbers']);
+
+        $this->assertDatabaseHas('import_batch_sheet_records', [
+            'import_batch_id' => $importBatchId,
+            'sheet_name' => 'Khoán NPP',
+            'customer_code' => '90300',
+            'row_number' => 7,
+            'customer_type_inferred' => 'Khách thường',
+        ]);
+
+        $batch = ImportBatch::query()->findOrFail($importBatchId);
+        $this->assertIsArray($batch->workbook_summary['sheetPreviews']['Khoán NPP'] ?? null);
     }
 
     public function test_guest_cannot_preview_khoan_npp_without_manage_permission(): void
@@ -90,7 +104,7 @@ class ImportsKhoanNppPreviewTest extends TestCase
         $this->actingAs($guest)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-khoan-npp'), [
-                'storedPath' => 'imports/tmp/fake.xlsx',
+                'importBatchId' => 999999,
             ])
             ->assertForbidden();
     }
@@ -110,12 +124,12 @@ class ImportsKhoanNppPreviewTest extends TestCase
                 'file' => $invalidWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-khoan-npp'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse

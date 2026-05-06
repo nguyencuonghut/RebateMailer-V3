@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,12 +40,12 @@ class ImportsKeyAccountPreviewTest extends TestCase
                 'file' => $uploadedWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-key-account'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -72,6 +73,17 @@ class ImportsKeyAccountPreviewTest extends TestCase
         $this->assertKeyAccountRecord11008($records);
         $this->assertKeyAccountRecord38041($records);
         $this->assertKeyAccountRecord38053($records);
+
+        $this->assertDatabaseHas('import_batch_sheet_records', [
+            'import_batch_id' => $importBatchId,
+            'sheet_name' => 'Key Account',
+            'customer_code' => '11008',
+            'row_number' => 2,
+            'customer_type_inferred' => 'Key Account',
+        ]);
+
+        $batch = ImportBatch::query()->findOrFail($importBatchId);
+        $this->assertIsArray($batch->workbook_summary['sheetPreviews']['Key Account'] ?? null);
     }
 
     public function test_guest_cannot_preview_key_account_without_manage_permission(): void
@@ -81,7 +93,7 @@ class ImportsKeyAccountPreviewTest extends TestCase
         $this->actingAs($guest)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-key-account'), [
-                'storedPath' => 'imports/tmp/fake.xlsx',
+                'importBatchId' => 999999,
             ])
             ->assertForbidden();
     }
@@ -101,12 +113,12 @@ class ImportsKeyAccountPreviewTest extends TestCase
                 'file' => $invalidWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-key-account'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -123,6 +135,7 @@ class ImportsKeyAccountPreviewTest extends TestCase
         $record = $records->get('11008');
 
         $this->assertNotNull($record);
+        $this->assertSame(2, $record['rowNumber']);
         $this->assertSame('147061500', $record['invoiceDiscount']);
         $this->assertSame('147061500', $record['grandTotal']);
         $this->assertSame([], $record['discreteItems']);
@@ -151,6 +164,7 @@ class ImportsKeyAccountPreviewTest extends TestCase
         $record = $records->get('38041');
 
         $this->assertNotNull($record);
+        $this->assertSame(3, $record['rowNumber']);
         $this->assertSame('724162810', $record['grandTotal']);
         $this->assertSame([
             ['label' => 'Thưởng doanh thu tháng', 'value' => '431855450'],
@@ -172,6 +186,7 @@ class ImportsKeyAccountPreviewTest extends TestCase
         $record = $records->get('38053');
 
         $this->assertNotNull($record);
+        $this->assertSame(4, $record['rowNumber']);
         $this->assertSame([
             ['label' => 'Thưởng doanh thu tháng', 'value' => '361787750'],
         ], $record['discreteItems']);

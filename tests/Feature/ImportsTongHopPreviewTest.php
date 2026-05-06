@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,12 +39,12 @@ class ImportsTongHopPreviewTest extends TestCase
                 'file' => $uploadedWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-tong-hop'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -63,6 +64,58 @@ class ImportsTongHopPreviewTest extends TestCase
         $this->assertNotEmpty($payload['records'][0]['customerCode']);
         $this->assertNotEmpty($payload['records'][0]['customerFullName']);
         $this->assertNotEmpty($payload['records'][0]['dynamicItems']);
+
+        $this->assertDatabaseHas('import_batch_sheet_records', [
+            'import_batch_id' => $importBatchId,
+            'sheet_name' => 'Tổng hợp',
+            'customer_code' => $payload['records'][0]['customerCode'],
+            'customer_type_inferred' => 'Khách thường',
+        ]);
+
+        $batch = ImportBatch::query()->findOrFail($importBatchId);
+        $this->assertSame('parsed_partial', $batch->status);
+        $this->assertIsArray($batch->workbook_summary['sheetPreviews']['Tổng hợp'] ?? null);
+    }
+
+    public function test_tong_hop_preview_can_be_read_back_from_db_after_temporary_file_is_deleted(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        $uploadedWorkbook = new UploadedFile(
+            base_path('data/Data import chuẩn_Final.xlsx'),
+            'Data import chuẩn_Final.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $uploadResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.upload'), [
+                'file' => $uploadedWorkbook,
+            ]);
+
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
+        $storedPath = $uploadResponse->json('data.storedPath');
+
+        $firstPreviewResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.preview-tong-hop'), [
+                'importBatchId' => $importBatchId,
+            ]);
+
+        $firstPreviewResponse->assertOk();
+        Storage::disk('local')->delete($storedPath);
+
+        $secondPreviewResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.preview-tong-hop'), [
+                'importBatchId' => $importBatchId,
+            ]);
+
+        $secondPreviewResponse
+            ->assertOk()
+            ->assertJsonPath('data.recordCount', $firstPreviewResponse->json('data.recordCount'))
+            ->assertJsonPath('data.records.0.customerCode', $firstPreviewResponse->json('data.records.0.customerCode'));
     }
 
     public function test_guest_cannot_preview_tong_hop_without_manage_permission(): void
@@ -72,7 +125,7 @@ class ImportsTongHopPreviewTest extends TestCase
         $this->actingAs($guest)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-tong-hop'), [
-                'storedPath' => 'imports/tmp/fake.xlsx',
+                'importBatchId' => 999999,
             ])
             ->assertForbidden();
     }
@@ -92,12 +145,12 @@ class ImportsTongHopPreviewTest extends TestCase
                 'file' => $invalidWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-tong-hop'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse

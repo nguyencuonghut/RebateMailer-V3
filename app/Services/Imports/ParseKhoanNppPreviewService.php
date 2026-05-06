@@ -110,9 +110,10 @@ class ParseKhoanNppPreviewService
             }
 
             $customerCode = $rowValues['Mã số'] ?? '';
+            $excelRowNumber = $this->extractRowNumber($row, $rowIndex + 1);
 
             if ($this->isMeaningfulCellValue($customerCode)) {
-                $record = $this->buildPrimaryRecord($rowValues, $indexedValues, $programBlocks);
+                $record = $this->buildPrimaryRecord($rowValues, $indexedValues, $programBlocks, $excelRowNumber);
 
                 if ($record !== null) {
                     $records[] = $record;
@@ -128,6 +129,7 @@ class ParseKhoanNppPreviewService
                     $records[$currentRecordIndex],
                     $indexedValues,
                     $programBlocks,
+                    $excelRowNumber,
                 );
             }
 
@@ -150,7 +152,7 @@ class ParseKhoanNppPreviewService
      * @param array<int, array<string, int|string>> $programBlocks
      * @return array<string, mixed>|null
      */
-    private function buildPrimaryRecord(array $rowValues, array $indexedValues, array $programBlocks): ?array
+    private function buildPrimaryRecord(array $rowValues, array $indexedValues, array $programBlocks, int $rowNumber): ?array
     {
         if (! $this->rowHasMeaningfulValue($rowValues)) {
             return null;
@@ -183,6 +185,8 @@ class ParseKhoanNppPreviewService
         }
 
         return [
+            'rowNumber' => $rowNumber,
+            'sourceRowNumbers' => [$rowNumber],
             'stt' => $rowValues['STT'] ?? '',
             'month' => $rowValues['Tháng'] ?? '',
             'customerCode' => $rowValues['Mã số'] ?? '',
@@ -201,8 +205,10 @@ class ParseKhoanNppPreviewService
      * @param array<int, string> $indexedValues
      * @param array<int, array<string, int|string>> $programBlocks
      */
-    private function mergeContinuationRowIntoRecord(array &$record, array $indexedValues, array $programBlocks): void
+    private function mergeContinuationRowIntoRecord(array &$record, array $indexedValues, array $programBlocks, int $rowNumber): void
     {
+        $rowWasMerged = false;
+
         foreach ($programBlocks as $block) {
             $programIndex = (int) $block['programIndex'];
 
@@ -215,10 +221,28 @@ class ParseKhoanNppPreviewService
 
                 if ($this->isMeaningfulCellValue($continuationContent)) {
                     $programItem['content'] = trim($programItem['content'].' '.$continuationContent);
+                    $rowWasMerged = true;
                 }
             }
             unset($programItem);
         }
+
+        if ($rowWasMerged) {
+            $sourceRowNumbers = $record['sourceRowNumbers'] ?? [];
+
+            if (! in_array($rowNumber, $sourceRowNumbers, true)) {
+                $sourceRowNumbers[] = $rowNumber;
+                sort($sourceRowNumbers);
+                $record['sourceRowNumbers'] = $sourceRowNumbers;
+            }
+        }
+    }
+
+    private function extractRowNumber(SimpleXMLElement $row, int $fallback): int
+    {
+        $rowNumber = (int) ($row['r'] ?? 0);
+
+        return $rowNumber > 0 ? $rowNumber : $fallback;
     }
 
     /**

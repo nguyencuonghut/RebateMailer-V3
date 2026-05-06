@@ -2,51 +2,40 @@
 
 namespace App\Services\Imports;
 
+use App\Models\ImportBatch;
+
 class AggregateImportPreviewService
 {
-    public function __construct(
-        private readonly ParseTongHopPreviewService $parseTongHopPreviewService,
-        private readonly ParseKhoanNppPreviewService $parseKhoanNppPreviewService,
-        private readonly ParseCamCaPreviewService $parseCamCaPreviewService,
-        private readonly ParseKeyAccountPreviewService $parseKeyAccountPreviewService,
-    ) {
-    }
-
     /**
      * @return array<string, mixed>
      */
-    public function aggregate(string $storedPath): array
+    public function aggregate(ImportBatch $importBatch): array
     {
-        $tongHopPreview = $this->parseTongHopPreviewService->parse($storedPath);
-        $khoanNppPreview = $this->parseKhoanNppPreviewService->parse($storedPath);
-        $camCaPreview = $this->parseCamCaPreviewService->parse($storedPath);
-        $keyAccountPreview = $this->parseKeyAccountPreviewService->parse($storedPath);
-
         $recordsByCustomerCode = [];
 
-        foreach ($tongHopPreview['records'] as $record) {
-            $code = $record['customerCode'];
+        foreach ($this->sheetRecords($importBatch, 'Tổng hợp') as $record) {
+            $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Khách thường');
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Tổng hợp';
             $recordsByCustomerCode[$code]['tongHop'] = $record;
         }
 
-        foreach ($khoanNppPreview['records'] as $record) {
-            $code = $record['customerCode'];
+        foreach ($this->sheetRecords($importBatch, 'Khoán NPP') as $record) {
+            $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Khách thường');
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Khoán NPP';
             $recordsByCustomerCode[$code]['khoanNpp'] = $record;
         }
 
-        foreach ($camCaPreview['records'] as $record) {
-            $code = $record['customerCode'];
+        foreach ($this->sheetRecords($importBatch, 'Cám cá') as $record) {
+            $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Khách thường');
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Cám cá';
             $recordsByCustomerCode[$code]['camCa'] = $record;
         }
 
-        foreach ($keyAccountPreview['records'] as $record) {
-            $code = $record['customerCode'];
+        foreach ($this->sheetRecords($importBatch, 'Key Account') as $record) {
+            $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Key Account');
             $recordsByCustomerCode[$code]['customerType'] = 'Key Account';
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Key Account';
@@ -79,6 +68,19 @@ class AggregateImportPreviewService
             'records' => $records,
             'nextStep' => 'Dữ liệu đã được gom theo Mã số. Bước kế tiếp sẽ thêm validation để đánh dấu thiếu email, xung đột phân loại và các bất thường dữ liệu.',
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function sheetRecords(ImportBatch $importBatch, string $sheetName): array
+    {
+        return $importBatch->sheetRecords()
+            ->where('sheet_name', $sheetName)
+            ->orderBy('row_number')
+            ->get()
+            ->map(static fn ($record): array => $record->parsed_payload)
+            ->all();
     }
 
     /**

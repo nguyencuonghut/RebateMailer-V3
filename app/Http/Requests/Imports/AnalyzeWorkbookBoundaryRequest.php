@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Imports;
 
+use App\Models\ImportBatch;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Validator;
 
 class AnalyzeWorkbookBoundaryRequest extends FormRequest
 {
+    private ?ImportBatch $resolvedImportBatch = null;
+
     public function authorize(): bool
     {
         return $this->user()?->can('imports.manage') ?? false;
@@ -19,7 +22,7 @@ class AnalyzeWorkbookBoundaryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'storedPath' => ['required', 'string', 'starts_with:imports/tmp/'],
+            'importBatchId' => ['required', 'integer', 'min:1'],
         ];
     }
 
@@ -29,24 +32,87 @@ class AnalyzeWorkbookBoundaryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'storedPath.required' => 'Không tìm thấy receipt upload để đọc workbook.',
-            'storedPath.string' => 'Đường dẫn file tạm không hợp lệ.',
-            'storedPath.starts_with' => 'Chỉ được phân tích file upload tạm của module import.',
+            'importBatchId.required' => 'Không tìm thấy batch import để tiếp tục xử lý workbook.',
+            'importBatchId.integer' => 'Mã batch import không hợp lệ.',
+            'importBatchId.min' => 'Mã batch import không hợp lệ.',
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            $storedPath = $this->string('storedPath')->toString();
+            $importBatchId = $this->integer('importBatchId');
 
-            if ($storedPath === '') {
+            if ($importBatchId <= 0) {
                 return;
             }
 
-            if (! Storage::disk('local')->exists($storedPath)) {
-                $validator->errors()->add('storedPath', 'Không tìm thấy file upload tạm để đọc workbook.');
+            $importBatch = ImportBatch::query()->find($importBatchId);
+
+            if (! $importBatch instanceof ImportBatch) {
+                $validator->errors()->add('importBatchId', 'Không tìm thấy batch import tương ứng.');
+
+                return;
+            }
+
+            $this->resolvedImportBatch = $importBatch;
+
+            if (! Storage::disk('local')->exists($importBatch->stored_path)) {
+                if ($this->canUsePersistedSheetPreview($importBatch)) {
+                    return;
+                }
+
+                $validator->errors()->add('importBatchId', 'Không tìm thấy file upload tạm cho batch import này.');
             }
         });
+    }
+
+    public function importBatch(): ImportBatch
+    {
+        if ($this->resolvedImportBatch instanceof ImportBatch) {
+            return $this->resolvedImportBatch;
+        }
+
+        /** @var ImportBatch $importBatch */
+        $importBatch = ImportBatch::query()->findOrFail($this->integer('importBatchId'));
+        $this->resolvedImportBatch = $importBatch;
+
+        return $importBatch;
+    }
+
+    public function resolvedStoredPath(): string
+    {
+        return $this->importBatch()->stored_path;
+    }
+
+    private function canUsePersistedSheetPreview(ImportBatch $importBatch): bool
+    {
+        $routeName = $this->route()?->getName();
+
+        if ($routeName === 'imports.preview-aggregated') {
+            $aggregatePreview = $importBatch->workbook_summary['aggregatePreview'] ?? null;
+
+            return is_array($aggregatePreview) && isset($aggregatePreview['summary']);
+        }
+
+        $sheetName = match ($routeName) {
+            'imports.preview-tong-hop' => 'Tổng hợp',
+            'imports.preview-khoan-npp' => 'Khoán NPP',
+            'imports.preview-cam-ca' => 'Cám cá',
+            'imports.preview-key-account' => 'Key Account',
+            default => null,
+        };
+
+        if ($sheetName === null) {
+            return false;
+        }
+
+        $sheetPreviews = $importBatch->workbook_summary['sheetPreviews'] ?? null;
+
+        if (! is_array($sheetPreviews) || ! isset($sheetPreviews[$sheetName]) || ! is_array($sheetPreviews[$sheetName])) {
+            return false;
+        }
+
+        return true;
     }
 }

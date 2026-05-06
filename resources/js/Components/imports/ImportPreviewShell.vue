@@ -38,20 +38,36 @@ const { summaryItems, contractMessages, sheetDetails } = useImportWorkbookBounda
                 </p>
             </div>
 
-            <Tag value="Upload thành công" severity="success" rounded />
+            <Tag
+                :value="receipt.importBatch.status === 'uploaded' ? 'Upload thành công' : 'Batch đã lưu'"
+                :severity="receipt.importBatch.status === 'uploaded' ? 'success' : 'info'"
+                rounded
+            />
         </div>
 
         <dl class="grid gap-4 sm:grid-cols-2">
             <div>
                 <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Dung lượng</dt>
                 <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
-                    {{ receipt.size.toLocaleString('vi-VN') }} bytes
+                    {{ receipt.size === null ? 'Không còn dữ liệu dung lượng' : `${receipt.size.toLocaleString('vi-VN')} bytes` }}
                 </dd>
             </div>
             <div>
                 <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Thời điểm upload</dt>
                 <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
-                    {{ receipt.uploadedAt }}
+                    {{ receipt.uploadedAt ?? 'Chưa có dữ liệu thời điểm upload' }}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Mã batch</dt>
+                <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    {{ receipt.importBatch.batchCode }}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Trạng thái batch</dt>
+                <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    {{ receipt.importBatch.status }}
                 </dd>
             </div>
         </dl>

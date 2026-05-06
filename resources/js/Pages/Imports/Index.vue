@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PageProps } from '@/types';
 import type { ImportPageProps } from '@/Services/imports/useImportsIndexPage';
+import ImportBatchHistoryCard from '@/Components/imports/ImportBatchHistoryCard.vue';
 import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
 import { useImportWorkbookBoundaryFlow } from '@/Services/imports/useImportWorkbookBoundaryFlow';
 import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
@@ -28,23 +29,29 @@ import { computed } from 'vue';
 const props = defineProps<ImportPageProps>();
 
 const page = usePage<PageProps>();
-const { acceptedSheetTags, uploadReadinessItems, disabledActionMessage } = useImportsIndexPage(props);
+const { acceptedSheetTags, disabledActionMessage } = useImportsIndexPage(props);
 const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, clearSelection, onFileChange } = useImportUploadCard(
     props.uploadPolicy.acceptedExtension,
 );
-const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow();
-const { isAnalyzingWorkbook, workbookBoundary, analysisErrorMessage, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow();
-const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHopPreview, resetTongHopPreview } = useTongHopPreviewFlow();
-const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview, resetKhoanNppPreview } = useKhoanNppPreviewFlow();
-const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview, resetCamCaPreview } = useCamCaPreviewFlow(workbookBoundary);
-const { isLoadingKeyAccountPreview, keyAccountPreview, keyAccountErrorMessage, canPreviewKeyAccount, loadKeyAccountPreview, resetKeyAccountPreview } = useKeyAccountPreviewFlow(workbookBoundary);
-const { isLoadingAggregatePreview, aggregatePreview, aggregateErrorMessage, canPreviewAggregate, loadAggregatePreview, resetAggregatePreview } = useAggregatePreviewFlow(workbookBoundary);
+const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow(props.initialUploadReceipt);
+const { isAnalyzingWorkbook, workbookBoundary, analysisErrorMessage, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow(props.initialWorkbookBoundary);
+const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHopPreview, resetTongHopPreview } = useTongHopPreviewFlow(props.initialTongHopPreview);
+const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview, resetKhoanNppPreview } = useKhoanNppPreviewFlow(props.initialKhoanNppPreview);
+const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview, resetCamCaPreview } = useCamCaPreviewFlow(workbookBoundary, props.initialCamCaPreview);
+const { isLoadingKeyAccountPreview, keyAccountPreview, keyAccountErrorMessage, canPreviewKeyAccount, loadKeyAccountPreview, resetKeyAccountPreview } = useKeyAccountPreviewFlow(workbookBoundary, props.initialKeyAccountPreview);
+const { isLoadingAggregatePreview, aggregatePreview, aggregateErrorMessage, canPreviewAggregate, loadAggregatePreview, resetAggregatePreview } = useAggregatePreviewFlow(workbookBoundary, props.initialAggregatePreview);
 const canPreviewTongHop = computed(() =>
     workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Tổng hợp' && sheet.present) ?? false,
 );
 const canPreviewKhoanNpp = computed(() =>
     workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Khoán NPP' && sheet.present) ?? false,
 );
+const canShowReceiptShell = computed(() => props.canManageImports || uploadReceipt.value !== null);
+const canShowTongHopCard = computed(() => props.canManageImports || tongHopPreview.value !== null);
+const canShowKhoanNppCard = computed(() => props.canManageImports || khoanNppPreview.value !== null);
+const canShowCamCaCard = computed(() => props.canManageImports || camCaPreview.value !== null);
+const canShowKeyAccountCard = computed(() => props.canManageImports || keyAccountPreview.value !== null);
+const canShowAggregateCard = computed(() => props.canManageImports || aggregatePreview.value !== null);
 
 const submitUpload = async (): Promise<void> => {
     resetWorkbookBoundary();
@@ -187,15 +194,13 @@ const loadAggregateDataPreview = async (): Promise<void> => {
             <div class="grid gap-6">
                 <Card class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
-                        Sẵn sàng triển khai
+                        Lịch sử import
                     </template>
                     <template #content>
-                        <ul class="space-y-3 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                            <li v-for="item in uploadReadinessItems" :key="item" class="flex gap-3">
-                                <i class="pi pi-check-circle mt-1 text-teal-600" />
-                                <span>{{ item }}</span>
-                            </li>
-                        </ul>
+                        <ImportBatchHistoryCard
+                            :history="importHistory"
+                            :active-batch-id="activeBatchId"
+                        />
                     </template>
                 </Card>
 
@@ -222,7 +227,7 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                     </template>
                 </Card>
 
-                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="canShowReceiptShell" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Preview workbook boundary
                     </template>
@@ -240,7 +245,7 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                     </template>
                 </Card>
 
-                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="canShowTongHopCard" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Preview sheet Tổng hợp
                     </template>
@@ -249,13 +254,13 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                             :preview="tongHopPreview"
                             :is-loading="isLoadingTongHopPreview"
                             :error-message="tongHopErrorMessage"
-                            :can-preview="canPreviewTongHop"
+                            :can-preview="canManageImports && canPreviewTongHop"
                             @load="loadTongHopSheetPreview"
                         />
                     </template>
                 </Card>
 
-                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="canShowKhoanNppCard" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Preview sheet Khoán NPP
                     </template>
@@ -264,13 +269,13 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                             :preview="khoanNppPreview"
                             :is-loading="isLoadingKhoanNppPreview"
                             :error-message="khoanNppErrorMessage"
-                            :can-preview="canPreviewKhoanNpp"
+                            :can-preview="canManageImports && canPreviewKhoanNpp"
                             @load="loadKhoanNppSheetPreview"
                         />
                     </template>
                 </Card>
 
-                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="canShowCamCaCard" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Preview sheet Cám cá
                     </template>
@@ -279,13 +284,13 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                             :preview="camCaPreview"
                             :is-loading="isLoadingCamCaPreview"
                             :error-message="camCaErrorMessage"
-                            :can-preview="canPreviewCamCa"
+                            :can-preview="canManageImports && canPreviewCamCa"
                             @load="loadCamCaSheetPreview"
                         />
                     </template>
                 </Card>
 
-                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="canShowKeyAccountCard" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Preview sheet Key Account
                     </template>
@@ -294,13 +299,13 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                             :preview="keyAccountPreview"
                             :is-loading="isLoadingKeyAccountPreview"
                             :error-message="keyAccountErrorMessage"
-                            :can-preview="canPreviewKeyAccount"
+                            :can-preview="canManageImports && canPreviewKeyAccount"
                             @load="loadKeyAccountSheetPreview"
                         />
                     </template>
                 </Card>
 
-                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="canShowAggregateCard" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Preview aggregator theo Mã số
                     </template>
@@ -309,13 +314,13 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                             :preview="aggregatePreview"
                             :is-loading="isLoadingAggregatePreview"
                             :error-message="aggregateErrorMessage"
-                            :can-preview="canPreviewAggregate"
+                            :can-preview="canManageImports && canPreviewAggregate"
                             @load="loadAggregateDataPreview"
                         />
                     </template>
                 </Card>
 
-                <Card v-else class="sakai-panel rounded-[2rem] border-0">
+                <Card v-if="!canManageImports && !canShowReceiptShell && !canShowAggregateCard" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
                         Quyền truy cập hiện tại
                     </template>
@@ -326,7 +331,7 @@ const loadAggregateDataPreview = async (): Promise<void> => {
                             </Message>
 
                             <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                Chức năng tải file lên và xem receipt upload chỉ mở cho người dùng được cấp quyền thao tác import.
+                                Tài khoản này chỉ xem được dữ liệu import đã lưu từ các batch trước đó. Chức năng tải file lên và chạy các bước parse mới chỉ mở cho người dùng được cấp quyền thao tác import.
                             </p>
                         </div>
                     </template>

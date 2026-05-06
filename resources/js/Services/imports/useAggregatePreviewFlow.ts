@@ -35,10 +35,13 @@ type AggregatePreviewResponse = {
     errors?: Record<string, string[]>;
 };
 
-export const useAggregatePreviewFlow = (workbookBoundary: { value: ImportWorkbookBoundary | null }) => {
+export const useAggregatePreviewFlow = (
+    workbookBoundary: { value: ImportWorkbookBoundary | null },
+    initialPreview: AggregatePreview | null = null,
+) => {
     const toast = useToast();
     const isLoadingAggregatePreview = ref(false);
-    const aggregatePreview = ref<AggregatePreview | null>(null);
+    const aggregatePreview = ref<AggregatePreview | null>(initialPreview);
     const aggregateErrorMessage = ref('');
 
     const canPreviewAggregate = computed(
@@ -60,7 +63,7 @@ export const useAggregatePreviewFlow = (workbookBoundary: { value: ImportWorkboo
             const response = await axios.post<AggregatePreviewResponse>(
                 previewUrl,
                 {
-                    storedPath: receipt.storedPath,
+                    importBatchId: receipt.importBatch.id,
                 },
                 {
                     headers: {
@@ -82,7 +85,7 @@ export const useAggregatePreviewFlow = (workbookBoundary: { value: ImportWorkboo
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.storedPath?.[0]
+                    error.response?.data?.errors?.importBatchId?.[0]
                     ?? error.response?.data?.errors?.aggregator?.[0]
                     ?? error.response?.data?.message;
 

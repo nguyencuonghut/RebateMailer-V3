@@ -44,10 +44,10 @@ type TongHopPreviewResponse = {
     errors?: Record<string, string[]>;
 };
 
-export const useTongHopPreviewFlow = () => {
+export const useTongHopPreviewFlow = (initialPreview: TongHopPreview | null = null) => {
     const toast = useToast();
     const isLoadingTongHopPreview = ref(false);
-    const tongHopPreview = ref<TongHopPreview | null>(null);
+    const tongHopPreview = ref<TongHopPreview | null>(initialPreview);
     const tongHopErrorMessage = ref('');
 
     const loadTongHopPreview = async (
@@ -65,7 +65,7 @@ export const useTongHopPreviewFlow = () => {
             const response = await axios.post<TongHopPreviewResponse>(
                 previewUrl,
                 {
-                    storedPath: receipt.storedPath,
+                    importBatchId: receipt.importBatch.id,
                 },
                 {
                     headers: {
@@ -87,7 +87,7 @@ export const useTongHopPreviewFlow = () => {
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.storedPath?.[0]
+                    error.response?.data?.errors?.importBatchId?.[0]
                     ?? error.response?.data?.errors?.tongHop?.[0]
                     ?? error.response?.data?.message;
 

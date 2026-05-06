@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,12 +40,12 @@ class ImportsCamCaPreviewTest extends TestCase
                 'file' => $uploadedWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-cam-ca'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -76,6 +77,17 @@ class ImportsCamCaPreviewTest extends TestCase
         $this->assertCamCaRecord16068($records);
         $this->assertCamCaRecord90006($records);
         $this->assertCamCaRecord90182Ts($records);
+
+        $this->assertDatabaseHas('import_batch_sheet_records', [
+            'import_batch_id' => $importBatchId,
+            'sheet_name' => 'Cám cá',
+            'customer_code' => '16068',
+            'row_number' => 2,
+            'customer_type_inferred' => 'Khách thường',
+        ]);
+
+        $batch = ImportBatch::query()->findOrFail($importBatchId);
+        $this->assertIsArray($batch->workbook_summary['sheetPreviews']['Cám cá'] ?? null);
     }
 
     public function test_guest_cannot_preview_cam_ca_without_manage_permission(): void
@@ -85,7 +97,7 @@ class ImportsCamCaPreviewTest extends TestCase
         $this->actingAs($guest)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-cam-ca'), [
-                'storedPath' => 'imports/tmp/fake.xlsx',
+                'importBatchId' => 999999,
             ])
             ->assertForbidden();
     }
@@ -105,12 +117,12 @@ class ImportsCamCaPreviewTest extends TestCase
                 'file' => $invalidWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-cam-ca'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -127,6 +139,7 @@ class ImportsCamCaPreviewTest extends TestCase
         $record = $records->get('16068');
 
         $this->assertNotNull($record);
+        $this->assertSame(2, $record['rowNumber']);
         $this->assertSame('16068 - Công ty TNHH TM DV Thắng Giang', $record['customerFullName']);
         $this->assertSame('128500', $record['totalQuantity']);
         $this->assertSame('2479904400', $record['revenue']);
@@ -156,6 +169,7 @@ class ImportsCamCaPreviewTest extends TestCase
         $record = $records->get('90006');
 
         $this->assertNotNull($record);
+        $this->assertSame(3, $record['rowNumber']);
         $this->assertSame([], $record['programItems']);
         $this->assertSame([
             ['label' => 'Thưởng sản lượng tháng 03.2026', 'value' => '1870000'],
@@ -173,6 +187,7 @@ class ImportsCamCaPreviewTest extends TestCase
         $record = $records->get('90182TS');
 
         $this->assertNotNull($record);
+        $this->assertSame(4, $record['rowNumber']);
         $this->assertCount(3, $record['programItems']);
         $this->assertSame([1, 2, 3], array_column($record['programItems'], 'programIndex'));
         $this->assertSame('Giảm trừ chiết khấu 8 tấn hàng gửi không lấy đúng hạn', $record['programItems'][0]['content']);

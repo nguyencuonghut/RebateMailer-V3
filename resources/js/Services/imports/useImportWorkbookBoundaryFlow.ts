@@ -15,6 +15,11 @@ export type ImportWorkbookBoundaryActionConfig = {
 
 export type ImportWorkbookBoundary = {
     storedPath: string;
+    importBatch?: {
+        id: number;
+        batchCode: string;
+        status: string;
+    };
     contract: {
         version: string;
         stage: string;
@@ -48,10 +53,10 @@ type AnalyzeWorkbookResponse = {
     errors?: Record<string, string[]>;
 };
 
-export const useImportWorkbookBoundaryFlow = () => {
+export const useImportWorkbookBoundaryFlow = (initialWorkbookBoundary: ImportWorkbookBoundary | null = null) => {
     const toast = useToast();
     const isAnalyzingWorkbook = ref(false);
-    const workbookBoundary = ref<ImportWorkbookBoundary | null>(null);
+    const workbookBoundary = ref<ImportWorkbookBoundary | null>(initialWorkbookBoundary);
     const analysisErrorMessage = ref('');
 
     const analyzeWorkbook = async (
@@ -69,7 +74,7 @@ export const useImportWorkbookBoundaryFlow = () => {
             const response = await axios.post<AnalyzeWorkbookResponse>(
                 analyzeUrl,
                 {
-                    storedPath: receipt.storedPath,
+                    importBatchId: receipt.importBatch.id,
                 },
                 {
                     headers: {
@@ -80,6 +85,11 @@ export const useImportWorkbookBoundaryFlow = () => {
 
             workbookBoundary.value = response.data.data;
             analysisErrorMessage.value = '';
+            if (response.data.data.importBatch) {
+                receipt.importBatch.id = response.data.data.importBatch.id;
+                receipt.importBatch.batchCode = response.data.data.importBatch.batchCode;
+                receipt.importBatch.status = response.data.data.importBatch.status;
+            }
 
             toast.add({
                 severity: response.data.toast.severity,
@@ -92,7 +102,7 @@ export const useImportWorkbookBoundaryFlow = () => {
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.storedPath?.[0]
+                    error.response?.data?.errors?.importBatchId?.[0]
                     ?? error.response?.data?.errors?.workbook?.[0]
                     ?? error.response?.data?.message;
 

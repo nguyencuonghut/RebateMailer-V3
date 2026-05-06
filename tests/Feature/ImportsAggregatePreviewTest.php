@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,12 +40,12 @@ class ImportsAggregatePreviewTest extends TestCase
                 'file' => $uploadedWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-aggregated'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse
@@ -62,6 +63,63 @@ class ImportsAggregatePreviewTest extends TestCase
         $this->assertAggregatedRecord16068($records);
         $this->assertAggregatedRecord90182Ts($records);
         $this->assertAggregatedRecord11008($records);
+
+        $this->assertDatabaseHas('import_batch_aggregated_records', [
+            'import_batch_id' => $importBatchId,
+            'customer_code' => '90300',
+            'customer_type' => 'Khách thường',
+        ]);
+
+        $this->assertDatabaseHas('import_batch_aggregated_records', [
+            'import_batch_id' => $importBatchId,
+            'customer_code' => '11008',
+            'customer_type' => 'Key Account',
+        ]);
+
+        $batch = ImportBatch::query()->findOrFail($importBatchId);
+        $this->assertSame('aggregated', $batch->status);
+        $this->assertIsArray($batch->workbook_summary['aggregatePreview'] ?? null);
+    }
+
+    public function test_aggregate_preview_can_be_read_back_from_db_after_temporary_file_is_deleted(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        $uploadedWorkbook = new UploadedFile(
+            base_path('data/Data import chuẩn_Final.xlsx'),
+            'Data import chuẩn_Final.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $uploadResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.upload'), [
+                'file' => $uploadedWorkbook,
+            ]);
+
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
+        $storedPath = $uploadResponse->json('data.storedPath');
+
+        $firstPreviewResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.preview-aggregated'), [
+                'importBatchId' => $importBatchId,
+            ]);
+
+        $firstPreviewResponse->assertOk();
+        Storage::disk('local')->delete($storedPath);
+
+        $secondPreviewResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.preview-aggregated'), [
+                'importBatchId' => $importBatchId,
+            ]);
+
+        $secondPreviewResponse
+            ->assertOk()
+            ->assertJsonPath('data.summary.totalCustomerCount', $firstPreviewResponse->json('data.summary.totalCustomerCount'))
+            ->assertJsonPath('data.records.0.customerCode', $firstPreviewResponse->json('data.records.0.customerCode'));
     }
 
     public function test_guest_cannot_preview_aggregator_without_manage_permission(): void
@@ -71,7 +129,7 @@ class ImportsAggregatePreviewTest extends TestCase
         $this->actingAs($guest)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-aggregated'), [
-                'storedPath' => 'imports/tmp/fake.xlsx',
+                'importBatchId' => 999999,
             ])
             ->assertForbidden();
     }
@@ -91,12 +149,12 @@ class ImportsAggregatePreviewTest extends TestCase
                 'file' => $invalidWorkbook,
             ]);
 
-        $storedPath = $uploadResponse->json('data.storedPath');
+        $importBatchId = $uploadResponse->json('data.importBatch.id');
 
         $previewResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.preview-aggregated'), [
-                'storedPath' => $storedPath,
+                'importBatchId' => $importBatchId,
             ]);
 
         $previewResponse

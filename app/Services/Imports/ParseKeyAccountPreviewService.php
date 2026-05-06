@@ -123,7 +123,8 @@ class ParseKeyAccountPreviewService
                 continue;
             }
 
-            $record = $this->buildRecord($row, $headers, $discreteHeaders, $programBlocks, $sharedStrings);
+            $excelRowNumber = $this->extractRowNumber($row, $rowIndex + 1);
+            $record = $this->buildRecord($row, $headers, $discreteHeaders, $programBlocks, $sharedStrings, $excelRowNumber);
 
             if ($record === null) {
                 $rowIndex++;
@@ -158,6 +159,7 @@ class ParseKeyAccountPreviewService
         array $discreteHeaders,
         array $programBlocks,
         array $sharedStrings,
+        int $rowNumber,
     ): ?array {
         $indexedValues = $this->extractIndexedRowValues($row, $sharedStrings);
         $rowValues = [];
@@ -218,6 +220,7 @@ class ParseKeyAccountPreviewService
         }
 
         return [
+            'rowNumber' => $rowNumber,
             'stt' => $rowValues['STT'] ?? '',
             'month' => $rowValues['Tháng'] ?? '',
             'customerCode' => $customerCode,
@@ -233,6 +236,13 @@ class ParseKeyAccountPreviewService
             'programItems' => $programItems,
             'discreteItems' => $discreteItems,
         ];
+    }
+
+    private function extractRowNumber(SimpleXMLElement $row, int $fallback): int
+    {
+        $rowNumber = (int) ($row['r'] ?? 0);
+
+        return $rowNumber > 0 ? $rowNumber : $fallback;
     }
 
     /**

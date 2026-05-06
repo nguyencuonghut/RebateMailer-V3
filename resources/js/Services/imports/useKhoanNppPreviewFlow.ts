@@ -42,10 +42,10 @@ type KhoanNppPreviewResponse = {
     errors?: Record<string, string[]>;
 };
 
-export const useKhoanNppPreviewFlow = () => {
+export const useKhoanNppPreviewFlow = (initialPreview: KhoanNppPreview | null = null) => {
     const toast = useToast();
     const isLoadingKhoanNppPreview = ref(false);
-    const khoanNppPreview = ref<KhoanNppPreview | null>(null);
+    const khoanNppPreview = ref<KhoanNppPreview | null>(initialPreview);
     const khoanNppErrorMessage = ref('');
 
     const loadKhoanNppPreview = async (
@@ -63,7 +63,7 @@ export const useKhoanNppPreviewFlow = () => {
             const response = await axios.post<KhoanNppPreviewResponse>(
                 previewUrl,
                 {
-                    storedPath: receipt.storedPath,
+                    importBatchId: receipt.importBatch.id,
                 },
                 {
                     headers: {
@@ -85,7 +85,7 @@ export const useKhoanNppPreviewFlow = () => {
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.storedPath?.[0]
+                    error.response?.data?.errors?.importBatchId?.[0]
                     ?? error.response?.data?.errors?.khoanNpp?.[0]
                     ?? error.response?.data?.message;
 

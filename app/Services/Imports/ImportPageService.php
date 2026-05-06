@@ -2,13 +2,29 @@
 
 namespace App\Services\Imports;
 
+use App\Models\ImportBatch;
+use Illuminate\Support\Facades\Storage;
+
 class ImportPageService
 {
+    public function __construct(
+        private readonly ReadPersistedSheetPreviewService $readPersistedSheetPreviewService,
+        private readonly ReadPersistedAggregatePreviewService $readPersistedAggregatePreviewService,
+    ) {
+    }
+
     /**
      * @return array<string, mixed>
      */
-    public function getIndexPageData(bool $canManageImports): array
+    public function getIndexPageData(bool $canManageImports, ?int $selectedBatchId = null): array
     {
+        $selectedBatch = $selectedBatchId === null
+            ? null
+            : ImportBatch::query()
+                ->with(['uploader'])
+                ->withCount(['sheetRecords', 'aggregatedRecords'])
+                ->find($selectedBatchId);
+
         return [
             'title' => 'Import dữ liệu',
             'description' => 'Khu vực tiếp nhận file Excel chiết khấu hàng tháng và chuẩn bị cho luồng preview dữ liệu rebate.',
@@ -50,6 +66,100 @@ class ImportPageService
                 'detail' => 'Bạn có thể tải file Excel lên, đọc workbook và mở preview aggregator theo Mã số.',
                 'life' => 4000,
             ],
+            'activeBatchId' => $selectedBatch?->getKey(),
+            'initialUploadReceipt' => $selectedBatch ? $this->buildInitialUploadReceipt($selectedBatch) : null,
+            'initialWorkbookBoundary' => $selectedBatch ? $this->buildInitialWorkbookBoundary($selectedBatch) : null,
+            'initialTongHopPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Tổng hợp') : null,
+            'initialKhoanNppPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Khoán NPP') : null,
+            'initialCamCaPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Cám cá') : null,
+            'initialKeyAccountPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Key Account') : null,
+            'initialAggregatePreview' => $selectedBatch ? $this->readPersistedAggregatePreviewService->read($selectedBatch) : null,
+            'importHistory' => $this->buildImportHistory(),
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildImportHistory(): array
+    {
+        return ImportBatch::query()
+            ->with(['uploader'])
+            ->withCount(['sheetRecords', 'aggregatedRecords'])
+            ->orderByDesc('started_at')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get()
+            ->map(fn (ImportBatch $importBatch): array => [
+                'id' => $importBatch->getKey(),
+                'batchCode' => $importBatch->batch_code,
+                'originalFileName' => $importBatch->original_file_name,
+                'status' => $importBatch->status,
+                'uploadedBy' => $importBatch->uploader?->name ?? 'Không xác định',
+                'uploadedAt' => $this->formatBatchTimestamp($importBatch),
+                'parsedRecordCount' => $importBatch->sheet_records_count,
+                'aggregatedRecordCount' => $importBatch->aggregated_records_count,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildInitialUploadReceipt(ImportBatch $importBatch): array
+    {
+        $fileSize = null;
+
+        if ($importBatch->stored_path !== '' && Storage::disk('local')->exists($importBatch->stored_path)) {
+            $fileSize = Storage::disk('local')->size($importBatch->stored_path);
+        }
+
+        return [
+            'originalFileName' => $importBatch->original_file_name,
+            'size' => $fileSize,
+            'storedPath' => $importBatch->stored_path,
+            'uploadedAt' => optional($importBatch->started_at)->toIso8601String(),
+            'importBatch' => [
+                'id' => $importBatch->getKey(),
+                'batchCode' => $importBatch->batch_code,
+                'status' => $importBatch->status,
+            ],
+            'nextStep' => 'Bạn đang xem lại một batch import đã được lưu trong hệ thống.',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function buildInitialWorkbookBoundary(ImportBatch $importBatch): ?array
+    {
+        $workbookSummary = $importBatch->workbook_summary ?? [];
+
+        if (! isset($workbookSummary['contract']) || ! isset($workbookSummary['sheets'])) {
+            return null;
+        }
+
+        return [
+            'storedPath' => $importBatch->stored_path,
+            'importBatch' => [
+                'id' => $importBatch->getKey(),
+                'batchCode' => $importBatch->batch_code,
+                'status' => $importBatch->status,
+            ],
+            'contract' => $workbookSummary['contract'],
+            'summary' => $workbookSummary['summary'] ?? [],
+            'expectedSheets' => $workbookSummary['expectedSheets'] ?? [],
+            'detectedSheets' => $workbookSummary['detectedSheets'] ?? [],
+            'missingSheets' => $workbookSummary['missingSheets'] ?? [],
+            'unexpectedSheets' => $workbookSummary['unexpectedSheets'] ?? [],
+            'sheets' => $workbookSummary['sheets'] ?? [],
+            'nextStep' => $workbookSummary['nextStep'] ?? null,
+        ];
+    }
+
+    private function formatBatchTimestamp(ImportBatch $importBatch): ?string
+    {
+        return optional($importBatch->started_at)->toIso8601String();
     }
 }

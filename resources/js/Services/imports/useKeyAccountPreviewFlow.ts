@@ -53,10 +53,13 @@ type KeyAccountPreviewResponse = {
     errors?: Record<string, string[]>;
 };
 
-export const useKeyAccountPreviewFlow = (workbookBoundary: { value: ImportWorkbookBoundary | null }) => {
+export const useKeyAccountPreviewFlow = (
+    workbookBoundary: { value: ImportWorkbookBoundary | null },
+    initialPreview: KeyAccountPreview | null = null,
+) => {
     const toast = useToast();
     const isLoadingKeyAccountPreview = ref(false);
-    const keyAccountPreview = ref<KeyAccountPreview | null>(null);
+    const keyAccountPreview = ref<KeyAccountPreview | null>(initialPreview);
     const keyAccountErrorMessage = ref('');
 
     const canPreviewKeyAccount = computed(() =>
@@ -78,7 +81,7 @@ export const useKeyAccountPreviewFlow = (workbookBoundary: { value: ImportWorkbo
             const response = await axios.post<KeyAccountPreviewResponse>(
                 previewUrl,
                 {
-                    storedPath: receipt.storedPath,
+                    importBatchId: receipt.importBatch.id,
                 },
                 {
                     headers: {
@@ -100,7 +103,7 @@ export const useKeyAccountPreviewFlow = (workbookBoundary: { value: ImportWorkbo
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.storedPath?.[0]
+                    error.response?.data?.errors?.importBatchId?.[0]
                     ?? error.response?.data?.errors?.keyAccount?.[0]
                     ?? error.response?.data?.message;
 

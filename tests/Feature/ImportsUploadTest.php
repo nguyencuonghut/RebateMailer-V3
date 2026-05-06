@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ImportBatch;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,12 +43,24 @@ class ImportsUploadTest extends TestCase
             ->assertJsonPath('message', 'Tải file lên thành công.')
             ->assertJsonPath('toast.summary', 'Tải file thành công')
             ->assertJsonPath('data.originalFileName', 'Data import chuẩn_Final.xlsx')
-            ->assertJsonPath('data.size', $file->getSize());
+            ->assertJsonPath('data.size', $file->getSize())
+            ->assertJsonPath('data.importBatch.status', 'uploaded');
 
         $storedPath = $response->json('data.storedPath');
+        $batchId = $response->json('data.importBatch.id');
 
         $this->assertNotEmpty($storedPath);
+        $this->assertNotEmpty($batchId);
         Storage::disk('local')->assertExists($storedPath);
+
+        $batch = ImportBatch::query()->findOrFail($batchId);
+
+        $this->assertSame('Data import chuẩn_Final.xlsx', $batch->original_file_name);
+        $this->assertSame($storedPath, $batch->stored_path);
+        $this->assertSame($user->id, $batch->uploaded_by);
+        $this->assertSame('uploaded', $batch->status);
+        $this->assertNotNull($batch->started_at);
+        $this->assertNotEmpty($response->json('data.importBatch.batchCode'));
     }
 
     public function test_guest_role_cannot_upload_import_file_without_manage_permission(): void
