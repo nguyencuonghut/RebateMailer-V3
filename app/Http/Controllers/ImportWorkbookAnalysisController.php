@@ -4,20 +4,40 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Imports\AnalyzeWorkbookBoundaryRequest;
 use App\Services\Imports\AnalyzeWorkbookBoundaryService;
+use App\Services\Imports\BuildWorkbookBoundaryPayloadService;
 use Illuminate\Http\JsonResponse;
+use RuntimeException;
 
 class ImportWorkbookAnalysisController extends Controller
 {
     public function __construct(
         private readonly AnalyzeWorkbookBoundaryService $analyzeWorkbookBoundaryService,
+        private readonly BuildWorkbookBoundaryPayloadService $buildWorkbookBoundaryPayloadService,
     ) {
     }
 
     public function store(AnalyzeWorkbookBoundaryRequest $request): JsonResponse
     {
-        $workbookBoundary = $this->analyzeWorkbookBoundaryService->analyze(
-            $request->string('storedPath')->toString(),
-        );
+        try {
+            $analysis = $this->analyzeWorkbookBoundaryService->analyze(
+                $request->string('storedPath')->toString(),
+            );
+            $workbookBoundary = $this->buildWorkbookBoundaryPayloadService->build($analysis);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+                'toast' => [
+                    'severity' => 'error',
+                    'summary' => 'Không thể đọc workbook',
+                    'detail' => $exception->getMessage(),
+                    'life' => 4000,
+                ],
+                'errors' => [
+                    'workbook' => [$exception->getMessage()],
+                ],
+            ], 422);
+        }
 
         return response()->json([
             'status' => 'ok',

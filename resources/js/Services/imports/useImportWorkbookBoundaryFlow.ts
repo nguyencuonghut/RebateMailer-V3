@@ -15,28 +15,44 @@ export type ImportWorkbookBoundaryActionConfig = {
 
 export type ImportWorkbookBoundary = {
     storedPath: string;
-    sheetCount: number;
+    contract: {
+        version: string;
+        stage: string;
+        expectedSheetCount: number;
+    };
+    summary: {
+        detectedSheetCount: number;
+        missingSheetCount: number;
+        unexpectedSheetCount: number;
+    };
     expectedSheets: string[];
     detectedSheets: string[];
     missingSheets: string[];
     unexpectedSheets: string[];
-    headerRowBySheet: Record<string, string[]>;
-    dataRowCountBySheet: Record<string, number>;
-    emptyStateBySheet: Record<string, boolean>;
+    sheets: Array<{
+        name: string;
+        present: boolean;
+        missing: boolean;
+        headerRow: string[];
+        dataRowCount: number;
+        isEmpty: boolean;
+    }>;
     nextStep: string;
 };
 
 type AnalyzeWorkbookResponse = {
-    status: 'ok';
+    status: 'ok' | 'error';
     message: string;
     toast: ImportPageToast;
     data: ImportWorkbookBoundary;
+    errors?: Record<string, string[]>;
 };
 
 export const useImportWorkbookBoundaryFlow = () => {
     const toast = useToast();
     const isAnalyzingWorkbook = ref(false);
     const workbookBoundary = ref<ImportWorkbookBoundary | null>(null);
+    const analysisErrorMessage = ref('');
 
     const analyzeWorkbook = async (
         receipt: ImportUploadReceipt | null,
@@ -47,6 +63,7 @@ export const useImportWorkbookBoundaryFlow = () => {
         }
 
         isAnalyzingWorkbook.value = true;
+        analysisErrorMessage.value = '';
 
         try {
             const response = await axios.post<AnalyzeWorkbookResponse>(
@@ -62,6 +79,7 @@ export const useImportWorkbookBoundaryFlow = () => {
             );
 
             workbookBoundary.value = response.data.data;
+            analysisErrorMessage.value = '';
 
             toast.add({
                 severity: response.data.toast.severity,
@@ -73,9 +91,14 @@ export const useImportWorkbookBoundaryFlow = () => {
             return null;
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                const backendMessage = error.response?.data?.errors?.storedPath?.[0];
+                const backendMessage =
+                    error.response?.data?.errors?.storedPath?.[0]
+                    ?? error.response?.data?.errors?.workbook?.[0]
+                    ?? error.response?.data?.message;
 
                 if (backendMessage) {
+                    analysisErrorMessage.value = backendMessage;
+
                     toast.add({
                         severity: 'error',
                         summary: 'Không thể đọc workbook',
@@ -88,6 +111,7 @@ export const useImportWorkbookBoundaryFlow = () => {
             }
 
             const fallbackMessage = 'Đọc cấu trúc workbook thất bại. Vui lòng thử lại.';
+            analysisErrorMessage.value = fallbackMessage;
 
             toast.add({
                 severity: 'error',
@@ -103,16 +127,18 @@ export const useImportWorkbookBoundaryFlow = () => {
     };
 
     const analysisStatusText = computed(() =>
-        workbookBoundary.value ? 'Đã đọc workbook' : 'Chưa đọc workbook',
+        workbookBoundary.value ? 'Đã đọc workbook' : analysisErrorMessage.value ? 'Phân tích thất bại' : 'Chưa đọc workbook',
     );
 
     const resetWorkbookBoundary = (): void => {
         workbookBoundary.value = null;
+        analysisErrorMessage.value = '';
     };
 
     return {
         isAnalyzingWorkbook,
         workbookBoundary,
+        analysisErrorMessage,
         analysisStatusText,
         analyzeWorkbook,
         resetWorkbookBoundary,

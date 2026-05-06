@@ -22,7 +22,7 @@ const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, c
     props.uploadPolicy.acceptedExtension,
 );
 const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow();
-const { isAnalyzingWorkbook, workbookBoundary, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow();
+const { isAnalyzingWorkbook, workbookBoundary, analysisErrorMessage, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow();
 
 const submitUpload = async (): Promise<void> => {
     resetWorkbookBoundary();
@@ -142,7 +142,7 @@ const prepareWorkbookBoundary = async (): Promise<void> => {
 
                 <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
                     <template #title>
-                        Preview receipt upload
+                        Preview workbook boundary
                     </template>
                     <template #content>
                         <ImportPreviewShell
@@ -151,6 +151,7 @@ const prepareWorkbookBoundary = async (): Promise<void> => {
                             :analysis-prep="analysisPrep"
                             :workbook-boundary="workbookBoundary"
                             :is-analyzing-workbook="isAnalyzingWorkbook"
+                            :analysis-error-message="analysisErrorMessage"
                             :analysis-status-text="analysisStatusText"
                             @prepare-analysis="prepareWorkbookBoundary"
                         />

@@ -13,8 +13,8 @@ class ImportPageService
             'title' => 'Import dữ liệu',
             'description' => 'Khu vực tiếp nhận file Excel chiết khấu hàng tháng và chuẩn bị cho luồng preview dữ liệu rebate.',
             'currentSlice' => [
-                'code' => '1.2-E',
-                'label' => 'Đếm số dòng dữ liệu và nhận diện sheet rỗng',
+                'code' => '1.2-I',
+                'label' => 'Chốt smoke test cho Workbook Boundary',
             ],
             'canManageImports' => $canManageImports,
             'uploadPolicy' => [
@@ -28,26 +28,26 @@ class ImportPageService
                 'Key Account',
             ],
             'nextSlice' => [
-                'code' => '1.2-F',
-                'label' => 'Chuẩn hóa preview workbook boundary trên UI',
+                'code' => '1.3',
+                'label' => 'Parser - Sheet Tổng hợp',
             ],
             'analysisPrep' => [
                 'actionLabel' => 'Đọc cấu trúc workbook',
-                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook để xem danh sách sheet, header line 1 và số dòng dữ liệu của từng sheet import hợp lệ.',
-                'readyTitle' => 'Đọc workbook, header và số dòng dữ liệu',
-                'readyDescription' => 'Workbook đã được phân tích thành công. Khu vực preview bên dưới đang hiển thị sheet hợp lệ, header line 1, số dòng dữ liệu và trạng thái rỗng của từng sheet import.',
+                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook trên boundary đã ổn định và verify được bằng smoke test trước khi đi sang parser sheet Tổng hợp.',
+                'readyTitle' => 'Workbook Boundary đã sẵn sàng bàn giao cho Task 1.3',
+                'readyDescription' => 'Workbook đã được phân tích thành công. Boundary hiện tại đã có smoke test cho happy path và failure path, đủ an toàn để chuyển sang parser sheet Tổng hợp.',
                 'statusLabel' => 'Chưa đọc workbook',
                 'toast' => [
                     'severity' => 'success',
                     'summary' => 'Đọc workbook thành công',
-                    'detail' => 'Hệ thống đã đọc được danh sách sheet, header line 1 và số dòng dữ liệu của các sheet import hợp lệ.',
+                    'detail' => 'Hệ thống đã khóa xong Workbook Boundary và sẵn sàng chuyển sang parser sheet Tổng hợp.',
                     'life' => 4000,
                 ],
             ],
             'toast' => [
                 'severity' => 'info',
                 'summary' => 'Khu vực import đã sẵn sàng',
-                'detail' => 'Bạn có thể tải file Excel lên và xem ngay số dòng dữ liệu của các sheet import hợp lệ.',
+                'detail' => 'Bạn có thể tải file Excel lên và xác nhận Workbook Boundary đã sẵn sàng để chuyển sang Task 1.3.',
                 'life' => 4000,
             ],
         ];

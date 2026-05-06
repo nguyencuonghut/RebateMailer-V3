@@ -104,7 +104,7 @@ class AnalyzeWorkbookBoundaryService
             'headerRowBySheet' => $headerRowBySheet,
             'dataRowCountBySheet' => $dataRowCountBySheet,
             'emptyStateBySheet' => $emptyStateBySheet,
-            'nextStep' => 'Workbook đã được nhận diện. Bước kế tiếp sẽ chuẩn hóa preview workbook boundary trên UI.',
+            'nextStep' => 'Workbook boundary contract đã được khóa. Các task parser tiếp theo sẽ chỉ cần mở rộng dữ liệu cho từng sheet hợp lệ.',
         ];
     }
 

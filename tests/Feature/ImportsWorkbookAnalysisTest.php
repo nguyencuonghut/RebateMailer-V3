@@ -51,7 +51,11 @@ class ImportsWorkbookAnalysisTest extends TestCase
             ->assertJsonPath('status', 'ok')
             ->assertJsonPath('message', 'Đã đọc cấu trúc workbook thành công.')
             ->assertJsonPath('toast.summary', 'Đọc workbook thành công')
-            ->assertJsonPath('data.sheetCount', 5)
+            ->assertJsonPath('data.contract.version', '1.2-H')
+            ->assertJsonPath('data.contract.stage', 'workbook-boundary')
+            ->assertJsonPath('data.summary.detectedSheetCount', 5)
+            ->assertJsonPath('data.summary.missingSheetCount', 0)
+            ->assertJsonPath('data.summary.unexpectedSheetCount', 1)
             ->assertJsonPath('data.expectedSheets.0', 'Tổng hợp')
             ->assertJsonPath('data.expectedSheets.1', 'Khoán NPP')
             ->assertJsonPath('data.expectedSheets.2', 'Cám cá')
@@ -63,24 +67,28 @@ class ImportsWorkbookAnalysisTest extends TestCase
             ->assertJsonPath('data.detectedSheets.4', 'Template Mail')
             ->assertJsonPath('data.missingSheets', [])
             ->assertJsonPath('data.unexpectedSheets.0', 'Template Mail')
-            ->assertJsonPath('data.headerRowBySheet.Tổng hợp.0', 'STT')
-            ->assertJsonPath('data.headerRowBySheet.Tổng hợp.1', 'Tháng')
-            ->assertJsonPath('data.headerRowBySheet.Tổng hợp.2', 'Mã số')
-            ->assertJsonPath('data.headerRowBySheet.Khoán NPP.9', 'Nội dung CT 1')
-            ->assertJsonPath('data.headerRowBySheet.Cám cá.10', 'CT1')
-            ->assertJsonPath('data.headerRowBySheet.Key Account.16', 'Nội dung CT 1');
+            ->assertJsonPath('data.sheets.0.name', 'Tổng hợp')
+            ->assertJsonPath('data.sheets.0.present', true)
+            ->assertJsonPath('data.sheets.0.missing', false)
+            ->assertJsonPath('data.sheets.0.headerRow.0', 'STT')
+            ->assertJsonPath('data.sheets.0.headerRow.1', 'Tháng')
+            ->assertJsonPath('data.sheets.0.headerRow.2', 'Mã số')
+            ->assertJsonPath('data.sheets.1.headerRow.9', 'Nội dung CT 1')
+            ->assertJsonPath('data.sheets.2.headerRow.10', 'CT1')
+            ->assertJsonPath('data.sheets.3.headerRow.16', 'Nội dung CT 1');
 
         $payload = $analysisResponse->json('data');
 
-        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Tổng hợp']);
-        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Khoán NPP']);
-        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Cám cá']);
-        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Key Account']);
+        $this->assertCount(4, $payload['sheets']);
+        $this->assertGreaterThan(0, $payload['sheets'][0]['dataRowCount']);
+        $this->assertGreaterThan(0, $payload['sheets'][1]['dataRowCount']);
+        $this->assertGreaterThan(0, $payload['sheets'][2]['dataRowCount']);
+        $this->assertGreaterThan(0, $payload['sheets'][3]['dataRowCount']);
 
-        $this->assertFalse($payload['emptyStateBySheet']['Tổng hợp']);
-        $this->assertFalse($payload['emptyStateBySheet']['Khoán NPP']);
-        $this->assertFalse($payload['emptyStateBySheet']['Cám cá']);
-        $this->assertFalse($payload['emptyStateBySheet']['Key Account']);
+        $this->assertFalse($payload['sheets'][0]['isEmpty']);
+        $this->assertFalse($payload['sheets'][1]['isEmpty']);
+        $this->assertFalse($payload['sheets'][2]['isEmpty']);
+        $this->assertFalse($payload['sheets'][3]['isEmpty']);
     }
 
     public function test_guest_cannot_analyze_workbook_without_manage_permission(): void
@@ -113,5 +121,35 @@ class ImportsWorkbookAnalysisTest extends TestCase
             'Không tìm thấy file upload tạm để đọc workbook.',
             $response->json('errors.storedPath.0'),
         );
+    }
+
+    public function test_analyze_workbook_returns_structured_error_for_invalid_excel_content(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        $invalidWorkbook = UploadedFile::fake()->create(
+            'broken.xlsx',
+            32,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        $uploadResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.upload'), [
+                'file' => $invalidWorkbook,
+            ]);
+
+        $storedPath = $uploadResponse->json('data.storedPath');
+
+        $analysisResponse = $this->actingAs($user)
+            ->withHeader('Accept', 'application/json')
+            ->post(route('imports.analyze-workbook'), [
+                'storedPath' => $storedPath,
+            ]);
+
+        $analysisResponse
+            ->assertUnprocessable()
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('toast.summary', 'Không thể đọc workbook')
+            ->assertJsonPath('errors.workbook.0', 'Không tìm thấy cấu trúc workbook trong file Excel.');
     }
 }
