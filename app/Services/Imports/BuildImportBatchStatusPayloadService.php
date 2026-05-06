@@ -6,6 +6,11 @@ use App\Models\ImportBatch;
 
 class BuildImportBatchStatusPayloadService
 {
+    public function __construct(
+        private readonly PresentImportProcessingErrorService $presentImportProcessingErrorService,
+    ) {
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -14,7 +19,9 @@ class BuildImportBatchStatusPayloadService
         $batch = $importBatch->fresh()->loadCount(['sheetRecords', 'aggregatedRecords']);
         $workbookSummary = $batch->workbook_summary ?? [];
         $status = (string) $batch->status;
-        $processingError = $workbookSummary['processingError']['message'] ?? null;
+        $processingError = isset($workbookSummary['processingError']['message'])
+            ? $this->presentImportProcessingErrorService->presentMessage($workbookSummary['processingError']['message'])
+            : null;
         $isCompleted = in_array($status, ['aggregated', 'validated_ready', 'validated_with_warnings'], true);
         $isFailed = $status === 'failed';
 

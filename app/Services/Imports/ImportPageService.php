@@ -10,6 +10,7 @@ class ImportPageService
     public function __construct(
         private readonly ReadPersistedSheetPreviewService $readPersistedSheetPreviewService,
         private readonly ReadPersistedAggregatePreviewService $readPersistedAggregatePreviewService,
+        private readonly PresentImportProcessingErrorService $presentImportProcessingErrorService,
     ) {
     }
 
@@ -175,6 +176,8 @@ class ImportPageService
     {
         $message = $importBatch->workbook_summary['processingError']['message'] ?? null;
 
-        return is_string($message) && $message !== '' ? $message : null;
+        return is_string($message) && $message !== ''
+            ? $this->presentImportProcessingErrorService->presentMessage($message)
+            : null;
     }
 }

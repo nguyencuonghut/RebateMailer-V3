@@ -193,8 +193,13 @@ const loadAggregateTab = async (): Promise<void> => {
             }"
             :pt="{
                 root: { class: '!top-24 md:!top-28 !right-4 md:!right-6' },
-                message: { class: 'max-w-[32rem]' },
-                detail: { class: 'break-words leading-6' },
+                message: { class: 'import-page-toast max-w-[32rem] !rounded-[1.4rem] !border !shadow-[0_24px_60px_rgba(15,23,42,0.55)]' },
+                messageContent: { class: '!items-start !gap-3 !px-5 !py-4' },
+                messageText: { class: '!gap-2' },
+                summary: { class: '!text-base !font-semibold !leading-6' },
+                detail: { class: '!mt-1 !text-sm !font-medium !leading-7 break-words' },
+                closeButton: { class: 'hover:!bg-white/10' },
+                closeIcon: { class: '!text-base' },
             }"
         />
 
@@ -326,3 +331,41 @@ const loadAggregateTab = async (): Promise<void> => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.import-page-toast.p-toast-message-success) {
+    border-color: rgb(16 185 129) !important;
+    background: linear-gradient(180deg, rgb(220 252 231), rgb(209 250 229)) !important;
+    color: rgb(6 78 59) !important;
+}
+
+:deep(.import-page-toast.p-toast-message-error) {
+    border-color: rgb(248 113 113) !important;
+    background: linear-gradient(180deg, rgb(127 29 29), rgb(69 10 10)) !important;
+    color: rgb(255 255 255) !important;
+}
+
+:deep(.import-page-toast.p-toast-message-warn) {
+    border-color: rgb(251 191 36) !important;
+    background: linear-gradient(180deg, rgb(120 53 15), rgb(113 63 18)) !important;
+    color: rgb(255 255 255) !important;
+}
+
+:deep(.import-page-toast.p-toast-message-success .p-toast-summary),
+:deep(.import-page-toast.p-toast-message-success .p-toast-detail),
+:deep(.import-page-toast.p-toast-message-success .p-toast-close-button),
+:deep(.import-page-toast.p-toast-message-success .p-toast-message-icon) {
+    color: rgb(6 78 59) !important;
+}
+
+:deep(.import-page-toast.p-toast-message-error .p-toast-summary),
+:deep(.import-page-toast.p-toast-message-error .p-toast-detail),
+:deep(.import-page-toast.p-toast-message-error .p-toast-close-button),
+:deep(.import-page-toast.p-toast-message-error .p-toast-message-icon),
+:deep(.import-page-toast.p-toast-message-warn .p-toast-summary),
+:deep(.import-page-toast.p-toast-message-warn .p-toast-detail),
+:deep(.import-page-toast.p-toast-message-warn .p-toast-close-button),
+:deep(.import-page-toast.p-toast-message-warn .p-toast-message-icon) {
+    color: rgb(255 255 255) !important;
+}
+</style>

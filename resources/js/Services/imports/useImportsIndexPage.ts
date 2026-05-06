@@ -1,5 +1,6 @@
 import type { AggregatePreview } from './useAggregatePreviewFlow';
 import type { CamCaPreview } from './useCamCaPreviewFlow';
+import { consumeImportBatchTerminalToast } from './useImportBatchStatusMonitor';
 import type { ImportUploadReceipt } from './useImportUploadFlow';
 import type { ImportWorkbookBoundary } from './useImportWorkbookBoundaryFlow';
 import type { KeyAccountPreview } from './useKeyAccountPreviewFlow';
@@ -89,6 +90,19 @@ export const useImportsIndexPage = (props: ImportPageProps) => {
     );
 
     onMounted(() => {
+        const terminalToast = consumeImportBatchTerminalToast();
+
+        if (terminalToast) {
+            toast.add({
+                severity: terminalToast.severity,
+                summary: terminalToast.summary,
+                detail: terminalToast.detail,
+                life: terminalToast.life ?? 5000,
+            });
+
+            return;
+        }
+
         if (!props.toast?.detail) {
             return;
         }

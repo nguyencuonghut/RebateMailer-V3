@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { router } from '@inertiajs/vue3';
-import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { ImportPageToast } from './useImportsIndexPage';
 
@@ -34,9 +33,9 @@ type ImportBatchStatusResponse = {
 };
 
 type TerminalCallback = (payload: ImportBatchStatusResponse['data']) => void;
+const IMPORT_BATCH_TERMINAL_TOAST_KEY = 'import-batch-terminal-toast';
 
 export const useImportBatchStatusMonitor = (initialError: string | null = null) => {
-    const toast = useToast();
     const isPolling = ref(false);
     const processingError = ref(initialError ?? '');
     const currentBatchStatus = ref<string | null>(null);
@@ -64,18 +63,9 @@ export const useImportBatchStatusMonitor = (initialError: string | null = null) 
         currentBatchStatus.value = response.data.importBatch.status;
         processingError.value = response.data.processingError ?? '';
 
-        if (
-            response.toast !== null
-            && lastHandledTerminalStatus.value !== response.data.importBatch.status
-        ) {
+        if (response.toast !== null && lastHandledTerminalStatus.value !== response.data.importBatch.status) {
             lastHandledTerminalStatus.value = response.data.importBatch.status;
-
-            toast.add({
-                severity: response.toast.severity,
-                summary: response.toast.summary,
-                detail: response.toast.detail,
-                life: response.toast.life ?? 5000,
-            });
+            sessionStorage.setItem(IMPORT_BATCH_TERMINAL_TOAST_KEY, JSON.stringify(response.toast));
         }
 
         onTerminal(response.data);
@@ -145,4 +135,20 @@ export const useImportBatchStatusMonitor = (initialError: string | null = null) 
         startMonitoring,
         stopPolling,
     };
+};
+
+export const consumeImportBatchTerminalToast = (): ImportPageToast | null => {
+    const rawValue = sessionStorage.getItem(IMPORT_BATCH_TERMINAL_TOAST_KEY);
+
+    if (!rawValue) {
+        return null;
+    }
+
+    sessionStorage.removeItem(IMPORT_BATCH_TERMINAL_TOAST_KEY);
+
+    try {
+        return JSON.parse(rawValue) as ImportPageToast;
+    } catch {
+        return null;
+    }
 };

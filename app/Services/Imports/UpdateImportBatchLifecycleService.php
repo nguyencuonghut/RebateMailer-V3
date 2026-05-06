@@ -7,6 +7,11 @@ use Throwable;
 
 class UpdateImportBatchLifecycleService
 {
+    public function __construct(
+        private readonly PresentImportProcessingErrorService $presentImportProcessingErrorService,
+    ) {
+    }
+
     public function markQueued(ImportBatch $importBatch): ImportBatch
     {
         $workbookSummary = $importBatch->workbook_summary ?? [];
@@ -38,7 +43,8 @@ class UpdateImportBatchLifecycleService
     {
         $workbookSummary = $importBatch->workbook_summary ?? [];
         $workbookSummary['processingError'] = [
-            'message' => $exception->getMessage(),
+            'message' => $this->presentImportProcessingErrorService->present($exception),
+            'technicalMessage' => $exception->getMessage(),
             'failedAt' => now()->toIso8601String(),
         ];
 
