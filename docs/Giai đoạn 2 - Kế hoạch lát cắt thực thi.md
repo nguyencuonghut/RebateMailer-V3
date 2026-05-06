@@ -1,0 +1,464 @@
+# Giai đoạn 2 - Kế hoạch lát cắt thực thi
+
+**Giai đoạn lớn:** 2 (Slice 2 - Visual Template Builder)  
+**Mục tiêu:** chia nhỏ `Giai đoạn 2` thành các lát cắt rất mỏng, có thể làm tuần tự và test được ngay trên UI  
+**Ngày cập nhật:** 06/05/2026
+
+## 1. Nguồn gốc kế hoạch
+
+- Nguồn tham chiếu gốc:
+  - [Mô tả phần mềm.txt](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/Mô%20tả%20ph%E1%BA%A7n%20m%E1%BB%81m.txt:1)
+  - [SRS.md](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/SRS.md:1)
+- Nguồn đối chiếu:
+  - [Kế hoạch Triển khai (Implementat.md](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docs/K%E1%BA%BF%20ho%E1%BA%A1ch%20Tri%E1%BB%83n%20khai%20%28Implementat.md:1)
+  - current code ở [routes/web.php](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/routes/web.php:1), [ModulePage.vue](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/resources/js/Pages/ModulePage.vue:1), [package.json](/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/package.json:1)
+- Skill đã dùng:
+  - `.ai/master_prompt.md`
+  - `.ai/rules/engineering/to-issues/SKILL.md`
+- Agent đã dùng:
+  - 1 agent rà requirement và business rule của builder
+  - 1 agent rà hiện trạng codebase và dependency thực tế
+
+## 2. Nguyên tắc chia lát cắt
+
+- Mỗi lát cắt phải đi xuyên suốt qua đủ lớp cần thiết: `permission -> route -> page -> service -> persistence -> test`.
+- Không chia ngang kiểu “làm xong toàn bộ drag-drop rồi mới làm save/load”.
+- Một lát cắt hoàn thành phải demo được ngay hoặc verify được bằng test.
+- Chỉ dùng các biến, quy tắc template và ràng buộc đã được xác nhận từ tài liệu gốc.
+- `Giai đoạn 2` phải bám thực tế repo hiện tại: mở đường bằng `Templates/Index` thật trước, rồi mới đi dần tới drag-drop builder.
+- Các lát cắt của builder phải bám đúng 6 phần nghiệp vụ thực tế của email:
+  - `Subject`
+  - `Lời chào`
+  - `Table Chế độ tháng`
+  - `Table Chương trình khoán đặc biệt`
+  - `Table Chiết khấu cám cá`
+  - `Table Chiết khấu Key Account`
+
+## 3. Hiện trạng codebase
+
+- `/templates` hiện vẫn render placeholder `ModulePage`, chưa có page, controller hay service riêng.
+- Permission đã có sẵn:
+  - `templates.view`
+  - `templates.manage`
+- Frontend đã có đủ nền để làm builder theo pattern hiện tại:
+  - Inertia + Vue 3 + TypeScript
+  - PrimeVue v4
+  - composable/service pattern trong `resources/js/Services/...`
+  - toast và layout dashboard production
+- Chưa có:
+  - dependency `vuedraggable`
+  - DB schema cho template mail
+  - page quản lý template
+  - visual builder thực sự
+  - engine interpolation cho subject/body
+  - preview email từ dữ liệu aggregate
+
+## 3.1. Sự thật nghiệp vụ đã được xác nhận
+
+- Builder cho phép kéo thả.
+- Builder cho phép mục cha/con trong table.
+- Số thứ tự phải auto nhảy.
+- Mặc định:
+  - mục cha `bold`
+  - mục con `regular`
+- Chỉ có `1 template active` tại một thời điểm.
+- Template gồm ít nhất:
+  - `Subject`
+  - `Body`
+- Các biến đã được xác nhận trong tài liệu:
+  - `{{tháng}}`
+  - `{{mã & tên khách hàng}}`
+  - `{{địa chỉ}}`
+  - `{{thức ăn chăn nuôi}}`
+- Cấu trúc template phải được lưu dưới dạng `JSON` vào `Postgres`.
+- Sheet mẫu trong workbook là `Template Mail`, không phải `Template Email`.
+- Sheet `Template Mail` hiện là ví dụ output email cuối cùng, không phải cấu trúc builder JSON.
+- Body mail mẫu hiện được chia rõ thành:
+  - `Lời chào`
+  - `Chi tiết chiết khấu 'Khách thường'`
+  - `Chi tiết chiết khấu 'Key Account'`
+- Với `Khách thường`, ví dụ hiện có 3 bảng:
+  - `Chế độ tháng`
+  - `Chương trình khoán đặc biệt`
+  - `Chiết khấu cám cá`
+- Với `Key Account`, ví dụ hiện có 1 bảng chi tiết riêng.
+- STT trong email mẫu không chỉ là số thường, mà có ít nhất 2 tầng:
+  - `I`, `II`
+  - `1`, `2`, `3`, ...
+- Trong email mẫu có các dòng tổng kết cố định:
+  - `Cộng`
+  - `Bằng chữ`
+- Cột `Nhóm` xuất hiện trong ví dụ bảng `Chế độ tháng` của `Khách thường`, nhưng các dòng ví dụ hiện không có value ở cột này.
+- Email mẫu `Key Account` hiện vẫn hiển thị một số dòng có giá trị `0`, nên builder/preview không được mặc định suy diễn rằng mọi dòng `0` đều phải bị ẩn.
+
+## 3.2. Quyết định kỹ thuật cho Giai đoạn 2
+
+- Mở đầu bằng `Templates/Index` thật thay cho placeholder, không nhảy thẳng vào drag-drop canvas.
+- Tách logic TypeScript khỏi `.vue` theo cùng pattern đã dùng ở import module: page/component mỏng, logic nằm trong `resources/js/Services/templates/...`.
+- Chỉ cài `vuedraggable` khi đã có page template thật, vì dependency này hiện chưa tồn tại trong repo.
+- Thiết kế persistence theo 2 lớp:
+  - metadata template
+  - `structure_json` cho builder
+- Không đoán thêm biến mới ngoài các biến đã được xác nhận; nếu cần danh sách biến mở rộng thì phải được suy ra từ dữ liệu aggregate thật ở giai đoạn sau.
+- Preview email phải đi từ dữ liệu đã aggregate/persist của Giai đoạn 1, không dựng mock domain mới để “minh họa”.
+- Builder phải đủ khả năng biểu diễn các row type khác nhau của email mẫu:
+  - section heading
+  - data row thường
+  - row cha kiểu `I`, `II`
+  - row con kiểu `1`, `2`, `3`
+  - summary row `Cộng`
+  - text row `Bằng chữ`
+- Không được lấy dãy STT cụ thể trong sheet mẫu làm rule đánh số của hệ thống, vì ví dụ `Khoán NPP` hiện có STT không liên tục `1, 4, 5, 7`.
+- Việc ẩn/hiện dòng theo giá trị `0` phải được xem là rule nghiệp vụ riêng cần chốt sau; chưa được phép cứng hóa trong kế hoạch này vì sheet `Template Mail` còn hiển thị nhiều dòng `0` ở ví dụ `Key Account`.
+- Kế hoạch phải tách riêng từng phần template để dễ test và dễ khóa phạm vi:
+  - `Subject` là một flow riêng
+  - `Lời chào` là một flow riêng
+  - mỗi bảng dữ liệu là một flow riêng gắn với đúng sheet nguồn
+
+## 4. Danh sách lát cắt
+
+### Slice 2.1-A - Mở đường vào màn Quản lý template
+
+- **Loại:** `AFK`
+- **Blocked by:** Không có
+- **Mục tiêu:** thay placeholder `/templates` bằng page thật để quản lý template mail.
+- **Kết quả demo:** vào menu `Thiết kế mẫu email`, thấy page thật với tiêu đề, mô tả, trạng thái active template và khung nội dung rỗng.
+- **Acceptance criteria:**
+  - route `/templates` render `Templates/Index.vue`
+  - actor có `templates.view` vào được page
+  - UI không còn dùng `ModulePage`
+
+### Slice 2.1-B - Khóa phân quyền đọc/ghi cho template
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.1-A`
+- **Mục tiêu:** tách rõ actor chỉ xem và actor được chỉnh sửa template.
+- **Kết quả demo:** actor có `templates.view` xem được; actor có `templates.manage` mới thấy action tạo/sửa/active template.
+- **Acceptance criteria:**
+  - read path dùng `templates.view`
+  - write actions dùng `templates.manage`
+  - UI không lộ action quản trị cho actor chỉ có quyền xem
+
+### Slice 2.1-C - Tạo schema DB tối thiểu cho template
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.1-B`
+- **Mục tiêu:** có persistence cho template metadata và `structure_json`.
+- **Kết quả demo:** tạo được record template trong DB với subject, body structure và cờ active.
+- **Acceptance criteria:**
+  - có migration + model cho template
+  - có trường đủ để lưu:
+    - tên template
+    - subject template
+    - structure JSON
+    - `is_active`
+    - metadata audit tối thiểu
+  - có ràng buộc chỉ một template active tại một thời điểm ở lớp application
+
+### Slice 2.1-D - Dựng danh sách template + active state
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.1-C`
+- **Mục tiêu:** hiển thị danh sách template đang có và template nào đang active.
+- **Kết quả demo:** thấy được template list, template active được đánh dấu rõ.
+- **Acceptance criteria:**
+  - page đọc dữ liệu từ controller/service thật
+  - list có trạng thái `Đang hoạt động` / `Ngừng hoạt động`
+  - empty state tiếng Việt rõ ràng khi chưa có template nào
+
+### Slice 2.1-E - Tạo template bằng form cơ bản chưa cần drag-drop
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.1-D`
+- **Mục tiêu:** có thể tạo template đầu tiên bằng form cơ bản để mở đường cho builder.
+- **Kết quả demo:** nhập tên template, subject, khung body cơ bản rồi lưu được.
+- **Acceptance criteria:**
+  - có modal hoặc page form tạo template
+  - validate backend/frontend cho các field bắt buộc
+  - save được `structure_json` dạng khởi tạo tối thiểu
+
+### Slice 2.2-A - Cài dependency `vuedraggable` và dựng Builder canvas thật
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.1-E`
+- **Mục tiêu:** đưa visual builder thật vào page template.
+- **Kết quả demo:** trong template editor có canvas các block/table row kéo thả được.
+- **Acceptance criteria:**
+  - `vuedraggable` được cài và dùng thực tế
+  - không phá build hiện tại
+  - builder canvas render từ `structure_json`
+
+### Slice 2.2-B - Thêm block section cho 6 phần chính của email
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.2-A`
+- **Mục tiêu:** builder hiểu đúng 6 phần nghiệp vụ chính của template email.
+- **Kết quả demo:** trong editor có thể thêm/chọn đúng các section:
+  - `Subject`
+  - `Lời chào`
+  - `Table Chế độ tháng`
+  - `Table Chương trình khoán đặc biệt`
+  - `Table Chiết khấu cám cá`
+  - `Table Chiết khấu Key Account`
+- **Acceptance criteria:**
+  - structure JSON có type rõ cho từng section
+  - editor không trộn lẫn 4 bảng vào một block generic duy nhất
+  - mỗi table section giữ được liên kết với sheet nguồn của nó
+
+### Slice 2.2-C - Thêm block table row và reorder bằng kéo thả
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.2-B`
+- **Mục tiêu:** người dùng thêm/xóa/sắp xếp các dòng trong table.
+- **Kết quả demo:** thêm vài dòng nội dung, kéo đổi thứ tự, state UI cập nhật đúng.
+- **Acceptance criteria:**
+  - add row
+  - delete row
+  - drag-drop reorder
+  - save lại được structure sau reorder
+
+### Slice 2.2-D - Hỗ trợ cha/con bằng indentation level
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.2-C`
+- **Mục tiêu:** cho phép một dòng trở thành mục cha hoặc mục con.
+- **Kết quả demo:** tăng/giảm cấp dòng và thấy hierarchy phản ánh ngay trên canvas.
+- **Acceptance criteria:**
+  - mỗi row có `indentLevel` hoặc cấu trúc tương đương
+  - mục con hiển thị thụt lề
+  - structure JSON lưu được hierarchy đó
+
+### Slice 2.2-E - Auto numbering theo hierarchy
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.2-D`
+- **Mục tiêu:** sinh STT tự động theo cấu trúc cha/con, đủ để biểu diễn kiểu `I/II` và `1/2/3` như email mẫu.
+- **Kết quả demo:** thêm, xóa, kéo thả hoặc đổi indentation thì STT tự cập nhật và preview được ít nhất 2 cấp numbering.
+- **Acceptance criteria:**
+  - numbering không nhập tay
+  - thay đổi thứ tự sẽ recalculated numbering
+  - quy tắc numbering ổn định giữa preview và dữ liệu lưu
+  - preview được group heading kiểu La Mã và row con kiểu số thường
+
+### Slice 2.2-F - Auto format bold/regular theo vai trò cha/con
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.2-E`
+- **Mục tiêu:** mục cha mặc định bold, mục con mặc định regular.
+- **Kết quả demo:** builder và preview đều phản ánh đúng format mặc định.
+- **Acceptance criteria:**
+  - parent row mặc định `font-weight: bold`
+  - child row mặc định `font-weight: regular`
+  - có thể lưu rule format này trong structure nếu cần
+
+### Slice 2.3-A - Khai báo contract biến cho Subject và Lời chào
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.2-F`
+- **Mục tiêu:** chốt danh sách biến được phép dùng trong builder.
+- **Kết quả demo:** UI có panel gợi ý biến xác nhận được từ tài liệu.
+- **Acceptance criteria:**
+  - chỉ hiển thị các biến đã được xác nhận
+  - subject/body có thể chèn biến qua click hoặc nhập tay
+  - contract biến được tách riêng khỏi template editor
+
+### Slice 2.3-B - Thiết kế và preview riêng cho Subject
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-A`
+- **Mục tiêu:** render subject preview với biến động như một phần độc lập của template.
+- **Kết quả demo:** subject như `Chế độ tháng {{tháng}} của khách hàng {{mã & tên khách hàng}}` được preview bằng dữ liệu thật.
+- **Acceptance criteria:**
+  - parser nhận đúng cú pháp `{{...}}`
+  - preview subject render được dữ liệu thật
+  - lỗi biến không hợp lệ được báo tiếng Việt
+
+### Slice 2.3-C - Thiết kế và preview riêng cho Lời chào
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-B`
+- **Mục tiêu:** render được phần `Lời chào` như một phần độc lập của body email.
+- **Kết quả demo:** lời chào và thông tin khách hiển thị đúng với dữ liệu aggregate đã persist.
+- **Acceptance criteria:**
+  - body text support interpolation
+  - giá trị preview lấy từ dữ liệu aggregate thật
+  - không dùng mock value đoán tay trong code production path
+
+### Slice 2.3-D - Thiết kế và preview `Table Chế độ tháng` từ sheet `Tổng hợp`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-C`
+- **Mục tiêu:** preview riêng bảng `Chế độ tháng` từ dữ liệu `Tổng hợp`.
+- **Kết quả demo:** chọn một batch/khách mẫu và thấy bảng `Chế độ tháng` render đúng dữ liệu tương ứng.
+- **Acceptance criteria:**
+  - preview dùng record aggregate thật
+  - section này chỉ dùng dữ liệu từ `Tổng hợp`
+  - hierarchy và numbering của builder được phản ánh trong preview
+  - preview render được các row type `Cộng` và `Bằng chữ` khi template có khai báo
+
+### Slice 2.3-E - Thiết kế và preview `Table Chương trình khoán đặc biệt` từ sheet `Khoán NPP`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-D`
+- **Mục tiêu:** preview riêng bảng `Chương trình khoán đặc biệt` từ dữ liệu `Khoán NPP`.
+- **Kết quả demo:** khách có dữ liệu khoán sẽ render đúng bảng `Nội dung chương trình | Sản lượng | Mức hỗ trợ | Tổng tiền`.
+- **Acceptance criteria:**
+  - section này chỉ dùng dữ liệu từ `Khoán NPP`
+  - preview phản ánh đúng row structure của builder
+  - section không hiện nếu khách không có dữ liệu `Khoán NPP`
+
+### Slice 2.3-F - Thiết kế và preview `Table Chiết khấu cám cá` từ sheet `Cám cá`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-E`
+- **Mục tiêu:** preview riêng bảng `Chiết khấu cám cá` từ dữ liệu `Cám cá`.
+- **Kết quả demo:** khách có dữ liệu cám cá sẽ render đúng bảng `STT | Nội dung | Tổng`.
+- **Acceptance criteria:**
+  - section này chỉ dùng dữ liệu từ `Cám cá`
+  - preview render được các row type `Cộng` và `Bằng chữ`
+  - section không hiện nếu khách không có dữ liệu `Cám cá`
+
+### Slice 2.3-G - Thiết kế và preview `Table Chiết khấu Key Account` từ sheet `Key Account`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-F`
+- **Mục tiêu:** preview riêng bảng `Chiết khấu Key Account` từ dữ liệu `Key Account`.
+- **Kết quả demo:** khách `Key Account` render đúng bảng `STT | Nội dung | Sản lượng | Mức hỗ trợ | Tổng`.
+- **Acceptance criteria:**
+  - section này chỉ dùng dữ liệu từ `Key Account`
+  - preview phản ánh đúng hierarchy và numbering của builder
+  - preview không lấy nhầm dữ liệu từ `Khách thường`
+
+### Slice 2.3-H - Chốt rule hiển thị dòng giá trị `0`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-G`
+- **Mục tiêu:** chốt rõ template preview có giữ hay ẩn các dòng có giá trị `0`.
+- **Kết quả demo:** cùng một template có thể được kiểm chứng với dữ liệu thật, và rule hiển thị `0` được ghi rõ bằng test thay vì suy đoán.
+- **Acceptance criteria:**
+  - rule `giữ 0` hoặc `ẩn 0` được chốt bằng evidence từ requirement bổ sung hoặc quyết định nghiệp vụ rõ ràng
+  - preview không tự ý lọc dòng `0` nếu chưa có rule chốt
+  - có test bảo vệ cho case `Key Account` hiện đang có nhiều dòng `0` trong sheet mẫu
+
+### Slice 2.4-A - Lưu template structure JSON vào DB
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.3-H`
+- **Mục tiêu:** chỉnh sửa builder xong thì lưu được JSON structure chuẩn.
+- **Kết quả demo:** reload page vẫn thấy template đã lưu đúng bố cục.
+- **Acceptance criteria:**
+  - save/update template dùng service BE thật
+  - JSON lưu đủ subject, body blocks, hierarchy, formatting, row type
+  - reload lại editor không mất state
+
+### Slice 2.4-B - Chuyển active template an toàn
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.4-A`
+- **Mục tiêu:** chỉ cho phép đúng 1 template active tại một thời điểm.
+- **Kết quả demo:** active template mới thì template cũ bị disable tự động.
+- **Acceptance criteria:**
+  - UI có action `Đặt làm template hoạt động`
+  - service BE bảo đảm chỉ một template active
+  - DB không rơi vào trạng thái hai template cùng active
+
+### Slice 2.4-C - Smoke test end-to-end cho Giai đoạn 2
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.4-B`
+- **Mục tiêu:** khóa toàn bộ flow template builder bằng test và verify UI.
+- **Kết quả demo:** tạo template, kéo thả, lưu, active, reload và preview lại được.
+- **Acceptance criteria:**
+  - có feature test cho CRUD template và active-state
+  - có test cho interpolation engine
+  - có smoke path UI cho builder tối thiểu
+
+## 5. Thứ tự triển khai đề xuất
+
+Thực hiện đúng thứ tự sau:
+
+1. `Slice 2.1-A`
+2. `Slice 2.1-B`
+3. `Slice 2.1-C`
+4. `Slice 2.1-D`
+5. `Slice 2.1-E`
+6. `Slice 2.2-A`
+7. `Slice 2.2-B`
+8. `Slice 2.2-C`
+9. `Slice 2.2-D`
+10. `Slice 2.2-E`
+11. `Slice 2.2-F`
+12. `Slice 2.3-A`
+13. `Slice 2.3-B`
+14. `Slice 2.3-C`
+15. `Slice 2.3-D`
+16. `Slice 2.3-E`
+17. `Slice 2.3-F`
+18. `Slice 2.3-G`
+19. `Slice 2.3-H`
+20. `Slice 2.4-A`
+21. `Slice 2.4-B`
+22. `Slice 2.4-C`
+
+Lý do:
+
+- mở đường bằng page thật và persistence tối thiểu trước;
+- chỉ cài drag-drop khi đã có editor thật để gắn vào;
+- `Subject` và `Lời chào` phải tách riêng trước 4 bảng dữ liệu;
+- 4 table phải được tách thành 4 flow riêng vì mỗi bảng gắn với một sheet nguồn khác nhau;
+- rule hiển thị dòng `0` phải được chốt trước khi coi JSON structure là ổn định;
+- active state nên làm sau khi save/load JSON đã vững;
+- smoke test chỉ chốt ở cuối khi full flow đã có đủ evidence.
+
+## 6. Mapping ra file/code dự kiến
+
+- `Slice 2.1-A` đến `2.1-B`
+  - `routes/web.php`
+  - `app/Http/Controllers/TemplatePageController.php`
+  - `app/Services/Templates/TemplatePageService.php`
+  - `resources/js/Pages/Templates/Index.vue`
+  - `resources/js/Services/templates/...`
+- `Slice 2.1-C` đến `2.1-E`
+  - migration/model template
+  - request validation
+  - create/update services
+  - template list/editor components
+- `Slice 2.2-A` đến `2.2-E`
+  - `package.json`
+  - builder components
+  - drag-drop services/composables
+  - structure normalization helpers
+- `Slice 2.3-A` đến `2.3-D`
+  - interpolation services
+  - preview builder components
+  - bridge tới aggregated record data
+- `Slice 2.4-A` đến `2.4-C`
+  - persistence services
+  - active template service
+  - feature tests / e2e smoke
+
+## 7. Definition of Done cho Giai đoạn 2
+
+`Giai đoạn 2` được coi là xong khi:
+
+- `/templates` không còn là placeholder;
+- có page quản lý template thật;
+- người có `templates.manage` tạo, sửa và lưu template được;
+- builder hỗ trợ kéo thả và hierarchy cha/con;
+- STT auto nhảy, hỗ trợ ít nhất 2 cấp hiển thị như email mẫu, và bold/regular mặc định hoạt động đúng;
+- `Subject` hỗ trợ interpolation bằng các biến đã được xác nhận;
+- `Lời chào` hỗ trợ interpolation bằng các biến đã được xác nhận;
+- preview được riêng 4 bảng:
+  - `Chế độ tháng`
+  - `Chương trình khoán đặc biệt`
+  - `Chiết khấu cám cá`
+  - `Chiết khấu Key Account`
+- mỗi bảng dùng đúng sheet nguồn của nó;
+- preview biểu diễn được các dòng `Cộng` và `Bằng chữ`;
+- chỉ có đúng `1 template active` tại một thời điểm;
+- cấu trúc template được lưu dưới dạng JSON trong Postgres;
+- có test đủ để khóa CRUD, active-state, interpolation và preview tối thiểu.
+
+## 8. Bước tiếp theo sau file kế hoạch này
+
+Sau khi chốt kế hoạch này, bước hợp lý tiếp theo là tạo tài liệu `Thiết kế chi tiết` cho `Slice 2.1-A -> 2.1-E`, vì đó là cụm mở đường nhỏ nhất để biến `/templates` từ placeholder thành module thật.
