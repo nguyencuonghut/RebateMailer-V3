@@ -62,7 +62,25 @@ class ImportsWorkbookAnalysisTest extends TestCase
             ->assertJsonPath('data.detectedSheets.3', 'Key Account')
             ->assertJsonPath('data.detectedSheets.4', 'Template Mail')
             ->assertJsonPath('data.missingSheets', [])
-            ->assertJsonPath('data.unexpectedSheets.0', 'Template Mail');
+            ->assertJsonPath('data.unexpectedSheets.0', 'Template Mail')
+            ->assertJsonPath('data.headerRowBySheet.Tổng hợp.0', 'STT')
+            ->assertJsonPath('data.headerRowBySheet.Tổng hợp.1', 'Tháng')
+            ->assertJsonPath('data.headerRowBySheet.Tổng hợp.2', 'Mã số')
+            ->assertJsonPath('data.headerRowBySheet.Khoán NPP.9', 'Nội dung CT 1')
+            ->assertJsonPath('data.headerRowBySheet.Cám cá.10', 'CT1')
+            ->assertJsonPath('data.headerRowBySheet.Key Account.16', 'Nội dung CT 1');
+
+        $payload = $analysisResponse->json('data');
+
+        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Tổng hợp']);
+        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Khoán NPP']);
+        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Cám cá']);
+        $this->assertGreaterThan(0, $payload['dataRowCountBySheet']['Key Account']);
+
+        $this->assertFalse($payload['emptyStateBySheet']['Tổng hợp']);
+        $this->assertFalse($payload['emptyStateBySheet']['Khoán NPP']);
+        $this->assertFalse($payload['emptyStateBySheet']['Cám cá']);
+        $this->assertFalse($payload['emptyStateBySheet']['Key Account']);
     }
 
     public function test_guest_cannot_analyze_workbook_without_manage_permission(): void

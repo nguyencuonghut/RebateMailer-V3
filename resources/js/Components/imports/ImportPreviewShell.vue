@@ -159,6 +159,67 @@ const emit = defineEmits<{
                     </div>
                 </div>
 
+                <div class="space-y-3">
+                    <p class="text-sm font-medium">Header line 1 của từng sheet import hợp lệ</p>
+
+                    <div class="grid gap-4">
+                        <div
+                            v-for="sheet in workbookBoundary.expectedSheets"
+                            :key="`headers-${sheet}`"
+                            class="rounded-[1rem] border p-4"
+                            :style="{ borderColor: 'var(--dashboard-panel-border)' }"
+                        >
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                        {{ sheet }}
+                                    </p>
+                                    <p class="text-sm">
+                                        {{
+                                            workbookBoundary.headerRowBySheet[sheet]?.length
+                                                ? `Đã đọc ${workbookBoundary.headerRowBySheet[sheet].length} cột ở line 1.`
+                                                : 'Sheet này chưa có dữ liệu header để hiển thị ở boundary hiện tại.'
+                                        }}
+                                    </p>
+                                    <p class="mt-1 text-sm">
+                                        {{
+                                            workbookBoundary.emptyStateBySheet[sheet]
+                                                ? 'Sheet hiện không có dòng dữ liệu nào sau header.'
+                                                : `Có ${workbookBoundary.dataRowCountBySheet[sheet] ?? 0} dòng dữ liệu sau header.`
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2">
+                                    <Tag
+                                        :value="workbookBoundary.headerRowBySheet[sheet]?.length ? 'Có header' : 'Chưa có header'"
+                                        :severity="workbookBoundary.headerRowBySheet[sheet]?.length ? 'success' : 'warn'"
+                                        rounded
+                                    />
+                                    <Tag
+                                        :value="workbookBoundary.emptyStateBySheet[sheet] ? 'Sheet rỗng' : `${workbookBoundary.dataRowCountBySheet[sheet] ?? 0} dòng dữ liệu`"
+                                        :severity="workbookBoundary.emptyStateBySheet[sheet] ? 'warn' : 'info'"
+                                        rounded
+                                    />
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="workbookBoundary.headerRowBySheet[sheet]?.length"
+                                class="mt-3 flex flex-wrap gap-2"
+                            >
+                                <Tag
+                                    v-for="(header, headerIndex) in workbookBoundary.headerRowBySheet[sheet]"
+                                    :key="`${sheet}-${headerIndex}`"
+                                    :value="header"
+                                    severity="secondary"
+                                    rounded
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <p class="text-sm leading-6">
                     {{ workbookBoundary.nextStep }}
                 </p>

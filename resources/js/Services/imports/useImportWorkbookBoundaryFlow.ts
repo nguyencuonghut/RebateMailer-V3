@@ -20,6 +20,9 @@ export type ImportWorkbookBoundary = {
     detectedSheets: string[];
     missingSheets: string[];
     unexpectedSheets: string[];
+    headerRowBySheet: Record<string, string[]>;
+    dataRowCountBySheet: Record<string, number>;
+    emptyStateBySheet: Record<string, boolean>;
     nextStep: string;
 };
 

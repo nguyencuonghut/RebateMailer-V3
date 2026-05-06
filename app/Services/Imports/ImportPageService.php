@@ -13,8 +13,8 @@ class ImportPageService
             'title' => 'Import dữ liệu',
             'description' => 'Khu vực tiếp nhận file Excel chiết khấu hàng tháng và chuẩn bị cho luồng preview dữ liệu rebate.',
             'currentSlice' => [
-                'code' => '1.2-C',
-                'label' => 'Khóa boundary đúng 4 sheet import hợp lệ',
+                'code' => '1.2-E',
+                'label' => 'Đếm số dòng dữ liệu và nhận diện sheet rỗng',
             ],
             'canManageImports' => $canManageImports,
             'uploadPolicy' => [
@@ -28,26 +28,26 @@ class ImportPageService
                 'Key Account',
             ],
             'nextSlice' => [
-                'code' => '1.2-D',
-                'label' => 'Đọc header line 1 cho từng sheet hợp lệ',
+                'code' => '1.2-F',
+                'label' => 'Chuẩn hóa preview workbook boundary trên UI',
             ],
             'analysisPrep' => [
                 'actionLabel' => 'Đọc cấu trúc workbook',
-                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook để đối chiếu danh sách sheet thực tế với đúng 4 sheet import hợp lệ.',
-                'readyTitle' => 'Đọc cấu trúc workbook và khóa boundary 4 sheet',
-                'readyDescription' => 'Workbook đã được phân tích thành công. Khu vực preview bên dưới đang hiển thị sheet hợp lệ, sheet thiếu và sheet ngoài contract import.',
+                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook để xem danh sách sheet, header line 1 và số dòng dữ liệu của từng sheet import hợp lệ.',
+                'readyTitle' => 'Đọc workbook, header và số dòng dữ liệu',
+                'readyDescription' => 'Workbook đã được phân tích thành công. Khu vực preview bên dưới đang hiển thị sheet hợp lệ, header line 1, số dòng dữ liệu và trạng thái rỗng của từng sheet import.',
                 'statusLabel' => 'Chưa đọc workbook',
                 'toast' => [
                     'severity' => 'success',
                     'summary' => 'Đọc workbook thành công',
-                    'detail' => 'Hệ thống đã đối chiếu workbook với đúng 4 sheet import hợp lệ.',
+                    'detail' => 'Hệ thống đã đọc được danh sách sheet, header line 1 và số dòng dữ liệu của các sheet import hợp lệ.',
                     'life' => 4000,
                 ],
             ],
             'toast' => [
                 'severity' => 'info',
                 'summary' => 'Khu vực import đã sẵn sàng',
-                'detail' => 'Bạn có thể tải file Excel lên và kiểm tra workbook có khớp đúng 4 sheet import hợp lệ hay không.',
+                'detail' => 'Bạn có thể tải file Excel lên và xem ngay số dòng dữ liệu của các sheet import hợp lệ.',
                 'life' => 4000,
             ],
         ];
