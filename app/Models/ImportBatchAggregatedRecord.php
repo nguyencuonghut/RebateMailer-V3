@@ -25,9 +25,9 @@ class ImportBatchAggregatedRecord extends Model
     protected function casts(): array
     {
         return [
-            'source_sheets' => 'array',
-            'aggregated_payload' => 'array',
-            'validation_state' => 'array',
+            'source_sheets' => 'json:unicode',
+            'aggregated_payload' => 'json:unicode',
+            'validation_state' => 'json:unicode',
         ];
     }
 

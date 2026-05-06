@@ -28,7 +28,7 @@ class ImportBatch extends Model
     protected function casts(): array
     {
         return [
-            'workbook_summary' => 'array',
+            'workbook_summary' => 'json:unicode',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

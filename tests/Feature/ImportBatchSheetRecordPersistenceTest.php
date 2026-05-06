@@ -145,4 +145,43 @@ class ImportBatchSheetRecordPersistenceTest extends TestCase
             $importBatch->sheetRecords()->where('sheet_name', 'Tổng hợp')->count(),
         );
     }
+
+    public function test_service_persists_unicode_json_without_escaping_vietnamese_characters(): void
+    {
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-TEST-0003',
+            'original_file_name' => 'Data import chuẩn_Final.xlsx',
+            'stored_path' => 'imports/tmp/test-3.xlsx',
+            'status' => 'workbook_analyzed',
+            'started_at' => now(),
+            'workbook_summary' => [
+                'expectedSheets' => ['Tổng hợp', 'Cám cá'],
+                'nextStep' => 'Đã sẵn sàng xử lý dữ liệu tiếng Việt.',
+            ],
+        ]);
+
+        $service = app(PersistImportBatchSheetRecordsService::class);
+
+        $service->replaceForSheet($importBatch, 'Cám cá', [
+            [
+                'customerCode' => '16068',
+                'rowNumber' => 2,
+                'parsedPayload' => [
+                    'sheetName' => 'Cám cá',
+                    'customerFullName' => 'Công ty Cám cá miền Tây',
+                ],
+            ],
+        ]);
+
+        $importBatch->refresh();
+        $record = $importBatch->sheetRecords()->firstOrFail();
+
+        $this->assertStringContainsString('Tổng hợp', $importBatch->getRawOriginal('workbook_summary'));
+        $this->assertStringContainsString('Đã sẵn sàng xử lý dữ liệu tiếng Việt.', $importBatch->getRawOriginal('workbook_summary'));
+        $this->assertStringNotContainsString('\\u', $importBatch->getRawOriginal('workbook_summary'));
+
+        $this->assertStringContainsString('Cám cá', $record->getRawOriginal('parsed_payload'));
+        $this->assertStringContainsString('Công ty Cám cá miền Tây', $record->getRawOriginal('parsed_payload'));
+        $this->assertStringNotContainsString('\\u', $record->getRawOriginal('parsed_payload'));
+    }
 }

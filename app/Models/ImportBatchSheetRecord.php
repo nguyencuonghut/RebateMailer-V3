@@ -25,7 +25,7 @@ class ImportBatchSheetRecord extends Model
     protected function casts(): array
     {
         return [
-            'parsed_payload' => 'array',
+            'parsed_payload' => 'json:unicode',
         ];
     }
 
