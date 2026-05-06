@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import type { TongHopPreview } from '@/Services/imports/useTongHopPreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
+import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -20,6 +22,28 @@ const emit = defineEmits<{
 }>();
 
 const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
+const {
+    filters,
+    globalFilterFields,
+    globalFilterValue,
+    clearGlobalFilter,
+} = useDataTableGlobalFilter<TongHopPreview['records'][number]>([
+    'customerCode',
+    'customerFullName',
+    'customerName',
+    'month',
+    'email',
+    'address',
+    'feedCategory',
+    'totalQuantity',
+    'revenue',
+    'invoiceDiscount',
+    'commitmentBonus',
+    'fishFeedDiscount',
+    'otherDiscount',
+    'grandTotal',
+    (record) => record.dynamicItems.map((item) => `${item.label} ${item.value}`).join(' '),
+]);
 </script>
 
 <template>
@@ -120,12 +144,21 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
 
             <DataTable
                 v-if="showDetailsTable"
+                v-model:filters="filters"
                 :value="preview.records"
+                :global-filter-fields="globalFilterFields"
                 paginator
                 :rows="10"
                 responsive-layout="scroll"
                 class="p-datatable-sm"
             >
+                <template #header>
+                    <DataTableGlobalFilterToolbar
+                        v-model="globalFilterValue"
+                        placeholder="Tìm theo mã khách, tên, email, tháng, thức ăn, giá trị động"
+                        @clear="clearGlobalFilter"
+                    />
+                </template>
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
                 <Column field="month" header="Tháng" />
                 <Column field="email" header="Email" />

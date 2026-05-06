@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { PageProps } from '@/types';
+import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
+import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
@@ -54,6 +56,18 @@ const summary = computed(() => ({
     users: props.users.filter((user) => user.roles.includes('Người dùng')).length,
     guests: props.users.filter((user) => user.roles.includes('Khách')).length,
 }));
+
+const {
+    filters: userFilters,
+    globalFilterFields: userGlobalFilterFields,
+    globalFilterValue: userGlobalFilterValue,
+    clearGlobalFilter: clearUserGlobalFilter,
+} = useDataTableGlobalFilter<ManagedUser>([
+    'name',
+    'email',
+    (user) => user.roles.join(' '),
+    (user) => (user.email_verified_at ? 'Đã xác thực' : 'Chưa xác thực'),
+]);
 
 const openEditDialog = (user: ManagedUser): void => {
     editingUser.value = user;
@@ -130,7 +144,20 @@ const removeUser = (user: ManagedUser): void => {
                         </div>
                     </div>
 
-                    <DataTable :value="users" data-key="id" striped-rows responsive-layout="scroll">
+                    <DataTableGlobalFilterToolbar
+                        v-model="userGlobalFilterValue"
+                        placeholder="Tìm theo họ tên, email, vai trò, trạng thái"
+                        @clear="clearUserGlobalFilter"
+                    />
+
+                    <DataTable
+                        v-model:filters="userFilters"
+                        :value="users"
+                        :global-filter-fields="userGlobalFilterFields"
+                        data-key="id"
+                        striped-rows
+                        responsive-layout="scroll"
+                    >
                         <Column field="name" header="Họ tên" />
                         <Column field="email" header="Email" />
                         <Column header="Vai trò">

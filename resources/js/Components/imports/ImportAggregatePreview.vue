@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import type { AggregatePreview } from '@/Services/imports/useAggregatePreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
+import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -20,6 +22,22 @@ const emit = defineEmits<{
 }>();
 
 const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
+const {
+    filters,
+    globalFilterFields,
+    globalFilterValue,
+    clearGlobalFilter,
+} = useDataTableGlobalFilter<AggregatePreview['records'][number]>([
+    'customerCode',
+    'customerType',
+    (record) => record.sourceSheets.join(' '),
+    (record) => [
+        record.tongHop ? 'Tổng hợp' : null,
+        record.khoanNpp ? 'Khoán NPP' : null,
+        record.camCa ? 'Cám cá' : null,
+        record.keyAccount ? 'Key Account' : null,
+    ].filter(Boolean).join(' '),
+]);
 </script>
 
 <template>
@@ -91,12 +109,21 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
 
             <DataTable
                 v-if="showDetailsTable"
+                v-model:filters="filters"
                 :value="preview.records"
+                :global-filter-fields="globalFilterFields"
                 paginator
                 :rows="10"
                 responsive-layout="scroll"
                 class="p-datatable-sm"
             >
+                <template #header>
+                    <DataTableGlobalFilterToolbar
+                        v-model="globalFilterValue"
+                        placeholder="Tìm theo mã số, loại khách, sheet nguồn, section dữ liệu"
+                        @clear="clearGlobalFilter"
+                    />
+                </template>
                 <Column field="customerCode" header="Mã số" />
                 <Column field="customerType" header="Loại khách">
                     <template #body="{ data }">

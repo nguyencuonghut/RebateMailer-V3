@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import type { ImportHistoryItem } from '@/Services/imports/useImportsIndexPage';
 import { useImportBatchHistory } from '@/Services/imports/useImportBatchHistory';
+import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -13,6 +15,20 @@ const props = defineProps<{
 }>();
 
 const { historyRows, openBatch, isActiveBatch } = useImportBatchHistory(props.history, props.activeBatchId);
+const {
+    filters,
+    globalFilterFields,
+    globalFilterValue,
+    clearGlobalFilter,
+} = useDataTableGlobalFilter([
+    'batchCode',
+    'originalFileName',
+    'statusLabel',
+    'uploadedBy',
+    'uploadedAtLabel',
+    'parsedRecordCountLabel',
+    'aggregatedRecordCountLabel',
+]);
 </script>
 
 <template>
@@ -30,9 +46,18 @@ const { historyRows, openBatch, isActiveBatch } = useImportBatchHistory(props.hi
             Chưa có batch import nào trong hệ thống.
         </Message>
 
+        <DataTableGlobalFilterToolbar
+            v-if="historyRows.length > 0"
+            v-model="globalFilterValue"
+            placeholder="Tìm theo mã batch, file nguồn, trạng thái, người import"
+            @clear="clearGlobalFilter"
+        />
+
         <DataTable
-            v-else
+            v-if="historyRows.length > 0"
+            v-model:filters="filters"
             :value="historyRows"
+            :global-filter-fields="globalFilterFields"
             paginator
             :rows="10"
             responsive-layout="scroll"

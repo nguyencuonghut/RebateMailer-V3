@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import type { KhoanNppPreview } from '@/Services/imports/useKhoanNppPreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import { useKhoanNppPreviewPresentation } from '@/Services/imports/useKhoanNppPreviewPresentation';
+import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -23,6 +25,21 @@ const emit = defineEmits<{
 
 const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview));
 const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
+const {
+    filters,
+    globalFilterFields,
+    globalFilterValue,
+    clearGlobalFilter,
+} = useDataTableGlobalFilter<KhoanNppPreview['records'][number]>([
+    'customerCode',
+    'customerFullName',
+    'month',
+    'email',
+    'address',
+    'feedCategory',
+    'grandTotal',
+    (record) => record.programItems.map((item) => `${item.programIndex} ${item.content} ${item.quantity} ${item.supportRate} ${item.amount}`).join(' '),
+]);
 </script>
 
 <template>
@@ -120,12 +137,21 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
 
             <DataTable
                 v-if="showDetailsTable"
+                v-model:filters="filters"
                 :value="preview.records"
+                :global-filter-fields="globalFilterFields"
                 paginator
                 :rows="10"
                 responsive-layout="scroll"
                 class="p-datatable-sm"
             >
+                <template #header>
+                    <DataTableGlobalFilterToolbar
+                        v-model="globalFilterValue"
+                        placeholder="Tìm theo mã khách, tên, tháng, thức ăn, nội dung CT"
+                        @clear="clearGlobalFilter"
+                    />
+                </template>
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
                 <Column field="month" header="Tháng" />
                 <Column field="feedCategory" header="Thức ăn chăn nuôi" />
