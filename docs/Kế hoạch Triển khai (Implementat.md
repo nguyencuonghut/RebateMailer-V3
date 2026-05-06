@@ -21,16 +21,24 @@
 * **Task 0.4:** Cấu hình Mailpit để kiểm thử luồng gửi mail cục bộ [cite: 237].
 
 ### Giai đoạn 1: Slice 1 - Ingestion & Data Aggregator
-* **Mục tiêu:** Triển khai luồng import theo các lát cắt nhỏ có thể test ngay trên UI, bắt đầu từ upload + preview tối thiểu, sau đó mở rộng dần parser cho từng sheet và cuối cùng mới hợp nhất dữ liệu [cite: 1, 2].
+* **Mục tiêu:** Triển khai luồng import theo các lát cắt nhỏ có thể test ngay trên UI, bắt đầu từ upload + preview tối thiểu, sau đó mở rộng dần parser cho từng sheet, hợp nhất dữ liệu theo `Mã số`, và **lưu DB theo từng lớp xử lý** để phục vụ review, validation, gửi mail và audit [cite: 1, 2].
+* **Quyết định kiến trúc:** Giai đoạn 1 **không dừng ở preview trong bộ nhớ**. Hệ thống phải lưu lại:
+  * thông tin và trạng thái của từng lần import;
+  * dữ liệu đã parse theo từng sheet;
+  * dữ liệu đã aggregate theo `Mã số`.
+* **Mô hình lưu trữ cấp cao đề xuất:**
+  * `import_batches`: metadata của mỗi lần import, trạng thái xử lý, người upload, file nguồn.
+  * `import_batch_sheet_records`: dữ liệu đã parse theo từng sheet, giữ raw/business shape của từng record.
+  * `import_batch_aggregated_records`: dữ liệu đã aggregate theo `Mã số`, tách rõ `Khách thường` và `Key Account`.
 * **Task 1.1 (UI Shell + Upload):** Tạo giao diện import tối thiểu gồm chọn file, upload, hiển thị trạng thái xử lý, và khung preview rỗng để có thể test end-to-end luồng upload ngay từ đầu.
-* **Task 1.2 (Workbook Boundary):** Xây dựng `ExcelService` dùng Laravel Excel để đọc workbook theo chunk, chỉ nhận đúng 4 sheet import (`Tổng hợp`, `Khoán NPP`, `Cám cá`, `Key Account`) và trả metadata parse cơ bản.
-* **Task 1.3 (Parser - Sheet Tổng hợp):** Parse riêng sheet `Tổng hợp`, chuẩn hóa cột cố định + cột động theo tháng, rồi hiển thị preview dữ liệu `Tổng hợp` trên UI.
-* **Task 1.4 (Parser - Sheet Khoán NPP):** Parse riêng sheet `Khoán NPP`, normalize block `Nội dung CT n | SL | đ/kg | Thành tiền`, rồi mở rộng preview để xem được dữ liệu khoán theo từng khách.
-* **Task 1.5 (Parser - Sheet Cám cá):** Parse riêng sheet `Cám cá`, tách rõ cột rời rạc và cặp `CTn | Thành tiền`, rồi hiển thị preview cho case khách chỉ có dữ liệu `Cám cá`.
-* **Task 1.6 (Parser - Sheet Key Account):** Parse riêng sheet `Key Account`, chuẩn hóa nhóm cột rời rạc + block chương trình, rồi hiển thị preview cho khách `Key Account`.
-* **Task 1.7 (Aggregator):** Viết thuật toán gom dữ liệu từ 4 sheet theo `Mã số`, đồng thời giữ đúng quy tắc phân loại `Khách thường` và `Key Account` [cite: 6, 7, 13].
-* **Task 1.8 (Validation):** Sử dụng Laravel Validation và Zod-style contracts để đánh dấu lỗi/cảnh báo như thiếu email, xung đột `Key Account`, header không hợp lệ, hoặc dữ liệu bất thường [cite: 5, 25].
-* **Task 1.9 (Unified Preview):** Nâng cấp DataTable preview để hiển thị dữ liệu đã gộp hoàn chỉnh, filter theo loại khách, trạng thái hợp lệ, và chỉ cho phép đi tiếp khi không có lỗi chặn.
+* **Task 1.2 (Workbook Boundary + Batch Draft):** Đọc workbook, chỉ nhận đúng 4 sheet import (`Tổng hợp`, `Khoán NPP`, `Cám cá`, `Key Account`), và tạo nháp `import_batch` đầu tiên để theo dõi vòng đời import.
+* **Task 1.3 (Parser - Sheet Tổng hợp + Persist Parsed Record):** Parse riêng sheet `Tổng hợp`, chuẩn hóa cột cố định + cột động theo tháng, hiển thị preview, đồng thời lưu parsed record vào DB theo batch.
+* **Task 1.4 (Parser - Sheet Khoán NPP + Persist Parsed Record):** Parse riêng sheet `Khoán NPP`, normalize block `Nội dung CT n | SL | đ/kg | Thành tiền`, hiển thị preview, đồng thời lưu parsed record vào DB theo batch.
+* **Task 1.5 (Parser - Sheet Cám cá + Persist Parsed Record):** Parse riêng sheet `Cám cá`, tách rõ cột rời rạc và cặp `CTn | Thành tiền`, hiển thị preview, đồng thời lưu parsed record vào DB theo batch.
+* **Task 1.6 (Parser - Sheet Key Account + Persist Parsed Record):** Parse riêng sheet `Key Account`, chuẩn hóa nhóm cột rời rạc + block chương trình, hiển thị preview, đồng thời lưu parsed record vào DB theo batch.
+* **Task 1.7 (Aggregator + Persist Aggregated Record):** Viết thuật toán gom dữ liệu từ 4 sheet theo `Mã số`, giữ đúng quy tắc phân loại `Khách thường` và `Key Account`, rồi lưu kết quả aggregate vào DB [cite: 6, 7, 13].
+* **Task 1.8 (Validation):** Sử dụng Laravel Validation và Zod-style contracts để đánh dấu lỗi/cảnh báo như thiếu email, xung đột `Key Account`, header không hợp lệ, hoặc dữ liệu bất thường, và cập nhật trạng thái batch/record [cite: 5, 25].
+* **Task 1.9 (Unified Preview + Batch Review):** Nâng cấp DataTable preview để hiển thị dữ liệu đã gộp hoàn chỉnh từ DB, filter theo loại khách, trạng thái hợp lệ, và chỉ cho phép đi tiếp khi không có lỗi chặn.
 
 ### Giai đoạn 2: Slice 2 - Visual Template Builder
 * **Mục tiêu:** Cho phép người dùng thiết kế mẫu mail bằng kéo thả và phân cấp cha/con [cite: 4, 70].
@@ -54,6 +62,11 @@
   * Khách tham gia nhiều chương trình khoán
   * Khách `Key Account` không được trùng với khách thường
   * Header động thay đổi theo tháng nhưng vẫn parse đúng [cite: 11, 12]
+* **Persistence Integrity:** Kiểm thử tính nhất quán giữa:
+  * file upload nguồn;
+  * parsed record đã lưu;
+  * aggregated record đã lưu;
+  * trạng thái `import_batch` trên từng bước xử lý.
 * **Security:** Sanitize toàn bộ dữ liệu từ Excel trước khi đưa vào Template để ngăn chặn XSS trong email.
 * **Performance:** Kiểm tra tốc độ xử lý khi file Excel lên tới >5000 dòng.
 
