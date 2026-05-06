@@ -7,10 +7,12 @@ import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
 import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { Head, usePage } from '@inertiajs/vue3';
 import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
+import ImportCamCaPreview from '@/Components/imports/ImportCamCaPreview.vue';
 import ImportPreviewShell from '@/Components/imports/ImportPreviewShell.vue';
 import ImportKhoanNppPreview from '@/Components/imports/ImportKhoanNppPreview.vue';
 import ImportTongHopPreview from '@/Components/imports/ImportTongHopPreview.vue';
 import AppLayout from '@/layout/AppLayout.vue';
+import { useCamCaPreviewFlow } from '@/Services/imports/useCamCaPreviewFlow';
 import { useKhoanNppPreviewFlow } from '@/Services/imports/useKhoanNppPreviewFlow';
 import { useTongHopPreviewFlow } from '@/Services/imports/useTongHopPreviewFlow';
 import Card from 'primevue/card';
@@ -30,6 +32,7 @@ const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow()
 const { isAnalyzingWorkbook, workbookBoundary, analysisErrorMessage, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow();
 const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHopPreview, resetTongHopPreview } = useTongHopPreviewFlow();
 const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview, resetKhoanNppPreview } = useKhoanNppPreviewFlow();
+const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview, resetCamCaPreview } = useCamCaPreviewFlow(workbookBoundary);
 const canPreviewTongHop = computed(() =>
     workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Tổng hợp' && sheet.present) ?? false,
 );
@@ -41,6 +44,7 @@ const submitUpload = async (): Promise<void> => {
     resetWorkbookBoundary();
     resetTongHopPreview();
     resetKhoanNppPreview();
+    resetCamCaPreview();
 
     const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
 
@@ -56,6 +60,7 @@ const prepareWorkbookBoundary = async (): Promise<void> => {
     inlineError.value = '';
     resetTongHopPreview();
     resetKhoanNppPreview();
+    resetCamCaPreview();
 
     const errorMessage = await analyzeWorkbook(uploadReceipt.value, route('imports.analyze-workbook'));
 
@@ -78,6 +83,16 @@ const loadKhoanNppSheetPreview = async (): Promise<void> => {
     inlineError.value = '';
 
     const errorMessage = await loadKhoanNppPreview(uploadReceipt.value, route('imports.preview-khoan-npp'));
+
+    if (errorMessage) {
+        inlineError.value = errorMessage;
+    }
+};
+
+const loadCamCaSheetPreview = async (): Promise<void> => {
+    inlineError.value = '';
+
+    const errorMessage = await loadCamCaPreview(uploadReceipt.value, route('imports.preview-cam-ca'));
 
     if (errorMessage) {
         inlineError.value = errorMessage;
@@ -221,6 +236,21 @@ const loadKhoanNppSheetPreview = async (): Promise<void> => {
                             :error-message="khoanNppErrorMessage"
                             :can-preview="canPreviewKhoanNpp"
                             @load="loadKhoanNppSheetPreview"
+                        />
+                    </template>
+                </Card>
+
+                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                    <template #title>
+                        Preview sheet Cám cá
+                    </template>
+                    <template #content>
+                        <ImportCamCaPreview
+                            :preview="camCaPreview"
+                            :is-loading="isLoadingCamCaPreview"
+                            :error-message="camCaErrorMessage"
+                            :can-preview="canPreviewCamCa"
+                            @load="loadCamCaSheetPreview"
                         />
                     </template>
                 </Card>
