@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AggregatePreview } from '@/Services/imports/useAggregatePreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
+import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -55,21 +56,21 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Tổng số khách</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.summary.totalCustomerCount }}
+                        {{ formatImportNumber(preview.summary.totalCustomerCount) }}
                     </p>
                 </div>
 
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Khách thường</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.summary.normalCustomerCount }}
+                        {{ formatImportNumber(preview.summary.normalCustomerCount) }}
                     </p>
                 </div>
 
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Key Account</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.summary.keyAccountCustomerCount }}
+                        {{ formatImportNumber(preview.summary.keyAccountCustomerCount) }}
                     </p>
                 </div>
             </div>

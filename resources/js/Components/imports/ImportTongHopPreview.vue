@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TongHopPreview } from '@/Services/imports/useTongHopPreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
+import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -62,14 +63,14 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Số bản ghi</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.recordCount }}
+                        {{ formatImportNumber(preview.recordCount) }}
                     </p>
                 </div>
 
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Cột động nhận diện</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.dynamicHeaders.length }}
+                        {{ formatImportNumber(preview.dynamicHeaders.length) }}
                     </p>
                 </div>
             </div>
@@ -128,15 +129,23 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
                 <Column field="month" header="Tháng" />
                 <Column field="email" header="Email" />
-                <Column field="invoiceDiscount" header="Tiền chiết khấu theo Hóa đơn" />
-                <Column field="grandTotal" header="Tổng cộng" />
+                <Column header="Tiền chiết khấu theo Hóa đơn">
+                    <template #body="{ data }">
+                        {{ formatImportNumber(data.invoiceDiscount) }}
+                    </template>
+                </Column>
+                <Column header="Tổng cộng">
+                    <template #body="{ data }">
+                        {{ formatImportNumber(data.grandTotal) }}
+                    </template>
+                </Column>
                 <Column header="Nội dung động">
                     <template #body="{ data }">
                         <div class="flex flex-wrap gap-2">
                             <Tag
                                 v-for="item in data.dynamicItems"
                                 :key="`${data.customerCode}-${item.label}`"
-                                :value="`${item.label}: ${item.value}`"
+                                :value="`${item.label}: ${formatImportNumber(item.value)}`"
                                 severity="secondary"
                                 rounded
                             />

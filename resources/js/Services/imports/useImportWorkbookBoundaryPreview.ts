@@ -1,5 +1,6 @@
 import { computed, type Ref } from 'vue';
 import type { ImportWorkbookBoundary } from './useImportWorkbookBoundaryFlow';
+import { formatImportNumber } from './useImportNumberFormatter';
 
 type Severity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 
@@ -38,25 +39,25 @@ export const useImportWorkbookBoundaryPreview = (workbookBoundary: Ref<ImportWor
         return [
             {
                 label: 'Sheet đã nhận diện',
-                value: `${boundary.summary.detectedSheetCount}`,
+                value: formatImportNumber(boundary.summary.detectedSheetCount),
                 helper: 'Tổng số sheet đọc được từ tệp Excel',
                 severity: 'contrast',
             },
             {
                 label: 'Sheet hợp lệ',
-                value: `${boundary.contract.expectedSheetCount}`,
+                value: formatImportNumber(boundary.contract.expectedSheetCount),
                 helper: 'Quy ước nhập liệu nghiệp vụ cố định',
                 severity: 'success',
             },
             {
                 label: 'Sheet thiếu',
-                value: `${boundary.summary.missingSheetCount}`,
+                value: formatImportNumber(boundary.summary.missingSheetCount),
                 helper: boundary.missingSheets.length ? boundary.missingSheets.join(', ') : 'Không thiếu sheet nào',
                 severity: boundary.missingSheets.length ? 'danger' : 'success',
             },
             {
                 label: 'Sheet ngoài contract',
-                value: `${boundary.summary.unexpectedSheetCount}`,
+                value: formatImportNumber(boundary.summary.unexpectedSheetCount),
                 helper: boundary.unexpectedSheets.length ? boundary.unexpectedSheets.join(', ') : 'Không có sheet ngoài quy ước',
                 severity: boundary.unexpectedSheets.length ? 'warn' : 'success',
             },
@@ -119,7 +120,7 @@ export const useImportWorkbookBoundaryPreview = (workbookBoundary: Ref<ImportWor
                 dataRowCount,
                 isEmpty,
                 headerStatusLabel: headers.length > 0 ? 'Có header' : 'Chưa có header',
-                rowStatusLabel: isEmpty ? 'Sheet rỗng' : `${dataRowCount} dòng dữ liệu`,
+                rowStatusLabel: isEmpty ? 'Sheet rỗng' : `${formatImportNumber(dataRowCount)} dòng dữ liệu`,
                 rowStatusSeverity: isEmpty ? 'warn' : 'info',
             };
         });

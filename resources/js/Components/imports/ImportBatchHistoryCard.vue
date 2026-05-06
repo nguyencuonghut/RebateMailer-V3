@@ -47,8 +47,8 @@ const { historyRows, openBatch, isActiveBatch } = useImportBatchHistory(props.hi
             </Column>
             <Column field="uploadedBy" header="Người import" />
             <Column field="uploadedAtLabel" header="Thời điểm" />
-            <Column field="parsedRecordCount" header="Parsed" />
-            <Column field="aggregatedRecordCount" header="Aggregated" />
+            <Column field="parsedRecordCountLabel" header="Parsed" />
+            <Column field="aggregatedRecordCountLabel" header="Aggregated" />
             <Column header="Mở lại">
                 <template #body="{ data }">
                     <Button

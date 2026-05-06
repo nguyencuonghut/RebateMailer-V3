@@ -1,4 +1,5 @@
 import type { KhoanNppPreview, KhoanNppPreviewRecord } from './useKhoanNppPreviewFlow';
+import { formatImportNumber } from './useImportNumberFormatter';
 
 export type KhoanNppProgramItemPresentation = {
     programIndex: number;
@@ -29,9 +30,9 @@ const buildProgramItemPresentation = (record: KhoanNppPreviewRecord): KhoanNppPr
         programIndex: item.programIndex,
         title: `CT ${item.programIndex}`,
         content: item.content,
-        quantityLabel: `SL: ${item.quantity || '-'}`,
-        supportRateLabel: `đ/kg: ${item.supportRate || '-'}`,
-        amountLabel: `Thành tiền: ${item.amount || '-'}`,
+        quantityLabel: `SL: ${formatImportNumber(item.quantity)}`,
+        supportRateLabel: `đ/kg: ${formatImportNumber(item.supportRate)}`,
+        amountLabel: `Thành tiền: ${formatImportNumber(item.amount)}`,
     }));
 
 const buildRecordPresentation = (record: KhoanNppPreviewRecord): KhoanNppPreviewRecordPresentation => {
@@ -67,10 +68,10 @@ export const useKhoanNppPreviewPresentation = (preview: KhoanNppPreview | null):
         : null;
 
     return {
-        programBlockSummary: `Sheet này có ${preview.programBlockCount} block CT được định nghĩa, từ CT1 đến CT${preview.programBlockCount}.`,
+        programBlockSummary: `Sheet này có ${formatImportNumber(preview.programBlockCount)} block CT được định nghĩa, từ CT1 đến CT${formatImportNumber(preview.programBlockCount)}.`,
         usageCoverageSummary: highestUsedProgramIndex === null
             ? 'Chưa có bản ghi nào dùng dữ liệu CT.'
-            : `Trong workbook hiện tại, bản ghi dùng CT cao nhất đang tới CT${highestUsedProgramIndex}.`,
+            : `Trong workbook hiện tại, bản ghi dùng CT cao nhất đang tới CT${formatImportNumber(highestUsedProgramIndex)}.`,
         records,
         recordsByCustomerCode: Object.fromEntries(
             records.map((record) => [record.customerCode, record]),

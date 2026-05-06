@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KeyAccountPreview } from '@/Services/imports/useKeyAccountPreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
+import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -62,14 +63,14 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Số bản ghi</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.recordCount }}
+                        {{ formatImportNumber(preview.recordCount) }}
                     </p>
                 </div>
 
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Số block chương trình</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.programBlockCount }}
+                        {{ formatImportNumber(preview.programBlockCount) }}
                     </p>
                 </div>
             </div>
@@ -124,8 +125,16 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
             >
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
                 <Column field="month" header="Tháng" />
-                <Column field="totalQuantity" header="Tổng sản lượng" />
-                <Column field="grandTotal" header="Tổng cộng" />
+                <Column header="Tổng sản lượng">
+                    <template #body="{ data }">
+                        {{ formatImportNumber(data.totalQuantity) }}
+                    </template>
+                </Column>
+                <Column header="Tổng cộng">
+                    <template #body="{ data }">
+                        {{ formatImportNumber(data.grandTotal) }}
+                    </template>
+                </Column>
                 <Column header="Cột rời rạc có giá trị">
                     <template #body="{ data }">
                         <div class="space-y-2">
@@ -133,7 +142,7 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                                 <Tag
                                     v-for="item in data.discreteItems"
                                     :key="`${data.customerCode}-${item.label}`"
-                                    :value="`${item.label}: ${item.value}`"
+                                    :value="`${item.label}: ${formatImportNumber(item.value)}`"
                                     severity="info"
                                     rounded
                                 />
@@ -160,9 +169,9 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                                     {{ item.content }}
                                 </p>
                                 <div class="mt-2 flex flex-wrap gap-2">
-                                    <Tag :value="`SL: ${item.quantity || '-'}`" severity="info" rounded />
-                                    <Tag :value="`đ/kg: ${item.supportRate || '-'}`" severity="warn" rounded />
-                                    <Tag :value="`Thành tiền: ${item.amount || '-'}`" severity="success" rounded />
+                                    <Tag :value="`SL: ${formatImportNumber(item.quantity)}`" severity="info" rounded />
+                                    <Tag :value="`đ/kg: ${formatImportNumber(item.supportRate)}`" severity="warn" rounded />
+                                    <Tag :value="`Thành tiền: ${formatImportNumber(item.amount)}`" severity="success" rounded />
                                 </div>
                             </div>
                         </div>

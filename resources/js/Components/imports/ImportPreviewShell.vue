@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ImportWorkbookBoundary, ImportWorkbookBoundaryActionConfig } from '@/Services/imports/useImportWorkbookBoundaryFlow';
 import type { ImportUploadReceipt } from '@/Services/imports/useImportUploadFlow';
+import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import Tag from 'primevue/tag';
 
 defineProps<{
@@ -37,7 +38,7 @@ defineProps<{
             <div>
                 <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Dung lượng</dt>
                 <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
-                    {{ receipt.size === null ? 'Không còn dữ liệu dung lượng' : `${receipt.size.toLocaleString('vi-VN')} bytes` }}
+                    {{ receipt.size === null ? 'Không còn dữ liệu dung lượng' : `${formatImportNumber(receipt.size)} bytes` }}
                 </dd>
             </div>
             <div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KhoanNppPreview } from '@/Services/imports/useKhoanNppPreviewFlow';
 import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
+import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import { useKhoanNppPreviewPresentation } from '@/Services/imports/useKhoanNppPreviewPresentation';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
@@ -65,14 +66,14 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Số bản ghi</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.recordCount }}
+                        {{ formatImportNumber(preview.recordCount) }}
                     </p>
                 </div>
 
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Block chương trình</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                        {{ preview.programBlockCount }}
+                        {{ formatImportNumber(preview.programBlockCount) }}
                     </p>
                 </div>
             </div>
@@ -128,7 +129,11 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
                 <Column field="month" header="Tháng" />
                 <Column field="feedCategory" header="Thức ăn chăn nuôi" />
-                <Column field="grandTotal" header="Tổng cộng" />
+                <Column header="Tổng cộng">
+                    <template #body="{ data }">
+                        {{ formatImportNumber(data.grandTotal) }}
+                    </template>
+                </Column>
                 <Column header="Phạm vi CT đang dùng">
                     <template #body="{ data }">
                         <div
@@ -138,12 +143,12 @@ const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelpe
                             <p>{{ presentation.recordsByCustomerCode[data.customerCode]?.usageSummary }}</p>
                             <div class="flex flex-wrap gap-2">
                                 <Tag
-                                    :value="`Số CT có dữ liệu: ${presentation.recordsByCustomerCode[data.customerCode]?.usedProgramCount ?? 0}`"
+                                    :value="`Số CT có dữ liệu: ${formatImportNumber(presentation.recordsByCustomerCode[data.customerCode]?.usedProgramCount ?? 0)}`"
                                     severity="contrast"
                                     rounded
                                 />
                                 <Tag
-                                    :value="`CT cao nhất: ${presentation.recordsByCustomerCode[data.customerCode]?.maxProgramIndex ? `CT${presentation.recordsByCustomerCode[data.customerCode]?.maxProgramIndex}` : '-'}`"
+                                    :value="`CT cao nhất: ${presentation.recordsByCustomerCode[data.customerCode]?.maxProgramIndex ? `CT${formatImportNumber(presentation.recordsByCustomerCode[data.customerCode]?.maxProgramIndex)}` : '-'}`"
                                     severity="info"
                                     rounded
                                 />

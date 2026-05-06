@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import type { ImportHistoryItem } from './useImportsIndexPage';
+import { formatImportNumber } from './useImportNumberFormatter';
 
 type HistoryStatusSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 
@@ -8,6 +9,8 @@ export type ImportHistoryRow = ImportHistoryItem & {
     statusLabel: string;
     statusSeverity: HistoryStatusSeverity;
     uploadedAtLabel: string;
+    parsedRecordCountLabel: string;
+    aggregatedRecordCountLabel: string;
 };
 
 const statusMap: Record<string, { label: string; severity: HistoryStatusSeverity }> = {
@@ -48,6 +51,8 @@ export const useImportBatchHistory = (
             statusLabel: statusMap[item.status]?.label ?? item.status,
             statusSeverity: statusMap[item.status]?.severity ?? 'secondary',
             uploadedAtLabel: formatUploadedAt(item.uploadedAt),
+            parsedRecordCountLabel: formatImportNumber(item.parsedRecordCount),
+            aggregatedRecordCountLabel: formatImportNumber(item.aggregatedRecordCount),
         })),
     );
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ImportWorkbookBoundary } from '@/Services/imports/useImportWorkbookBoundaryFlow';
+import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import { useImportWorkbookBoundaryPreview } from '@/Services/imports/useImportWorkbookBoundaryPreview';
 import Message from 'primevue/message';
 import Tab from 'primevue/tab';
@@ -110,7 +111,7 @@ const { summaryItems, contractMessages, sheetDetails } = useImportWorkbookBounda
                                         <p class="text-sm">
                                             {{
                                                 sheetDetail.hasHeader
-                                                    ? `Đã đọc ${sheetDetail.headerCount} cột ở line 1.`
+                                                    ? `Đã đọc ${formatImportNumber(sheetDetail.headerCount)} cột ở line 1.`
                                                     : 'Sheet này chưa có dữ liệu header để hiển thị ở boundary hiện tại.'
                                             }}
                                         </p>
@@ -118,7 +119,7 @@ const { summaryItems, contractMessages, sheetDetails } = useImportWorkbookBounda
                                             {{
                                                 sheetDetail.isEmpty
                                                     ? 'Sheet hiện không có dòng dữ liệu nào sau header.'
-                                                    : `Có ${sheetDetail.dataRowCount} dòng dữ liệu sau header.`
+                                                    : `Có ${formatImportNumber(sheetDetail.dataRowCount)} dòng dữ liệu sau header.`
                                             }}
                                         </p>
                                     </div>
