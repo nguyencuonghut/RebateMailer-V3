@@ -7,6 +7,7 @@ import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
 import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { Head, usePage } from '@inertiajs/vue3';
 import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
+import ImportAggregatePreview from '@/Components/imports/ImportAggregatePreview.vue';
 import ImportCamCaPreview from '@/Components/imports/ImportCamCaPreview.vue';
 import ImportKeyAccountPreview from '@/Components/imports/ImportKeyAccountPreview.vue';
 import ImportPreviewShell from '@/Components/imports/ImportPreviewShell.vue';
@@ -14,6 +15,7 @@ import ImportKhoanNppPreview from '@/Components/imports/ImportKhoanNppPreview.vu
 import ImportTongHopPreview from '@/Components/imports/ImportTongHopPreview.vue';
 import AppLayout from '@/layout/AppLayout.vue';
 import { useCamCaPreviewFlow } from '@/Services/imports/useCamCaPreviewFlow';
+import { useAggregatePreviewFlow } from '@/Services/imports/useAggregatePreviewFlow';
 import { useKeyAccountPreviewFlow } from '@/Services/imports/useKeyAccountPreviewFlow';
 import { useKhoanNppPreviewFlow } from '@/Services/imports/useKhoanNppPreviewFlow';
 import { useTongHopPreviewFlow } from '@/Services/imports/useTongHopPreviewFlow';
@@ -36,6 +38,7 @@ const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHo
 const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview, resetKhoanNppPreview } = useKhoanNppPreviewFlow();
 const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview, resetCamCaPreview } = useCamCaPreviewFlow(workbookBoundary);
 const { isLoadingKeyAccountPreview, keyAccountPreview, keyAccountErrorMessage, canPreviewKeyAccount, loadKeyAccountPreview, resetKeyAccountPreview } = useKeyAccountPreviewFlow(workbookBoundary);
+const { isLoadingAggregatePreview, aggregatePreview, aggregateErrorMessage, canPreviewAggregate, loadAggregatePreview, resetAggregatePreview } = useAggregatePreviewFlow(workbookBoundary);
 const canPreviewTongHop = computed(() =>
     workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Tổng hợp' && sheet.present) ?? false,
 );
@@ -49,6 +52,7 @@ const submitUpload = async (): Promise<void> => {
     resetKhoanNppPreview();
     resetCamCaPreview();
     resetKeyAccountPreview();
+    resetAggregatePreview();
 
     const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
 
@@ -66,6 +70,7 @@ const prepareWorkbookBoundary = async (): Promise<void> => {
     resetKhoanNppPreview();
     resetCamCaPreview();
     resetKeyAccountPreview();
+    resetAggregatePreview();
 
     const errorMessage = await analyzeWorkbook(uploadReceipt.value, route('imports.analyze-workbook'));
 
@@ -108,6 +113,16 @@ const loadKeyAccountSheetPreview = async (): Promise<void> => {
     inlineError.value = '';
 
     const errorMessage = await loadKeyAccountPreview(uploadReceipt.value, route('imports.preview-key-account'));
+
+    if (errorMessage) {
+        inlineError.value = errorMessage;
+    }
+};
+
+const loadAggregateDataPreview = async (): Promise<void> => {
+    inlineError.value = '';
+
+    const errorMessage = await loadAggregatePreview(uploadReceipt.value, route('imports.preview-aggregated'));
 
     if (errorMessage) {
         inlineError.value = errorMessage;
@@ -281,6 +296,21 @@ const loadKeyAccountSheetPreview = async (): Promise<void> => {
                             :error-message="keyAccountErrorMessage"
                             :can-preview="canPreviewKeyAccount"
                             @load="loadKeyAccountSheetPreview"
+                        />
+                    </template>
+                </Card>
+
+                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                    <template #title>
+                        Preview aggregator theo Mã số
+                    </template>
+                    <template #content>
+                        <ImportAggregatePreview
+                            :preview="aggregatePreview"
+                            :is-loading="isLoadingAggregatePreview"
+                            :error-message="aggregateErrorMessage"
+                            :can-preview="canPreviewAggregate"
+                            @load="loadAggregateDataPreview"
                         />
                     </template>
                 </Card>

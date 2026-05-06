@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportCamCaPreviewController;
+use App\Http\Controllers\ImportAggregatePreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
 use App\Http\Controllers\ImportPageController;
 use App\Http\Controllers\ImportKhoanNppPreviewController;
@@ -45,6 +46,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/imports/preview-key-account', [ImportKeyAccountPreviewController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.preview-key-account');
+    Route::post('/imports/preview-aggregated', [ImportAggregatePreviewController::class, 'store'])
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.preview-aggregated');
 
     Route::get('/templates', function () {
         return Inertia::render('ModulePage', [

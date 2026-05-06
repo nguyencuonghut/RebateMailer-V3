@@ -13,8 +13,8 @@ class ImportPageService
             'title' => 'Import dữ liệu',
             'description' => 'Khu vực tiếp nhận file Excel chiết khấu hàng tháng và chuẩn bị cho luồng preview dữ liệu rebate.',
             'currentSlice' => [
-                'code' => '1.6',
-                'label' => 'Parser - Sheet Key Account',
+                'code' => '1.7',
+                'label' => 'Aggregator',
             ],
             'canManageImports' => $canManageImports,
             'uploadPolicy' => [
@@ -28,26 +28,26 @@ class ImportPageService
                 'Key Account',
             ],
             'nextSlice' => [
-                'code' => '1.7',
-                'label' => 'Aggregator',
+                'code' => '1.8',
+                'label' => 'Validation',
             ],
             'analysisPrep' => [
                 'actionLabel' => 'Đọc cấu trúc workbook',
-                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook rồi mở preview riêng cho sheet Key Account để kiểm tra cột rời rạc và các block Nội dung CT | SL | đ/kg | Thành tiền ngay trên UI.',
-                'readyTitle' => 'Parser sheet Key Account đã sẵn sàng',
-                'readyDescription' => 'Workbook đã được phân tích thành công. Khu vực bên dưới có thể mở preview riêng cho sheet Key Account với nhóm cột rời rạc và các block chương trình đã được chuẩn hóa.',
+                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook rồi mở preview aggregator để kiểm tra dữ liệu đã được gom theo Mã số ngay trên UI.',
+                'readyTitle' => 'Aggregator đã sẵn sàng',
+                'readyDescription' => 'Workbook đã được phân tích thành công. Khu vực bên dưới có thể mở preview dữ liệu hợp nhất giữa Khách thường và Key Account theo Mã số.',
                 'statusLabel' => 'Chưa đọc workbook',
                 'toast' => [
                     'severity' => 'success',
                     'summary' => 'Đọc workbook thành công',
-                    'detail' => 'Workbook boundary đã sẵn sàng. Bạn có thể mở preview parser cho sheet Key Account.',
+                    'detail' => 'Workbook boundary đã sẵn sàng. Bạn có thể mở preview aggregator theo Mã số.',
                     'life' => 4000,
                 ],
             ],
             'toast' => [
                 'severity' => 'info',
                 'summary' => 'Khu vực import đã sẵn sàng',
-                'detail' => 'Bạn có thể tải file Excel lên, đọc workbook và mở preview parser cho sheet Key Account.',
+                'detail' => 'Bạn có thể tải file Excel lên, đọc workbook và mở preview aggregator theo Mã số.',
                 'life' => 4000,
             ],
         ];
