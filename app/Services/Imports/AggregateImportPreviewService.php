@@ -16,6 +16,10 @@ class AggregateImportPreviewService
         foreach ($this->sheetRecords($importBatch, 'Tổng hợp') as $record) {
             $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Khách thường');
+            $recordsByCustomerCode[$code]['customerFullName'] = $this->resolveCustomerFullName(
+                $recordsByCustomerCode[$code]['customerFullName'],
+                $record['customerFullName'] ?? null,
+            );
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Tổng hợp';
             $recordsByCustomerCode[$code]['tongHop'] = $record;
         }
@@ -23,6 +27,10 @@ class AggregateImportPreviewService
         foreach ($this->sheetRecords($importBatch, 'Khoán NPP') as $record) {
             $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Khách thường');
+            $recordsByCustomerCode[$code]['customerFullName'] = $this->resolveCustomerFullName(
+                $recordsByCustomerCode[$code]['customerFullName'],
+                $record['customerFullName'] ?? null,
+            );
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Khoán NPP';
             $recordsByCustomerCode[$code]['khoanNpp'] = $record;
         }
@@ -30,6 +38,10 @@ class AggregateImportPreviewService
         foreach ($this->sheetRecords($importBatch, 'Cám cá') as $record) {
             $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Khách thường');
+            $recordsByCustomerCode[$code]['customerFullName'] = $this->resolveCustomerFullName(
+                $recordsByCustomerCode[$code]['customerFullName'],
+                $record['customerFullName'] ?? null,
+            );
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Cám cá';
             $recordsByCustomerCode[$code]['camCa'] = $record;
         }
@@ -38,6 +50,10 @@ class AggregateImportPreviewService
             $code = (string) $record['customerCode'];
             $recordsByCustomerCode[$code] ??= $this->makeBaseRecord($code, 'Key Account');
             $recordsByCustomerCode[$code]['customerType'] = 'Key Account';
+            $recordsByCustomerCode[$code]['customerFullName'] = $this->resolveCustomerFullName(
+                $recordsByCustomerCode[$code]['customerFullName'],
+                $record['customerFullName'] ?? null,
+            );
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Key Account';
             $recordsByCustomerCode[$code]['keyAccount'] = $record;
         }
@@ -90,6 +106,7 @@ class AggregateImportPreviewService
     {
         return [
             'customerCode' => $customerCode,
+            'customerFullName' => '',
             'customerType' => $customerType,
             'sourceSheets' => [],
             'tongHop' => null,
@@ -97,5 +114,16 @@ class AggregateImportPreviewService
             'camCa' => null,
             'keyAccount' => null,
         ];
+    }
+
+    private function resolveCustomerFullName(mixed $currentValue, mixed $candidateValue): string
+    {
+        $current = trim((string) $currentValue);
+
+        if ($current !== '') {
+            return $current;
+        }
+
+        return trim((string) $candidateValue);
     }
 }

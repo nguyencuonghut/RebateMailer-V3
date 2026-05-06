@@ -29,6 +29,7 @@ const {
     clearGlobalFilter,
 } = useDataTableGlobalFilter<AggregatePreview['records'][number]>([
     'customerCode',
+    'customerFullName',
     'customerType',
     (record) => record.sourceSheets.join(' '),
     (record) => [
@@ -120,11 +121,11 @@ const {
                 <template #header>
                     <DataTableGlobalFilterToolbar
                         v-model="globalFilterValue"
-                        placeholder="Tìm theo mã số, loại khách, sheet nguồn, section dữ liệu"
+                        placeholder="Tìm theo mã khách, tên khách hàng, loại khách, sheet nguồn"
                         @clear="clearGlobalFilter"
                     />
                 </template>
-                <Column field="customerCode" header="Mã số" />
+                <Column field="customerFullName" header="Mã & tên khách hàng" />
                 <Column field="customerType" header="Loại khách">
                     <template #body="{ data }">
                         <Tag

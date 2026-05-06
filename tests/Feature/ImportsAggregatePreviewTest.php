@@ -171,6 +171,7 @@ class ImportsAggregatePreviewTest extends TestCase
         $record = $records->get('90300');
 
         $this->assertNotNull($record);
+        $this->assertNotSame('', $record['customerFullName']);
         $this->assertSame('Khách thường', $record['customerType']);
         $this->assertSame(['Tổng hợp', 'Khoán NPP'], $record['sourceSheets']);
         $this->assertNotNull($record['tongHop']);
@@ -187,6 +188,7 @@ class ImportsAggregatePreviewTest extends TestCase
         $record = $records->get('16068');
 
         $this->assertNotNull($record);
+        $this->assertSame('16068 - Công ty TNHH TM DV Thắng Giang', $record['customerFullName']);
         $this->assertSame('Khách thường', $record['customerType']);
         $this->assertSame(['Cám cá'], $record['sourceSheets']);
         $this->assertNull($record['tongHop']);
@@ -217,6 +219,7 @@ class ImportsAggregatePreviewTest extends TestCase
         $record = $records->get('11008');
 
         $this->assertNotNull($record);
+        $this->assertNotSame('', $record['customerFullName']);
         $this->assertSame('Key Account', $record['customerType']);
         $this->assertSame(['Key Account'], $record['sourceSheets']);
         $this->assertNull($record['tongHop']);

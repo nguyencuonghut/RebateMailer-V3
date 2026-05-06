@@ -9,6 +9,7 @@ type AggregateCustomerType = 'Khách thường' | 'Key Account';
 
 export type AggregatedImportRecord = {
     customerCode: string;
+    customerFullName: string;
     customerType: AggregateCustomerType;
     sourceSheets: string[];
     tongHop: Record<string, unknown> | null;
