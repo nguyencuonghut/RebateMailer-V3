@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportPageController;
+use App\Http\Controllers\ImportTongHopPreviewController;
 use App\Http\Controllers\ImportUploadController;
 use App\Http\Controllers\ImportWorkbookAnalysisController;
 use App\Http\Controllers\UserManagementController;
@@ -29,6 +30,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/imports/analyze-workbook', [ImportWorkbookAnalysisController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.analyze-workbook');
+    Route::post('/imports/preview-tong-hop', [ImportTongHopPreviewController::class, 'store'])
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.preview-tong-hop');
 
     Route::get('/templates', function () {
         return Inertia::render('ModulePage', [
