@@ -182,7 +182,21 @@ const loadAggregateTab = async (): Promise<void> => {
     <Head :title="title" />
 
     <AppLayout :app-name="page.props.appName">
-        <Toast position="top-right" />
+        <Toast
+            position="top-right"
+            :breakpoints="{
+                '960px': {
+                    width: 'calc(100vw - 2rem)',
+                    right: '1rem',
+                    left: '1rem',
+                },
+            }"
+            :pt="{
+                root: { class: '!top-24 md:!top-28 !right-4 md:!right-6' },
+                message: { class: 'max-w-[32rem]' },
+                detail: { class: 'break-words leading-6' },
+            }"
+        />
 
         <div class="space-y-6">
             <Card class="sakai-panel rounded-[2rem] border-0">

@@ -63,9 +63,9 @@ class ImportPageService
             'toast' => $selectedBatch === null
                 ? [
                     'severity' => 'info',
-                    'summary' => 'Khu vực nhập dữ liệu đã sẵn sàng',
-                    'detail' => 'Bạn có thể tải file Excel lên để hệ thống tự xử lý đợt nhập và hiển thị kết quả theo từng tab dữ liệu.',
-                    'life' => 4000,
+                    'summary' => '',
+                    'detail' => '',
+                    'life' => 0,
                 ]
                 : [
                     'severity' => 'info',

@@ -23,7 +23,7 @@ class ImportsPageTest extends TestCase
         Storage::fake('local');
     }
 
-    public function test_imports_page_renders_through_inertia_with_backend_driven_toast_message(): void
+    public function test_imports_page_renders_through_inertia_without_boot_toast_message(): void
     {
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
 
@@ -39,8 +39,8 @@ class ImportsPageTest extends TestCase
                 ->where('uploadPolicy.acceptedExtension', '.xlsx')
                 ->where('analysisPrep.actionLabel', 'Đọc cấu trúc workbook')
                 ->where('nextSlice.code', '1.8')
-                ->where('toast.summary', 'Khu vực nhập dữ liệu đã sẵn sàng')
-                ->where('toast.detail', 'Bạn có thể tải file Excel lên để hệ thống tự xử lý đợt nhập và hiển thị kết quả theo từng tab dữ liệu.')
+                ->where('toast.summary', '')
+                ->where('toast.detail', '')
             );
     }
 
