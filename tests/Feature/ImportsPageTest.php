@@ -39,8 +39,8 @@ class ImportsPageTest extends TestCase
                 ->where('uploadPolicy.acceptedExtension', '.xlsx')
                 ->where('analysisPrep.actionLabel', 'Đọc cấu trúc workbook')
                 ->where('nextSlice.code', '1.8')
-                ->where('toast.summary', 'Khu vực import đã sẵn sàng')
-                ->where('toast.detail', 'Bạn có thể tải file Excel lên để hệ thống tự xử lý batch và hiển thị kết quả theo từng tab dữ liệu.')
+                ->where('toast.summary', 'Khu vực nhập dữ liệu đã sẵn sàng')
+                ->where('toast.detail', 'Bạn có thể tải file Excel lên để hệ thống tự xử lý đợt nhập và hiển thị kết quả theo từng tab dữ liệu.')
             );
     }
 

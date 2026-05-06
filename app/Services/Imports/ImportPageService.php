@@ -60,14 +60,22 @@ class ImportPageService
                     'life' => 4000,
                 ],
             ],
-            'toast' => [
-                'severity' => 'info',
-                'summary' => 'Khu vực nhập dữ liệu đã sẵn sàng',
-                'detail' => 'Bạn có thể tải file Excel lên để hệ thống tự xử lý đợt nhập và hiển thị kết quả theo từng tab dữ liệu.',
-                'life' => 4000,
-            ],
+            'toast' => $selectedBatch === null
+                ? [
+                    'severity' => 'info',
+                    'summary' => 'Khu vực nhập dữ liệu đã sẵn sàng',
+                    'detail' => 'Bạn có thể tải file Excel lên để hệ thống tự xử lý đợt nhập và hiển thị kết quả theo từng tab dữ liệu.',
+                    'life' => 4000,
+                ]
+                : [
+                    'severity' => 'info',
+                    'summary' => '',
+                    'detail' => '',
+                    'life' => 0,
+                ],
             'activeBatchId' => $selectedBatch?->getKey(),
             'initialUploadReceipt' => $selectedBatch ? $this->buildInitialUploadReceipt($selectedBatch) : null,
+            'initialBatchProcessingError' => $selectedBatch ? $this->initialBatchProcessingError($selectedBatch) : null,
             'initialWorkbookBoundary' => $selectedBatch ? $this->buildInitialWorkbookBoundary($selectedBatch) : null,
             'initialTongHopPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Tổng hợp') : null,
             'initialKhoanNppPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Khoán NPP') : null,
@@ -161,5 +169,12 @@ class ImportPageService
     private function formatBatchTimestamp(ImportBatch $importBatch): ?string
     {
         return optional($importBatch->started_at)->toIso8601String();
+    }
+
+    private function initialBatchProcessingError(ImportBatch $importBatch): ?string
+    {
+        $message = $importBatch->workbook_summary['processingError']['message'] ?? null;
+
+        return is_string($message) && $message !== '' ? $message : null;
     }
 }

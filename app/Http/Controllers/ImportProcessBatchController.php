@@ -2,54 +2,81 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessImportBatchJob;
 use App\Http\Requests\Imports\AnalyzeWorkbookBoundaryRequest;
-use App\Services\Imports\PrepareAggregatePreviewService;
+use App\Services\Imports\UpdateImportBatchLifecycleService;
 use Illuminate\Http\JsonResponse;
-use RuntimeException;
 
 class ImportProcessBatchController extends Controller
 {
     public function __construct(
-        private readonly PrepareAggregatePreviewService $prepareAggregatePreviewService,
+        private readonly UpdateImportBatchLifecycleService $updateImportBatchLifecycleService,
     ) {
     }
 
-    /**
-     * Chạy toàn bộ pipeline: analyze workbook → parse 4 sheet → aggregate → persist.
-     * Được gọi tự động từ FE ngay sau khi upload thành công.
-     */
     public function store(AnalyzeWorkbookBoundaryRequest $request): JsonResponse
     {
-        try {
-            $preview = $this->prepareAggregatePreviewService->prepare(
-                $request->importBatch(),
-            );
-        } catch (RuntimeException $exception) {
+        $importBatch = $request->importBatch();
+
+        if (in_array($importBatch->status, ['aggregated', 'validated_ready', 'validated_with_warnings'], true)) {
             return response()->json([
-                'status' => 'error',
-                'message' => $exception->getMessage(),
+                'status' => 'ok',
+                'message' => 'Batch import này đã được xử lý xong.',
                 'toast' => [
-                    'severity' => 'error',
-                    'summary' => 'Xử lý dữ liệu thất bại',
-                    'detail' => $exception->getMessage(),
-                    'life' => 5000,
+                    'severity' => 'success',
+                    'summary' => 'Batch đã xử lý xong',
+                    'detail' => 'Đợt import này đã có dữ liệu hoàn chỉnh trong hệ thống, không cần đưa lại vào hàng đợi.',
+                    'life' => 4000,
                 ],
-                'errors' => [
-                    'batch' => [$exception->getMessage()],
+                'data' => [
+                    'importBatch' => [
+                        'id' => $importBatch->id,
+                        'batchCode' => $importBatch->batch_code,
+                        'status' => $importBatch->status,
+                    ],
                 ],
-            ], 422);
+            ]);
         }
+
+        if (in_array($importBatch->status, ['queued', 'processing'], true)) {
+            return response()->json([
+                'status' => 'ok',
+                'message' => 'Batch import đang nằm trong hàng đợi xử lý.',
+                'toast' => [
+                    'severity' => 'info',
+                    'summary' => 'Batch đang được xử lý',
+                    'detail' => 'Hệ thống đang tiếp tục xử lý batch này ở background. Trang sẽ tự cập nhật khi hoàn tất.',
+                    'life' => 4000,
+                ],
+                'data' => [
+                    'importBatch' => [
+                        'id' => $importBatch->id,
+                        'batchCode' => $importBatch->batch_code,
+                        'status' => $importBatch->status,
+                    ],
+                ],
+            ], 202);
+        }
+
+        $importBatch = $this->updateImportBatchLifecycleService->markQueued($importBatch);
+        ProcessImportBatchJob::dispatch($importBatch->id);
 
         return response()->json([
             'status' => 'ok',
-            'message' => 'Đã xử lý và lưu dữ liệu import thành công.',
+            'message' => 'Batch import đã được đưa vào hàng đợi xử lý.',
             'toast' => [
-                'severity' => 'success',
-                'summary' => 'Xử lý dữ liệu hoàn tất',
-                'detail' => 'Dữ liệu đã được parse và tổng hợp theo Mã số. Bạn có thể xem kết quả trong các tab bên dưới.',
+                'severity' => 'info',
+                'summary' => 'Đã đưa vào hàng đợi xử lý',
+                'detail' => 'Batch import sẽ được worker xử lý ở background. Trang sẽ tự cập nhật khi hoàn tất.',
                 'life' => 4000,
             ],
-            'data' => $preview,
-        ]);
+            'data' => [
+                'importBatch' => [
+                    'id' => $importBatch->id,
+                    'batchCode' => $importBatch->batch_code,
+                    'status' => $importBatch->status,
+                ],
+            ],
+        ], 202);
     }
 }

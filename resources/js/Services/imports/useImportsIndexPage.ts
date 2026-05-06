@@ -43,6 +43,7 @@ export type ImportPageProps = {
     toast: ImportPageToast;
     activeBatchId: number | null;
     initialUploadReceipt: ImportUploadReceipt | null;
+    initialBatchProcessingError: string | null;
     initialWorkbookBoundary: ImportWorkbookBoundary | null;
     initialTongHopPreview: TongHopPreview | null;
     initialKhoanNppPreview: KhoanNppPreview | null;

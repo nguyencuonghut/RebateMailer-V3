@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ImportAggregatePreviewController;
+use App\Http\Controllers\ImportBatchStatusController;
 use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
 use App\Http\Controllers\ImportPageController;
@@ -35,6 +36,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/imports/process-batch', [ImportProcessBatchController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.process-batch');
+    Route::get('/imports/batches/{importBatch}/status', [ImportBatchStatusController::class, 'show'])
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.batch-status');
     Route::post('/imports/analyze-workbook', [ImportWorkbookAnalysisController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.analyze-workbook');

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { ImportWorkbookBoundary, ImportWorkbookBoundaryActionConfig } from '@/Services/imports/useImportWorkbookBoundaryFlow';
 import type { ImportUploadReceipt } from '@/Services/imports/useImportUploadFlow';
+import { getImportBatchStatusPresentation } from '@/Services/imports/useImportBatchStatusPresentation';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 import Tag from 'primevue/tag';
 
-defineProps<{
+const props = defineProps<{
     receipt: ImportUploadReceipt | null;
     canManageImports: boolean;
     analysisPrep: ImportWorkbookBoundaryActionConfig;
@@ -13,6 +15,12 @@ defineProps<{
     analysisErrorMessage: string;
     analysisStatusText: string;
 }>();
+
+const importBatchStatusPresentation = computed(() =>
+    props.receipt
+        ? getImportBatchStatusPresentation(props.receipt.importBatch.status)
+        : null,
+);
 </script>
 
 <template>
@@ -28,8 +36,8 @@ defineProps<{
             </div>
 
             <Tag
-                :value="receipt.importBatch.status === 'uploaded' ? 'Tải lên thành công' : 'Đợt nhập đã lưu'"
-                :severity="receipt.importBatch.status === 'uploaded' ? 'success' : 'info'"
+                :value="importBatchStatusPresentation?.label"
+                :severity="importBatchStatusPresentation?.severity"
                 rounded
             />
         </div>
@@ -56,7 +64,7 @@ defineProps<{
             <div>
                 <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Trạng thái đợt nhập</dt>
                 <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
-                    {{ receipt.importBatch.status }}
+                    {{ importBatchStatusPresentation?.label }}
                 </dd>
             </div>
         </dl>

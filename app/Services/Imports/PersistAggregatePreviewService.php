@@ -26,6 +26,7 @@ class PersistAggregatePreviewService
         $this->persistImportBatchAggregatedRecordsService->replaceForBatch($importBatch, $records);
 
         $workbookSummary = $importBatch->workbook_summary ?? [];
+        unset($workbookSummary['processingError']);
         $workbookSummary['aggregatePreview'] = [
             'summary' => $summary,
             'recordCount' => count($records),
@@ -35,6 +36,7 @@ class PersistAggregatePreviewService
         $importBatch->forceFill([
             'workbook_summary' => $workbookSummary,
             'status' => 'aggregated',
+            'completed_at' => now(),
         ])->save();
 
         return $importBatch->refresh();

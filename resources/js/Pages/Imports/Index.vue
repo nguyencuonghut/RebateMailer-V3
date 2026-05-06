@@ -8,6 +8,7 @@ import { useAggregatePreviewFlow } from '@/Services/imports/useAggregatePreviewF
 import { useCamCaPreviewFlow } from '@/Services/imports/useCamCaPreviewFlow';
 import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
 import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
+import { useImportBatchStatusMonitor } from '@/Services/imports/useImportBatchStatusMonitor';
 import { useImportProcessBatchFlow } from '@/Services/imports/useImportProcessBatchFlow';
 import { useImportWorkbookBoundaryFlow } from '@/Services/imports/useImportWorkbookBoundaryFlow';
 import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
@@ -21,7 +22,7 @@ import AppLayout from '@/layout/AppLayout.vue';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import Toast from 'primevue/toast';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps<ImportPageProps>();
 
@@ -43,6 +44,11 @@ const {
     processBatch,
     resetProcessBatch,
 } = useImportProcessBatchFlow();
+const {
+    isBatchProcessing,
+    processingError: batchProcessingError,
+    startMonitoring,
+} = useImportBatchStatusMonitor(props.initialBatchProcessingError);
 
 const canShowReceiptShell = computed(() => props.canManageImports || uploadReceipt.value !== null);
 const canShowResultTabs = computed(
@@ -53,7 +59,28 @@ const canShowResultTabs = computed(
         || camCaPreview.value !== null
         || keyAccountPreview.value !== null
         || isProcessing.value
-        || processingError.value !== '',
+        || isBatchProcessing.value
+        || processingError.value !== ''
+        || batchProcessingError.value !== '',
+);
+
+watch(
+    () => uploadReceipt.value?.importBatch.status,
+    (status) => {
+        if (!props.canManageImports || !uploadReceipt.value) {
+            return;
+        }
+
+        if (!['queued', 'processing'].includes(status ?? '')) {
+            return;
+        }
+
+        startMonitoring(
+            uploadReceipt.value.importBatch.id,
+            route('imports.batch-status', uploadReceipt.value.importBatch.id),
+        );
+    },
+    { immediate: true },
 );
 
 const submitUpload = async (): Promise<void> => {
@@ -272,8 +299,8 @@ const loadAggregateTab = async (): Promise<void> => {
                         :can-preview-khoan-npp="canManageImports && !!uploadReceipt && !!workbookBoundary?.sheets.some((sheet) => sheet.name === 'Khoán NPP' && sheet.present)"
                         :can-preview-cam-ca="canManageImports && canPreviewCamCa"
                         :can-preview-key-account="canManageImports && canPreviewKeyAccount"
-                        :is-processing="isProcessing"
-                        :processing-error="processingError"
+                        :is-processing="isProcessing || isBatchProcessing"
+                        :processing-error="processingError || batchProcessingError"
                         @load-aggregate="loadAggregateTab"
                         @load-tong-hop="loadTongHopTab"
                         @load-khoan-npp="loadKhoanNppTab"

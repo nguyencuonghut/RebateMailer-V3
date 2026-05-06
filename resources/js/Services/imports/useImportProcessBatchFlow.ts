@@ -3,13 +3,18 @@ import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 import type { ImportPageToast } from './useImportsIndexPage';
 import type { ImportUploadReceipt } from './useImportUploadFlow';
-import type { AggregatePreview } from './useAggregatePreviewFlow';
 
 type ProcessBatchResponse = {
     status: 'ok' | 'error';
     message: string;
     toast: ImportPageToast;
-    data: AggregatePreview;
+    data: {
+        importBatch: {
+            id: number;
+            batchCode: string;
+            status: string;
+        };
+    };
     errors?: Record<string, string[]>;
 };
 
@@ -17,7 +22,6 @@ export const useImportProcessBatchFlow = () => {
     const toast = useToast();
     const isProcessing = ref(false);
     const processingError = ref('');
-    const processedPreview = ref<AggregatePreview | null>(null);
 
     const processBatch = async (
         receipt: ImportUploadReceipt | null,
@@ -37,7 +41,9 @@ export const useImportProcessBatchFlow = () => {
                 { headers: { Accept: 'application/json' } },
             );
 
-            processedPreview.value = response.data.data;
+            if (receipt) {
+                receipt.importBatch.status = response.data.data.importBatch.status;
+            }
 
             toast.add({
                 severity: response.data.toast.severity,
@@ -84,14 +90,12 @@ export const useImportProcessBatchFlow = () => {
     };
 
     const resetProcessBatch = (): void => {
-        processedPreview.value = null;
         processingError.value = '';
     };
 
     return {
         isProcessing,
         processingError,
-        processedPreview,
         processBatch,
         resetProcessBatch,
     };
