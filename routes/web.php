@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ImportPageController;
+use App\Http\Controllers\ImportKhoanNppPreviewController;
 use App\Http\Controllers\ImportTongHopPreviewController;
 use App\Http\Controllers\ImportUploadController;
 use App\Http\Controllers\ImportWorkbookAnalysisController;
@@ -33,6 +34,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/imports/preview-tong-hop', [ImportTongHopPreviewController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.preview-tong-hop');
+    Route::post('/imports/preview-khoan-npp', [ImportKhoanNppPreviewController::class, 'store'])
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.preview-khoan-npp');
 
     Route::get('/templates', function () {
         return Inertia::render('ModulePage', [
