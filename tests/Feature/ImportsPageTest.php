@@ -30,13 +30,13 @@ class ImportsPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Imports/Index')
                 ->where('title', 'Import dữ liệu')
-                ->where('currentSlice.code', '1.5')
+                ->where('currentSlice.code', '1.6')
                 ->where('canManageImports', true)
                 ->where('uploadPolicy.acceptedExtension', '.xlsx')
                 ->where('analysisPrep.actionLabel', 'Đọc cấu trúc workbook')
-                ->where('nextSlice.code', '1.6')
+                ->where('nextSlice.code', '1.7')
                 ->where('toast.summary', 'Khu vực import đã sẵn sàng')
-                ->where('toast.detail', 'Bạn có thể tải file Excel lên, đọc workbook và mở preview parser cho sheet Cám cá.')
+                ->where('toast.detail', 'Bạn có thể tải file Excel lên, đọc workbook và mở preview parser cho sheet Key Account.')
             );
     }
 

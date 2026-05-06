@@ -8,11 +8,13 @@ import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { Head, usePage } from '@inertiajs/vue3';
 import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
 import ImportCamCaPreview from '@/Components/imports/ImportCamCaPreview.vue';
+import ImportKeyAccountPreview from '@/Components/imports/ImportKeyAccountPreview.vue';
 import ImportPreviewShell from '@/Components/imports/ImportPreviewShell.vue';
 import ImportKhoanNppPreview from '@/Components/imports/ImportKhoanNppPreview.vue';
 import ImportTongHopPreview from '@/Components/imports/ImportTongHopPreview.vue';
 import AppLayout from '@/layout/AppLayout.vue';
 import { useCamCaPreviewFlow } from '@/Services/imports/useCamCaPreviewFlow';
+import { useKeyAccountPreviewFlow } from '@/Services/imports/useKeyAccountPreviewFlow';
 import { useKhoanNppPreviewFlow } from '@/Services/imports/useKhoanNppPreviewFlow';
 import { useTongHopPreviewFlow } from '@/Services/imports/useTongHopPreviewFlow';
 import Card from 'primevue/card';
@@ -33,6 +35,7 @@ const { isAnalyzingWorkbook, workbookBoundary, analysisErrorMessage, analysisSta
 const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHopPreview, resetTongHopPreview } = useTongHopPreviewFlow();
 const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview, resetKhoanNppPreview } = useKhoanNppPreviewFlow();
 const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview, resetCamCaPreview } = useCamCaPreviewFlow(workbookBoundary);
+const { isLoadingKeyAccountPreview, keyAccountPreview, keyAccountErrorMessage, canPreviewKeyAccount, loadKeyAccountPreview, resetKeyAccountPreview } = useKeyAccountPreviewFlow(workbookBoundary);
 const canPreviewTongHop = computed(() =>
     workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Tổng hợp' && sheet.present) ?? false,
 );
@@ -45,6 +48,7 @@ const submitUpload = async (): Promise<void> => {
     resetTongHopPreview();
     resetKhoanNppPreview();
     resetCamCaPreview();
+    resetKeyAccountPreview();
 
     const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
 
@@ -61,6 +65,7 @@ const prepareWorkbookBoundary = async (): Promise<void> => {
     resetTongHopPreview();
     resetKhoanNppPreview();
     resetCamCaPreview();
+    resetKeyAccountPreview();
 
     const errorMessage = await analyzeWorkbook(uploadReceipt.value, route('imports.analyze-workbook'));
 
@@ -93,6 +98,16 @@ const loadCamCaSheetPreview = async (): Promise<void> => {
     inlineError.value = '';
 
     const errorMessage = await loadCamCaPreview(uploadReceipt.value, route('imports.preview-cam-ca'));
+
+    if (errorMessage) {
+        inlineError.value = errorMessage;
+    }
+};
+
+const loadKeyAccountSheetPreview = async (): Promise<void> => {
+    inlineError.value = '';
+
+    const errorMessage = await loadKeyAccountPreview(uploadReceipt.value, route('imports.preview-key-account'));
 
     if (errorMessage) {
         inlineError.value = errorMessage;
@@ -251,6 +266,21 @@ const loadCamCaSheetPreview = async (): Promise<void> => {
                             :error-message="camCaErrorMessage"
                             :can-preview="canPreviewCamCa"
                             @load="loadCamCaSheetPreview"
+                        />
+                    </template>
+                </Card>
+
+                <Card v-if="canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                    <template #title>
+                        Preview sheet Key Account
+                    </template>
+                    <template #content>
+                        <ImportKeyAccountPreview
+                            :preview="keyAccountPreview"
+                            :is-loading="isLoadingKeyAccountPreview"
+                            :error-message="keyAccountErrorMessage"
+                            :can-preview="canPreviewKeyAccount"
+                            @load="loadKeyAccountSheetPreview"
                         />
                     </template>
                 </Card>
