@@ -70,7 +70,7 @@ export const useCamCaPreviewFlow = (
         previewUrl: string,
     ): Promise<string | null> => {
         if (!receipt) {
-            return 'Chưa có receipt upload để preview sheet Cám cá.';
+            return 'Chưa có thông tin tải file lên để xem trước sheet Cám cá.';
         }
 
         isLoadingCamCaPreview.value = true;
@@ -111,7 +111,7 @@ export const useCamCaPreviewFlow = (
 
                     toast.add({
                         severity: 'error',
-                        summary: 'Không thể preview sheet Cám cá',
+                        summary: 'Không thể xem trước sheet Cám cá',
                         detail: backendMessage,
                         life: 4000,
                     });
@@ -120,12 +120,12 @@ export const useCamCaPreviewFlow = (
                 }
             }
 
-            const fallbackMessage = 'Preview sheet Cám cá thất bại. Vui lòng thử lại.';
+            const fallbackMessage = 'Xem trước sheet Cám cá thất bại. Vui lòng thử lại.';
             camCaErrorMessage.value = fallbackMessage;
 
             toast.add({
                 severity: 'error',
-                summary: 'Không thể preview sheet Cám cá',
+                summary: 'Không thể xem trước sheet Cám cá',
                 detail: fallbackMessage,
                 life: 4000,
             });

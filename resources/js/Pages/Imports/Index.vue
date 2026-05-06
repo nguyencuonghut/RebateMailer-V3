@@ -2,26 +2,23 @@
 import type { PageProps } from '@/types';
 import type { ImportPageProps } from '@/Services/imports/useImportsIndexPage';
 import ImportBatchHistoryCard from '@/Components/imports/ImportBatchHistoryCard.vue';
-import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
-import { useImportWorkbookBoundaryFlow } from '@/Services/imports/useImportWorkbookBoundaryFlow';
-import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
-import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
-import { Head, usePage } from '@inertiajs/vue3';
-import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
-import ImportAggregatePreview from '@/Components/imports/ImportAggregatePreview.vue';
-import ImportCamCaPreview from '@/Components/imports/ImportCamCaPreview.vue';
-import ImportKeyAccountPreview from '@/Components/imports/ImportKeyAccountPreview.vue';
-import ImportPreviewShell from '@/Components/imports/ImportPreviewShell.vue';
-import ImportKhoanNppPreview from '@/Components/imports/ImportKhoanNppPreview.vue';
-import ImportTongHopPreview from '@/Components/imports/ImportTongHopPreview.vue';
-import AppLayout from '@/layout/AppLayout.vue';
-import { useCamCaPreviewFlow } from '@/Services/imports/useCamCaPreviewFlow';
+import ImportResultTabs from '@/Components/imports/ImportResultTabs.vue';
+import ImportWorkbookBoundarySummary from '@/Components/imports/ImportWorkbookBoundarySummary.vue';
 import { useAggregatePreviewFlow } from '@/Services/imports/useAggregatePreviewFlow';
+import { useCamCaPreviewFlow } from '@/Services/imports/useCamCaPreviewFlow';
+import { useImportUploadCard } from '@/Services/imports/useImportUploadCard';
+import { useImportUploadFlow } from '@/Services/imports/useImportUploadFlow';
+import { useImportProcessBatchFlow } from '@/Services/imports/useImportProcessBatchFlow';
+import { useImportWorkbookBoundaryFlow } from '@/Services/imports/useImportWorkbookBoundaryFlow';
+import { useImportsIndexPage } from '@/Services/imports/useImportsIndexPage';
 import { useKeyAccountPreviewFlow } from '@/Services/imports/useKeyAccountPreviewFlow';
 import { useKhoanNppPreviewFlow } from '@/Services/imports/useKhoanNppPreviewFlow';
 import { useTongHopPreviewFlow } from '@/Services/imports/useTongHopPreviewFlow';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import ImportUploadCard from '@/Components/imports/ImportUploadCard.vue';
+import ImportPreviewShell from '@/Components/imports/ImportPreviewShell.vue';
+import AppLayout from '@/layout/AppLayout.vue';
 import Card from 'primevue/card';
-import Message from 'primevue/message';
 import Tag from 'primevue/tag';
 import Toast from 'primevue/toast';
 import { computed } from 'vue';
@@ -34,32 +31,34 @@ const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, c
     props.uploadPolicy.acceptedExtension,
 );
 const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow(props.initialUploadReceipt);
-const { isAnalyzingWorkbook, workbookBoundary, analysisErrorMessage, analysisStatusText, analyzeWorkbook, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow(props.initialWorkbookBoundary);
-const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHopPreview, resetTongHopPreview } = useTongHopPreviewFlow(props.initialTongHopPreview);
-const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview, resetKhoanNppPreview } = useKhoanNppPreviewFlow(props.initialKhoanNppPreview);
-const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview, resetCamCaPreview } = useCamCaPreviewFlow(workbookBoundary, props.initialCamCaPreview);
-const { isLoadingKeyAccountPreview, keyAccountPreview, keyAccountErrorMessage, canPreviewKeyAccount, loadKeyAccountPreview, resetKeyAccountPreview } = useKeyAccountPreviewFlow(workbookBoundary, props.initialKeyAccountPreview);
-const { isLoadingAggregatePreview, aggregatePreview, aggregateErrorMessage, canPreviewAggregate, loadAggregatePreview, resetAggregatePreview } = useAggregatePreviewFlow(workbookBoundary, props.initialAggregatePreview);
-const canPreviewTongHop = computed(() =>
-    workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Tổng hợp' && sheet.present) ?? false,
-);
-const canPreviewKhoanNpp = computed(() =>
-    workbookBoundary.value?.sheets.some((sheet) => sheet.name === 'Khoán NPP' && sheet.present) ?? false,
-);
+const { workbookBoundary, resetWorkbookBoundary } = useImportWorkbookBoundaryFlow(props.initialWorkbookBoundary);
+const { isLoadingTongHopPreview, tongHopPreview, tongHopErrorMessage, loadTongHopPreview } = useTongHopPreviewFlow(props.initialTongHopPreview);
+const { isLoadingKhoanNppPreview, khoanNppPreview, khoanNppErrorMessage, loadKhoanNppPreview } = useKhoanNppPreviewFlow(props.initialKhoanNppPreview);
+const { isLoadingCamCaPreview, camCaPreview, camCaErrorMessage, canPreviewCamCa, loadCamCaPreview } = useCamCaPreviewFlow(workbookBoundary, props.initialCamCaPreview);
+const { isLoadingKeyAccountPreview, keyAccountPreview, keyAccountErrorMessage, canPreviewKeyAccount, loadKeyAccountPreview } = useKeyAccountPreviewFlow(workbookBoundary, props.initialKeyAccountPreview);
+const { isLoadingAggregatePreview, aggregatePreview, aggregateErrorMessage, canPreviewAggregate, loadAggregatePreview } = useAggregatePreviewFlow(workbookBoundary, props.initialAggregatePreview);
+const {
+    isProcessing,
+    processingError,
+    processBatch,
+    resetProcessBatch,
+} = useImportProcessBatchFlow();
+
 const canShowReceiptShell = computed(() => props.canManageImports || uploadReceipt.value !== null);
-const canShowTongHopCard = computed(() => props.canManageImports || tongHopPreview.value !== null);
-const canShowKhoanNppCard = computed(() => props.canManageImports || khoanNppPreview.value !== null);
-const canShowCamCaCard = computed(() => props.canManageImports || camCaPreview.value !== null);
-const canShowKeyAccountCard = computed(() => props.canManageImports || keyAccountPreview.value !== null);
-const canShowAggregateCard = computed(() => props.canManageImports || aggregatePreview.value !== null);
+const canShowResultTabs = computed(
+    () =>
+        aggregatePreview.value !== null
+        || tongHopPreview.value !== null
+        || khoanNppPreview.value !== null
+        || camCaPreview.value !== null
+        || keyAccountPreview.value !== null
+        || isProcessing.value
+        || processingError.value !== '',
+);
 
 const submitUpload = async (): Promise<void> => {
     resetWorkbookBoundary();
-    resetTongHopPreview();
-    resetKhoanNppPreview();
-    resetCamCaPreview();
-    resetKeyAccountPreview();
-    resetAggregatePreview();
+    resetProcessBatch();
 
     const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
 
@@ -69,25 +68,31 @@ const submitUpload = async (): Promise<void> => {
     }
 
     inlineError.value = '';
-};
 
-const prepareWorkbookBoundary = async (): Promise<void> => {
-    inlineError.value = '';
-    resetTongHopPreview();
-    resetKhoanNppPreview();
-    resetCamCaPreview();
-    resetKeyAccountPreview();
-    resetAggregatePreview();
+    // Auto-trigger pipeline ngay sau upload thành công
+    const processError = await processBatch(uploadReceipt.value, route('imports.process-batch'));
 
-    const errorMessage = await analyzeWorkbook(uploadReceipt.value, route('imports.analyze-workbook'));
-
-    if (errorMessage) {
-        inlineError.value = errorMessage;
+    if (processError) {
+        inlineError.value = processError;
+        return;
     }
+
+    router.get(
+        route('imports.index'),
+        {
+            batch: uploadReceipt.value?.importBatch.id,
+        },
+        {
+            preserveScroll: true,
+            preserveState: false,
+        },
+    );
 };
 
-const loadTongHopSheetPreview = async (): Promise<void> => {
-    inlineError.value = '';
+const loadTongHopTab = async (): Promise<void> => {
+    if (!uploadReceipt.value) {
+        return;
+    }
 
     const errorMessage = await loadTongHopPreview(uploadReceipt.value, route('imports.preview-tong-hop'));
 
@@ -96,8 +101,10 @@ const loadTongHopSheetPreview = async (): Promise<void> => {
     }
 };
 
-const loadKhoanNppSheetPreview = async (): Promise<void> => {
-    inlineError.value = '';
+const loadKhoanNppTab = async (): Promise<void> => {
+    if (!uploadReceipt.value) {
+        return;
+    }
 
     const errorMessage = await loadKhoanNppPreview(uploadReceipt.value, route('imports.preview-khoan-npp'));
 
@@ -106,8 +113,10 @@ const loadKhoanNppSheetPreview = async (): Promise<void> => {
     }
 };
 
-const loadCamCaSheetPreview = async (): Promise<void> => {
-    inlineError.value = '';
+const loadCamCaTab = async (): Promise<void> => {
+    if (!uploadReceipt.value) {
+        return;
+    }
 
     const errorMessage = await loadCamCaPreview(uploadReceipt.value, route('imports.preview-cam-ca'));
 
@@ -116,8 +125,10 @@ const loadCamCaSheetPreview = async (): Promise<void> => {
     }
 };
 
-const loadKeyAccountSheetPreview = async (): Promise<void> => {
-    inlineError.value = '';
+const loadKeyAccountTab = async (): Promise<void> => {
+    if (!uploadReceipt.value) {
+        return;
+    }
 
     const errorMessage = await loadKeyAccountPreview(uploadReceipt.value, route('imports.preview-key-account'));
 
@@ -126,8 +137,10 @@ const loadKeyAccountSheetPreview = async (): Promise<void> => {
     }
 };
 
-const loadAggregateDataPreview = async (): Promise<void> => {
-    inlineError.value = '';
+const loadAggregateTab = async (): Promise<void> => {
+    if (!uploadReceipt.value) {
+        return;
+    }
 
     const errorMessage = await loadAggregatePreview(uploadReceipt.value, route('imports.preview-aggregated'));
 
@@ -135,6 +148,7 @@ const loadAggregateDataPreview = async (): Promise<void> => {
         inlineError.value = errorMessage;
     }
 };
+
 </script>
 
 <template>
@@ -143,200 +157,131 @@ const loadAggregateDataPreview = async (): Promise<void> => {
     <AppLayout :app-name="page.props.appName">
         <Toast position="top-right" />
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
+        <div class="space-y-6">
             <Card class="sakai-panel rounded-[2rem] border-0">
                 <template #content>
-                    <div class="space-y-6">
-                        <div class="space-y-4">
-                            <p class="text-sm font-semibold uppercase tracking-[0.28em] text-teal-600">
-                                Slice {{ currentSlice.code }}
-                            </p>
-                            <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="space-y-2">
+                            <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl" :style="{ color: 'var(--dashboard-strong-text)' }">
                                 {{ title }}
                             </h1>
-                            <p class="max-w-3xl text-base leading-7" :style="{ color: 'var(--dashboard-muted-text)' }">
+                            <p class="text-sm leading-6 sm:text-base" :style="{ color: 'var(--dashboard-muted-text)' }">
                                 {{ description }}
                             </p>
                         </div>
-
-                        <Message severity="info" :closable="false">
-                            {{ currentSlice.label }}. Sau khi có receipt upload, người dùng có quyền thao tác sẽ thấy rõ bước kế tiếp để chuyển sang đọc cấu trúc workbook.
-                        </Message>
-
-                        <div class="rounded-[1.6rem] border p-5" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
-                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                    <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                        Chính sách tiếp nhận file
-                                    </p>
-                                    <p class="mt-2 text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                        {{ uploadPolicy.acceptedMimeLabel }}
-                                    </p>
-                                </div>
-
-                                <Tag :value="uploadPolicy.acceptedExtension" severity="success" rounded />
-                            </div>
-
-                            <div class="mt-5 flex flex-wrap gap-2">
-                                <Tag
-                                    v-for="sheet in acceptedSheetTags"
-                                    :key="sheet.label"
-                                    :value="sheet.label"
-                                    :severity="sheet.severity"
-                                    rounded
-                                />
-                            </div>
+                        <div class="flex flex-wrap gap-2">
+                            <Tag
+                                v-for="sheet in acceptedSheetTags"
+                                :key="sheet.label"
+                                :value="sheet.label"
+                                :severity="sheet.severity"
+                                rounded
+                            />
                         </div>
                     </div>
                 </template>
             </Card>
 
-            <div class="grid gap-6">
-                <Card class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Lịch sử import
-                    </template>
-                    <template #content>
-                        <ImportBatchHistoryCard
-                            :history="importHistory"
-                            :active-batch-id="activeBatchId"
-                        />
-                    </template>
-                </Card>
+            <Card class="sakai-panel rounded-[2rem] border-0">
+                <template #title>
+                    Tải file dữ liệu
+                </template>
+                <template #content>
+                    <ImportUploadCard
+                        :can-manage-imports="canManageImports"
+                        :accepted-extension="uploadPolicy.acceptedExtension"
+                        :accepted-mime-label="uploadPolicy.acceptedMimeLabel"
+                        :input-id="inputId"
+                        :selected-file="selectedFile"
+                        :formatted-file-size="formattedFileSize"
+                        :inline-error="inlineError"
+                        :disabled-action-message="disabledActionMessage"
+                        :is-uploading="isUploading || isProcessing"
+                        @open="openFileDialog"
+                        @clear="clearSelection"
+                        @select="onFileChange"
+                        @upload="submitUpload"
+                    />
+                </template>
+            </Card>
 
-                <Card class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Khung thao tác upload
-                    </template>
-                    <template #content>
-                        <ImportUploadCard
-                            :can-manage-imports="canManageImports"
-                            :accepted-extension="uploadPolicy.acceptedExtension"
-                            :accepted-mime-label="uploadPolicy.acceptedMimeLabel"
-                            :input-id="inputId"
-                            :selected-file="selectedFile"
-                            :formatted-file-size="formattedFileSize"
-                            :inline-error="inlineError"
-                            :disabled-action-message="disabledActionMessage"
-                            :is-uploading="isUploading"
-                            @open="openFileDialog"
-                            @clear="clearSelection"
-                            @select="onFileChange"
-                            @upload="submitUpload"
-                        />
-                    </template>
-                </Card>
+            <Card class="sakai-panel rounded-[2rem] border-0">
+                <template #title>
+                    Lịch sử nhập dữ liệu
+                </template>
+                <template #content>
+                    <ImportBatchHistoryCard
+                        :history="importHistory"
+                        :active-batch-id="activeBatchId"
+                    />
+                </template>
+            </Card>
 
-                <Card v-if="canShowReceiptShell" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Preview workbook boundary
-                    </template>
-                    <template #content>
-                        <ImportPreviewShell
-                            :receipt="uploadReceipt"
-                            :can-manage-imports="canManageImports"
-                            :analysis-prep="analysisPrep"
-                            :workbook-boundary="workbookBoundary"
-                            :is-analyzing-workbook="isAnalyzingWorkbook"
-                            :analysis-error-message="analysisErrorMessage"
-                            :analysis-status-text="analysisStatusText"
-                            @prepare-analysis="prepareWorkbookBoundary"
-                        />
-                    </template>
-                </Card>
+            <Card v-if="canShowReceiptShell" class="sakai-panel rounded-[2rem] border-0">
+                <template #title>
+                    Thông tin file đã nhận
+                </template>
+                <template #content>
+                    <ImportPreviewShell
+                        :receipt="uploadReceipt"
+                        :can-manage-imports="canManageImports"
+                        :analysis-prep="analysisPrep"
+                        :workbook-boundary="workbookBoundary"
+                        :is-analyzing-workbook="false"
+                        analysis-error-message=""
+                        analysis-status-text=""
+                    />
+                </template>
+            </Card>
 
-                <Card v-if="canShowTongHopCard" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Preview sheet Tổng hợp
-                    </template>
-                    <template #content>
-                        <ImportTongHopPreview
-                            :preview="tongHopPreview"
-                            :is-loading="isLoadingTongHopPreview"
-                            :error-message="tongHopErrorMessage"
-                            :can-preview="canManageImports && canPreviewTongHop"
-                            @load="loadTongHopSheetPreview"
-                        />
-                    </template>
-                </Card>
+            <Card v-if="workbookBoundary" class="sakai-panel rounded-[2rem] border-0">
+                <template #title>
+                    Cấu trúc tệp Excel
+                </template>
+                <template #content>
+                    <ImportWorkbookBoundarySummary
+                        :workbook-boundary="workbookBoundary"
+                    />
+                </template>
+            </Card>
 
-                <Card v-if="canShowKhoanNppCard" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Preview sheet Khoán NPP
-                    </template>
-                    <template #content>
-                        <ImportKhoanNppPreview
-                            :preview="khoanNppPreview"
-                            :is-loading="isLoadingKhoanNppPreview"
-                            :error-message="khoanNppErrorMessage"
-                            :can-preview="canManageImports && canPreviewKhoanNpp"
-                            @load="loadKhoanNppSheetPreview"
-                        />
-                    </template>
-                </Card>
-
-                <Card v-if="canShowCamCaCard" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Preview sheet Cám cá
-                    </template>
-                    <template #content>
-                        <ImportCamCaPreview
-                            :preview="camCaPreview"
-                            :is-loading="isLoadingCamCaPreview"
-                            :error-message="camCaErrorMessage"
-                            :can-preview="canManageImports && canPreviewCamCa"
-                            @load="loadCamCaSheetPreview"
-                        />
-                    </template>
-                </Card>
-
-                <Card v-if="canShowKeyAccountCard" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Preview sheet Key Account
-                    </template>
-                    <template #content>
-                        <ImportKeyAccountPreview
-                            :preview="keyAccountPreview"
-                            :is-loading="isLoadingKeyAccountPreview"
-                            :error-message="keyAccountErrorMessage"
-                            :can-preview="canManageImports && canPreviewKeyAccount"
-                            @load="loadKeyAccountSheetPreview"
-                        />
-                    </template>
-                </Card>
-
-                <Card v-if="canShowAggregateCard" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Preview aggregator theo Mã số
-                    </template>
-                    <template #content>
-                        <ImportAggregatePreview
-                            :preview="aggregatePreview"
-                            :is-loading="isLoadingAggregatePreview"
-                            :error-message="aggregateErrorMessage"
-                            :can-preview="canManageImports && canPreviewAggregate"
-                            @load="loadAggregateDataPreview"
-                        />
-                    </template>
-                </Card>
-
-                <Card v-if="!canManageImports && !canShowReceiptShell && !canShowAggregateCard" class="sakai-panel rounded-[2rem] border-0">
-                    <template #title>
-                        Quyền truy cập hiện tại
-                    </template>
-                    <template #content>
-                        <div class="space-y-4">
-                            <Message severity="warn" :closable="false">
-                                Tài khoản hiện tại chỉ có quyền xem khu vực import dữ liệu.
-                            </Message>
-
-                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                Tài khoản này chỉ xem được dữ liệu import đã lưu từ các batch trước đó. Chức năng tải file lên và chạy các bước parse mới chỉ mở cho người dùng được cấp quyền thao tác import.
-                            </p>
-                        </div>
-                    </template>
-                </Card>
-            </div>
+            <!-- Kết quả import: TabView full-width -->
+            <Card v-if="canShowResultTabs || props.canManageImports" class="sakai-panel rounded-[2rem] border-0">
+                <template #title>
+                    Kết quả import
+                </template>
+                <template #content>
+                    <ImportResultTabs
+                        :aggregate-preview="aggregatePreview"
+                        :tong-hop-preview="tongHopPreview"
+                        :khoan-npp-preview="khoanNppPreview"
+                        :cam-ca-preview="camCaPreview"
+                        :key-account-preview="keyAccountPreview"
+                        :is-loading-aggregate-preview="isLoadingAggregatePreview"
+                        :is-loading-tong-hop-preview="isLoadingTongHopPreview"
+                        :is-loading-khoan-npp-preview="isLoadingKhoanNppPreview"
+                        :is-loading-cam-ca-preview="isLoadingCamCaPreview"
+                        :is-loading-key-account-preview="isLoadingKeyAccountPreview"
+                        :aggregate-error-message="aggregateErrorMessage"
+                        :tong-hop-error-message="tongHopErrorMessage"
+                        :khoan-npp-error-message="khoanNppErrorMessage"
+                        :cam-ca-error-message="camCaErrorMessage"
+                        :key-account-error-message="keyAccountErrorMessage"
+                        :can-preview-aggregate="canManageImports && canPreviewAggregate"
+                        :can-preview-tong-hop="canManageImports && !!uploadReceipt && !!workbookBoundary?.sheets.some((sheet) => sheet.name === 'Tổng hợp' && sheet.present)"
+                        :can-preview-khoan-npp="canManageImports && !!uploadReceipt && !!workbookBoundary?.sheets.some((sheet) => sheet.name === 'Khoán NPP' && sheet.present)"
+                        :can-preview-cam-ca="canManageImports && canPreviewCamCa"
+                        :can-preview-key-account="canManageImports && canPreviewKeyAccount"
+                        :is-processing="isProcessing"
+                        :processing-error="processingError"
+                        @load-aggregate="loadAggregateTab"
+                        @load-tong-hop="loadTongHopTab"
+                        @load-khoan-npp="loadKhoanNppTab"
+                        @load-cam-ca="loadCamCaTab"
+                        @load-key-account="loadKeyAccountTab"
+                    />
+                </template>
+            </Card>
         </div>
     </AppLayout>
 </template>

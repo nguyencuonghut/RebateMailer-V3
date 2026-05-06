@@ -53,7 +53,7 @@ export const useAggregatePreviewFlow = (
         previewUrl: string,
     ): Promise<string | null> => {
         if (!receipt) {
-            return 'Chưa có receipt upload để preview aggregator.';
+            return 'Chưa có thông tin tải file lên để xem trước dữ liệu hợp nhất.';
         }
 
         isLoadingAggregatePreview.value = true;
@@ -94,7 +94,7 @@ export const useAggregatePreviewFlow = (
 
                     toast.add({
                         severity: 'error',
-                        summary: 'Không thể preview aggregator',
+                        summary: 'Không thể xem trước dữ liệu hợp nhất',
                         detail: backendMessage,
                         life: 4000,
                     });
@@ -103,12 +103,12 @@ export const useAggregatePreviewFlow = (
                 }
             }
 
-            const fallbackMessage = 'Preview aggregator thất bại. Vui lòng thử lại.';
+            const fallbackMessage = 'Xem trước dữ liệu hợp nhất thất bại. Vui lòng thử lại.';
             aggregateErrorMessage.value = fallbackMessage;
 
             toast.add({
                 severity: 'error',
-                summary: 'Không thể preview aggregator',
+                summary: 'Không thể xem trước dữ liệu hợp nhất',
                 detail: fallbackMessage,
                 life: 4000,
             });

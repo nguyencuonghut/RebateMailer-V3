@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AggregatePreview } from '@/Services/imports/useAggregatePreviewFlow';
+import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -16,6 +17,8 @@ defineProps<{
 const emit = defineEmits<{
     load: [];
 }>();
+
+const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
 </script>
 
 <template>
@@ -23,7 +26,7 @@ const emit = defineEmits<{
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
-                    Aggregator theo Mã số
+                    Dữ liệu hợp nhất theo Mã số
                 </p>
                 <p class="mt-2 text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
                     Preview dữ liệu hợp nhất giữa Khách thường và Key Account
@@ -31,7 +34,7 @@ const emit = defineEmits<{
             </div>
 
             <Button
-                :label="errorMessage ? 'Thử preview lại' : 'Preview aggregator'"
+                :label="errorMessage ? 'Thử xem lại' : 'Xem dữ liệu hợp nhất'"
                 :icon="errorMessage ? 'pi pi-refresh' : 'pi pi-sitemap'"
                 :loading="isLoading"
                 :disabled="isLoading || !canPreview"
@@ -71,7 +74,22 @@ const emit = defineEmits<{
                 </div>
             </div>
 
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm">
+                    {{ detailToggleHelper }}
+                </p>
+
+                <Button
+                    :label="detailToggleLabel"
+                    :icon="detailToggleIcon"
+                    severity="secondary"
+                    outlined
+                    @click="toggleDetailsTable"
+                />
+            </div>
+
             <DataTable
+                v-if="showDetailsTable"
                 :value="preview.records"
                 paginator
                 :rows="10"
@@ -113,6 +131,14 @@ const emit = defineEmits<{
                 </Column>
             </DataTable>
 
+            <div
+                v-else
+                class="rounded-[1rem] border border-dashed p-4 text-sm"
+                :style="{ borderColor: 'var(--dashboard-panel-border)' }"
+            >
+                Bảng chi tiết đang được thu gọn để giảm độ dài trang trên màn hình nhỏ.
+            </div>
+
             <p class="text-sm leading-6">
                 {{ preview.nextStep }}
             </p>
@@ -123,7 +149,7 @@ const emit = defineEmits<{
             class="rounded-[1.2rem] border border-dashed p-4 text-sm"
             :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
         >
-            Chưa có preview aggregator. Sau khi workbook boundary hợp lệ, khu vực này sẽ hiển thị dữ liệu đã được gom theo Mã số.
+            Chưa có dữ liệu hợp nhất để xem trước. Sau khi cấu trúc tệp Excel hợp lệ, khu vực này sẽ hiển thị dữ liệu đã được gom theo Mã số.
         </div>
     </div>
 </template>

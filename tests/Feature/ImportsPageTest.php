@@ -40,7 +40,7 @@ class ImportsPageTest extends TestCase
                 ->where('analysisPrep.actionLabel', 'Đọc cấu trúc workbook')
                 ->where('nextSlice.code', '1.8')
                 ->where('toast.summary', 'Khu vực import đã sẵn sàng')
-                ->where('toast.detail', 'Bạn có thể tải file Excel lên, đọc workbook và mở preview aggregator theo Mã số.')
+                ->where('toast.detail', 'Bạn có thể tải file Excel lên để hệ thống tự xử lý batch và hiển thị kết quả theo từng tab dữ liệu.')
             );
     }
 

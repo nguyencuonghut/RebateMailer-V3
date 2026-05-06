@@ -24,7 +24,7 @@ class StoreTemporaryImportFileService
             'size' => $file->getSize(),
             'storedPath' => $storedPath,
             'uploadedAt' => $timestamp,
-            'nextStep' => 'Sẵn sàng cho bước đọc workbook ở Task 1.2.',
+            'nextStep' => 'Sẵn sàng cho bước phân tích tệp Excel.',
         ];
     }
 }

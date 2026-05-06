@@ -1,14 +1,15 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportAggregatePreviewController;
+use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
 use App\Http\Controllers\ImportPageController;
 use App\Http\Controllers\ImportKhoanNppPreviewController;
+use App\Http\Controllers\ImportProcessBatchController;
 use App\Http\Controllers\ImportTongHopPreviewController;
 use App\Http\Controllers\ImportUploadController;
 use App\Http\Controllers\ImportWorkbookAnalysisController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserManagementController;
 use App\Support\Authorization\PermissionName;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/imports/upload', [ImportUploadController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.upload');
+    Route::post('/imports/process-batch', [ImportProcessBatchController::class, 'store'])
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.process-batch');
     Route::post('/imports/analyze-workbook', [ImportWorkbookAnalysisController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.analyze-workbook');

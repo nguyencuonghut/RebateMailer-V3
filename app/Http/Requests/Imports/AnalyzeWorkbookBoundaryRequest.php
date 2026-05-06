@@ -89,7 +89,7 @@ class AnalyzeWorkbookBoundaryRequest extends FormRequest
     {
         $routeName = $this->route()?->getName();
 
-        if ($routeName === 'imports.preview-aggregated') {
+        if (in_array($routeName, ['imports.preview-aggregated', 'imports.process-batch'], true)) {
             $aggregatePreview = $importBatch->workbook_summary['aggregatePreview'] ?? null;
 
             return is_array($aggregatePreview) && isset($aggregatePreview['summary']);

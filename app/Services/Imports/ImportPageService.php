@@ -27,7 +27,7 @@ class ImportPageService
 
         return [
             'title' => 'Import dữ liệu',
-            'description' => 'Khu vực tiếp nhận file Excel chiết khấu hàng tháng và chuẩn bị cho luồng preview dữ liệu rebate.',
+            'description' => 'Tiếp nhận file Excel chiết khấu, xử lý dữ liệu theo batch và xem lại kết quả đã lưu trong hệ thống.',
             'currentSlice' => [
                 'code' => '1.7',
                 'label' => 'Aggregator',
@@ -35,7 +35,7 @@ class ImportPageService
             'canManageImports' => $canManageImports,
             'uploadPolicy' => [
                 'acceptedExtension' => '.xlsx',
-                'acceptedMimeLabel' => 'Excel Workbook (.xlsx)',
+                'acceptedMimeLabel' => 'Tệp Excel (.xlsx)',
             ],
             'acceptedSheets' => [
                 'Tổng hợp',
@@ -49,21 +49,21 @@ class ImportPageService
             ],
             'analysisPrep' => [
                 'actionLabel' => 'Đọc cấu trúc workbook',
-                'helperText' => 'Sau khi có receipt upload, bạn có thể đọc cấu trúc workbook rồi mở preview aggregator để kiểm tra dữ liệu đã được gom theo Mã số ngay trên UI.',
-                'readyTitle' => 'Aggregator đã sẵn sàng',
-                'readyDescription' => 'Workbook đã được phân tích thành công. Khu vực bên dưới có thể mở preview dữ liệu hợp nhất giữa Khách thường và Key Account theo Mã số.',
-                'statusLabel' => 'Chưa đọc workbook',
+                'helperText' => 'Thông tin cấu trúc tệp Excel được dùng để kiểm tra nhanh tình trạng 4 sheet nhập liệu hợp lệ của đợt nhập hiện tại.',
+                'readyTitle' => 'Cấu trúc tệp Excel đã sẵn sàng',
+                'readyDescription' => 'Tệp Excel đã được phân tích và lưu vào đợt nhập. Khu vực bên dưới hiển thị lại cấu trúc đã được lưu trong hệ thống.',
+                'statusLabel' => 'Chưa phân tích tệp Excel',
                 'toast' => [
                     'severity' => 'success',
-                    'summary' => 'Đọc workbook thành công',
-                    'detail' => 'Workbook boundary đã sẵn sàng. Bạn có thể mở preview aggregator theo Mã số.',
+                    'summary' => 'Phân tích tệp Excel thành công',
+                    'detail' => 'Cấu trúc tệp Excel đã sẵn sàng và có thể dùng để rà nhanh cấu trúc nhập dữ liệu của đợt nhập.',
                     'life' => 4000,
                 ],
             ],
             'toast' => [
                 'severity' => 'info',
-                'summary' => 'Khu vực import đã sẵn sàng',
-                'detail' => 'Bạn có thể tải file Excel lên, đọc workbook và mở preview aggregator theo Mã số.',
+                'summary' => 'Khu vực nhập dữ liệu đã sẵn sàng',
+                'detail' => 'Bạn có thể tải file Excel lên để hệ thống tự xử lý đợt nhập và hiển thị kết quả theo từng tab dữ liệu.',
                 'life' => 4000,
             ],
             'activeBatchId' => $selectedBatch?->getKey(),
@@ -125,7 +125,7 @@ class ImportPageService
                 'batchCode' => $importBatch->batch_code,
                 'status' => $importBatch->status,
             ],
-            'nextStep' => 'Bạn đang xem lại một batch import đã được lưu trong hệ thống.',
+            'nextStep' => 'Bạn đang xem lại một đợt nhập dữ liệu đã được lưu trong hệ thống.',
         ];
     }
 

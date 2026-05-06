@@ -53,7 +53,7 @@ export const useKhoanNppPreviewFlow = (initialPreview: KhoanNppPreview | null = 
         previewUrl: string,
     ): Promise<string | null> => {
         if (!receipt) {
-            return 'Chưa có receipt upload để preview sheet Khoán NPP.';
+            return 'Chưa có thông tin tải file lên để xem trước sheet Khoán NPP.';
         }
 
         isLoadingKhoanNppPreview.value = true;
@@ -94,7 +94,7 @@ export const useKhoanNppPreviewFlow = (initialPreview: KhoanNppPreview | null = 
 
                     toast.add({
                         severity: 'error',
-                        summary: 'Không thể preview sheet Khoán NPP',
+                        summary: 'Không thể xem trước sheet Khoán NPP',
                         detail: backendMessage,
                         life: 4000,
                     });
@@ -103,12 +103,12 @@ export const useKhoanNppPreviewFlow = (initialPreview: KhoanNppPreview | null = 
                 }
             }
 
-            const fallbackMessage = 'Preview sheet Khoán NPP thất bại. Vui lòng thử lại.';
+            const fallbackMessage = 'Xem trước sheet Khoán NPP thất bại. Vui lòng thử lại.';
             khoanNppErrorMessage.value = fallbackMessage;
 
             toast.add({
                 severity: 'error',
-                summary: 'Không thể preview sheet Khoán NPP',
+                summary: 'Không thể xem trước sheet Khoán NPP',
                 detail: fallbackMessage,
                 life: 4000,
             });

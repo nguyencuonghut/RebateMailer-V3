@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { KhoanNppPreview } from '@/Services/imports/useKhoanNppPreviewFlow';
+import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import { useKhoanNppPreviewPresentation } from '@/Services/imports/useKhoanNppPreviewPresentation';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
@@ -20,6 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview));
+const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
 </script>
 
 <template>
@@ -27,15 +29,15 @@ const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
-                    Parser riêng cho sheet Khoán NPP
+                    Xử lý riêng cho sheet Khoán NPP
                 </p>
                 <p class="mt-2 text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                    Preview dữ liệu khoán theo từng khách hàng
+                    Xem trước dữ liệu khoán theo từng khách hàng
                 </p>
             </div>
 
             <Button
-                :label="errorMessage ? 'Thử preview lại' : 'Preview sheet Khoán NPP'"
+                :label="errorMessage ? 'Thử xem lại' : 'Xem sheet Khoán NPP'"
                 :icon="errorMessage ? 'pi pi-refresh' : 'pi pi-list'"
                 :loading="isLoading"
                 :disabled="isLoading || !canPreview"
@@ -54,7 +56,7 @@ const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview
         >
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
-                    <p class="text-sm font-medium">Sheet đang preview</p>
+                    <p class="text-sm font-medium">Sheet đang xem</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
                         {{ preview.sheetName }}
                     </p>
@@ -101,7 +103,22 @@ const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview
                 </p>
             </div>
 
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm">
+                    {{ detailToggleHelper }}
+                </p>
+
+                <Button
+                    :label="detailToggleLabel"
+                    :icon="detailToggleIcon"
+                    severity="secondary"
+                    outlined
+                    @click="toggleDetailsTable"
+                />
+            </div>
+
             <DataTable
+                v-if="showDetailsTable"
                 :value="preview.records"
                 paginator
                 :rows="10"
@@ -163,6 +180,14 @@ const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview
                 </Column>
             </DataTable>
 
+            <div
+                v-else
+                class="rounded-[1rem] border border-dashed p-4 text-sm"
+                :style="{ borderColor: 'var(--dashboard-panel-border)' }"
+            >
+                Bảng chi tiết đang được thu gọn để ưu tiên phần phạm vi CT và mức độ sử dụng chương trình.
+            </div>
+
             <p class="text-sm leading-6">
                 {{ preview.nextStep }}
             </p>
@@ -173,7 +198,7 @@ const presentation = computed(() => useKhoanNppPreviewPresentation(props.preview
             class="rounded-[1.2rem] border border-dashed p-4 text-sm"
             :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
         >
-            Chưa có preview sheet Khoán NPP. Sau khi workbook boundary hợp lệ, khu vực này sẽ hiển thị dữ liệu khoán đã được parse riêng.
+            Chưa có dữ liệu xem trước cho sheet Khoán NPP. Sau khi cấu trúc tệp Excel hợp lệ, khu vực này sẽ hiển thị dữ liệu khoán đã được xử lý riêng.
         </div>
     </div>
 </template>

@@ -39,13 +39,13 @@ export const useImportWorkbookBoundaryPreview = (workbookBoundary: Ref<ImportWor
             {
                 label: 'Sheet đã nhận diện',
                 value: `${boundary.summary.detectedSheetCount}`,
-                helper: 'Tổng số sheet đọc được từ workbook',
+                helper: 'Tổng số sheet đọc được từ tệp Excel',
                 severity: 'contrast',
             },
             {
                 label: 'Sheet hợp lệ',
                 value: `${boundary.contract.expectedSheetCount}`,
-                helper: 'Contract import nghiệp vụ cố định',
+                helper: 'Quy ước nhập liệu nghiệp vụ cố định',
                 severity: 'success',
             },
             {
@@ -57,7 +57,7 @@ export const useImportWorkbookBoundaryPreview = (workbookBoundary: Ref<ImportWor
             {
                 label: 'Sheet ngoài contract',
                 value: `${boundary.summary.unexpectedSheetCount}`,
-                helper: boundary.unexpectedSheets.length ? boundary.unexpectedSheets.join(', ') : 'Không có sheet ngoài contract',
+                helper: boundary.unexpectedSheets.length ? boundary.unexpectedSheets.join(', ') : 'Không có sheet ngoài quy ước',
                 severity: boundary.unexpectedSheets.length ? 'warn' : 'success',
             },
         ];
@@ -74,24 +74,24 @@ export const useImportWorkbookBoundaryPreview = (workbookBoundary: Ref<ImportWor
 
         if (boundary.missingSheets.length === 0) {
             messages.push({
-                text: 'Workbook hiện không thiếu sheet import nào trong contract 4 sheet.',
+                text: 'Tệp Excel hiện không thiếu sheet nhập liệu nào trong quy ước 4 sheet.',
                 severity: 'success',
             });
         } else {
             messages.push({
-                text: `Workbook đang thiếu ${boundary.missingSheets.length} sheet import: ${boundary.missingSheets.join(', ')}.`,
+                text: `Tệp Excel đang thiếu ${boundary.missingSheets.length} sheet nhập liệu: ${boundary.missingSheets.join(', ')}.`,
                 severity: 'error',
             });
         }
 
         if (boundary.unexpectedSheets.length === 0) {
             messages.push({
-                text: 'Workbook không có sheet ngoài contract import.',
+                text: 'Tệp Excel không có sheet ngoài quy ước nhập liệu.',
                 severity: 'success',
             });
         } else {
             messages.push({
-                text: `Workbook có ${boundary.unexpectedSheets.length} sheet ngoài contract import: ${boundary.unexpectedSheets.join(', ')}.`,
+                text: `Tệp Excel có ${boundary.unexpectedSheets.length} sheet ngoài quy ước nhập liệu: ${boundary.unexpectedSheets.join(', ')}.`,
                 severity: 'warn',
             });
         }

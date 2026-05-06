@@ -55,7 +55,7 @@ export const useTongHopPreviewFlow = (initialPreview: TongHopPreview | null = nu
         previewUrl: string,
     ): Promise<string | null> => {
         if (!receipt) {
-            return 'Chưa có receipt upload để preview sheet Tổng hợp.';
+            return 'Chưa có thông tin tải file lên để xem trước sheet Tổng hợp.';
         }
 
         isLoadingTongHopPreview.value = true;
@@ -96,7 +96,7 @@ export const useTongHopPreviewFlow = (initialPreview: TongHopPreview | null = nu
 
                     toast.add({
                         severity: 'error',
-                        summary: 'Không thể preview sheet Tổng hợp',
+                        summary: 'Không thể xem trước sheet Tổng hợp',
                         detail: backendMessage,
                         life: 4000,
                     });
@@ -105,12 +105,12 @@ export const useTongHopPreviewFlow = (initialPreview: TongHopPreview | null = nu
                 }
             }
 
-            const fallbackMessage = 'Preview sheet Tổng hợp thất bại. Vui lòng thử lại.';
+            const fallbackMessage = 'Xem trước sheet Tổng hợp thất bại. Vui lòng thử lại.';
             tongHopErrorMessage.value = fallbackMessage;
 
             toast.add({
                 severity: 'error',
-                summary: 'Không thể preview sheet Tổng hợp',
+                summary: 'Không thể xem trước sheet Tổng hợp',
                 detail: fallbackMessage,
                 life: 4000,
             });

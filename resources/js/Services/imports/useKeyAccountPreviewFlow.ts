@@ -71,7 +71,7 @@ export const useKeyAccountPreviewFlow = (
         previewUrl: string,
     ): Promise<string | null> => {
         if (!receipt) {
-            return 'Chưa có receipt upload để preview sheet Key Account.';
+            return 'Chưa có thông tin tải file lên để xem trước sheet Khách hàng trọng điểm.';
         }
 
         isLoadingKeyAccountPreview.value = true;
@@ -112,7 +112,7 @@ export const useKeyAccountPreviewFlow = (
 
                     toast.add({
                         severity: 'error',
-                        summary: 'Không thể preview sheet Key Account',
+                        summary: 'Không thể xem trước sheet Khách hàng trọng điểm',
                         detail: backendMessage,
                         life: 4000,
                     });
@@ -121,12 +121,12 @@ export const useKeyAccountPreviewFlow = (
                 }
             }
 
-            const fallbackMessage = 'Preview sheet Key Account thất bại. Vui lòng thử lại.';
+            const fallbackMessage = 'Xem trước sheet Khách hàng trọng điểm thất bại. Vui lòng thử lại.';
             keyAccountErrorMessage.value = fallbackMessage;
 
             toast.add({
                 severity: 'error',
-                summary: 'Không thể preview sheet Key Account',
+                summary: 'Không thể xem trước sheet Khách hàng trọng điểm',
                 detail: fallbackMessage,
                 life: 4000,
             });

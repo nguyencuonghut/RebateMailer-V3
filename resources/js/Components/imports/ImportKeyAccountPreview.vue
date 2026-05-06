@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { KeyAccountPreview } from '@/Services/imports/useKeyAccountPreviewFlow';
+import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -16,6 +17,8 @@ defineProps<{
 const emit = defineEmits<{
     load: [];
 }>();
+
+const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
 </script>
 
 <template>
@@ -97,7 +100,22 @@ const emit = defineEmits<{
                 </div>
             </div>
 
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm">
+                    {{ detailToggleHelper }}
+                </p>
+
+                <Button
+                    :label="detailToggleLabel"
+                    :icon="detailToggleIcon"
+                    severity="secondary"
+                    outlined
+                    @click="toggleDetailsTable"
+                />
+            </div>
+
             <DataTable
+                v-if="showDetailsTable"
                 :value="preview.records"
                 paginator
                 :rows="10"
@@ -151,6 +169,14 @@ const emit = defineEmits<{
                     </template>
                 </Column>
             </DataTable>
+
+            <div
+                v-else
+                class="rounded-[1rem] border border-dashed p-4 text-sm"
+                :style="{ borderColor: 'var(--dashboard-panel-border)' }"
+            >
+                Bảng chi tiết đang được thu gọn để ưu tiên phần tóm tắt Key Account và giảm scroll trên màn hình nhỏ.
+            </div>
 
             <p class="text-sm leading-6">
                 {{ preview.nextStep }}

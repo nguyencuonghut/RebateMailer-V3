@@ -12,10 +12,10 @@ export type ImportHistoryRow = ImportHistoryItem & {
 
 const statusMap: Record<string, { label: string; severity: HistoryStatusSeverity }> = {
     uploaded: { label: 'Đã tải lên', severity: 'info' },
-    workbook_analyzed: { label: 'Đã đọc workbook', severity: 'info' },
-    parsed_partial: { label: 'Đã parse một phần', severity: 'warn' },
-    parsed_complete: { label: 'Đã parse đủ sheet', severity: 'success' },
-    aggregated: { label: 'Đã aggregate', severity: 'success' },
+    workbook_analyzed: { label: 'Đã phân tích tệp Excel', severity: 'info' },
+    parsed_partial: { label: 'Đã xử lý một phần', severity: 'warn' },
+    parsed_complete: { label: 'Đã xử lý đủ 4 sheet', severity: 'success' },
+    aggregated: { label: 'Đã hợp nhất dữ liệu', severity: 'success' },
     validated_with_warnings: { label: 'Có cảnh báo', severity: 'warn' },
     validated_ready: { label: 'Sẵn sàng dùng', severity: 'success' },
     failed: { label: 'Thất bại', severity: 'danger' },

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TongHopPreview } from '@/Services/imports/useTongHopPreviewFlow';
+import { useImportDetailTableVisibility } from '@/Services/imports/useImportDetailTableVisibility';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -16,6 +17,8 @@ defineProps<{
 const emit = defineEmits<{
     load: [];
 }>();
+
+const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
 </script>
 
 <template>
@@ -23,7 +26,7 @@ const emit = defineEmits<{
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
-                    Parser riêng cho sheet Tổng hợp
+                    Xử lý riêng cho sheet Tổng hợp
                 </p>
                 <p class="mt-2 text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
                     Preview dữ liệu đã chuẩn hóa cho Khách thường
@@ -31,7 +34,7 @@ const emit = defineEmits<{
             </div>
 
             <Button
-                :label="errorMessage ? 'Thử preview lại' : 'Preview sheet Tổng hợp'"
+                :label="errorMessage ? 'Thử xem lại' : 'Xem sheet Tổng hợp'"
                 :icon="errorMessage ? 'pi pi-refresh' : 'pi pi-table'"
                 :loading="isLoading"
                 :disabled="isLoading || !canPreview"
@@ -50,7 +53,7 @@ const emit = defineEmits<{
         >
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
-                    <p class="text-sm font-medium">Sheet đang preview</p>
+                    <p class="text-sm font-medium">Sheet đang xem</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
                         {{ preview.sheetName }}
                     </p>
@@ -100,7 +103,22 @@ const emit = defineEmits<{
                 </p>
             </div>
 
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm">
+                    {{ detailToggleHelper }}
+                </p>
+
+                <Button
+                    :label="detailToggleLabel"
+                    :icon="detailToggleIcon"
+                    severity="secondary"
+                    outlined
+                    @click="toggleDetailsTable"
+                />
+            </div>
+
             <DataTable
+                v-if="showDetailsTable"
                 :value="preview.records"
                 paginator
                 :rows="10"
@@ -127,6 +145,14 @@ const emit = defineEmits<{
                 </Column>
             </DataTable>
 
+            <div
+                v-else
+                class="rounded-[1rem] border border-dashed p-4 text-sm"
+                :style="{ borderColor: 'var(--dashboard-panel-border)' }"
+            >
+                Bảng chi tiết đang được thu gọn để ưu tiên phần tóm tắt và các header đã nhận diện.
+            </div>
+
             <p class="text-sm leading-6">
                 {{ preview.nextStep }}
             </p>
@@ -137,7 +163,7 @@ const emit = defineEmits<{
             class="rounded-[1.2rem] border border-dashed p-4 text-sm"
             :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
         >
-            Chưa có preview sheet Tổng hợp. Sau khi workbook boundary hợp lệ, khu vực này sẽ hiển thị dữ liệu đã parse riêng cho sheet Tổng hợp.
+            Chưa có dữ liệu xem trước cho sheet Tổng hợp. Sau khi cấu trúc tệp Excel hợp lệ, khu vực này sẽ hiển thị dữ liệu đã xử lý riêng cho sheet Tổng hợp.
         </div>
     </div>
 </template>
