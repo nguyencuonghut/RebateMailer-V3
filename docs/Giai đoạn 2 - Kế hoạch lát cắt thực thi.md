@@ -463,6 +463,56 @@
   - section này chỉ dùng dữ liệu từ `Khoán NPP`
   - preview phản ánh đúng row structure của builder
   - section không hiện nếu khách không có dữ liệu `Khoán NPP`
+  - không áp mental model của `Tổng hợp` cho section này
+
+#### Ghi chú thiết kế bắt buộc cho `Khoán NPP`
+
+- `Khoán NPP` khác bản chất với `Tổng hợp`:
+  - `Tổng hợp`: `Nội dung` lấy từ **tên cột**
+  - `Khoán NPP`: `Nội dung chương trình` lấy từ **value của các cột `Nội dung CT i`**
+- Vì vậy builder của `Khoán NPP` không nên dùng row model “mỗi dòng map tới một column key tĩnh” như `Tổng hợp`.
+- Row model đúng cho `Khoán NPP` phải là **repeater theo `programItems[]`** đã parse từ sheet:
+  - mỗi `programItem` tương ứng 1 CT thực tế
+  - data source của 1 row lặp gồm:
+    - `content <- programItem.content`
+    - `quantity <- programItem.quantity`
+    - `supportRate <- programItem.supportRate`
+    - `amount <- programItem.amount`
+- Từ workbook mẫu `Data import chuẩn_Final.xlsx` đã xác nhận:
+  - sheet `Khoán NPP` có tối đa `16` block `Nội dung CT i | SL | đ/kg | Thành tiền`
+  - dữ liệu mẫu hiện dùng tới `CT4`
+  - parser hiện tại đã chuẩn hóa thành `programItems[]`
+  - có CT chỉ có `content + amount`, còn `SL` và `đ/kg` để trống
+  - vì vậy không được ép một row dữ liệu khoán phải luôn có đủ `SL` và `đ/kg`
+- `Table rows` của builder `Khoán NPP` nên đi theo 4 row type sau:
+  - `program-loop`
+    - lặp qua toàn bộ `programItems[]` hợp lệ
+    - phải giữ được `sourceProgramIndex` của từng CT
+    - rule số hiển thị hiện còn mâu thuẫn giữa:
+      - ví dụ prose trong `Mô tả phần mềm.txt` đang dùng STT tuần tự `1, 2, 3, 4`
+      - sheet `Template Mail` trong workbook mẫu lại đang hiển thị `1, 4, 5, 7`
+    - vì vậy trước khi chốt renderer thật, system phải lưu riêng:
+      - `sourceProgramIndex`
+      - `displayNumber`
+    - không được hard-code ngay rằng `Khoán NPP` luôn renumber tuần tự như `Tổng hợp`
+  - `blank`
+    - dòng trống nếu người dùng muốn chèn khoảng cách
+  - `total`
+    - lấy từ `grandTotal`
+    - label mặc định: `Cộng`
+  - `in-words`
+    - lấy từ `totalInWords`
+    - label mặc định: `Bằng chữ:`
+- UI `Table rows` cho `Khoán NPP` nên tối giản hơn `Tổng hợp`:
+  - không có input text tay cho từng dòng `Nội dung chương trình`
+  - không có dropdown chọn `columnKey` theo kiểu cột tĩnh
+  - thay vào đó phải hiển thị rõ rằng row `program-loop` đang bind cố định tới `programItems[]`
+- Rule render đúng:
+  - một CT được render nếu parser đã tạo ra `programItem`
+  - CT có `content + amount` nhưng `SL` và `đ/kg` rỗng vẫn phải render
+  - CT hoàn toàn rỗng hoặc chỉ còn giá trị `0` thì không render
+  - không thêm rule ẩn dòng mới trong builder nếu rule đó đã được parser xử lý ở nguồn
+  - `total` và `in-words` là row tĩnh của section, không phải row phát sinh từ `CT i`
 
 ### Slice 2.3-F - Thiết kế và preview `Table Chiết khấu cám cá` từ sheet `Cám cá`
 
