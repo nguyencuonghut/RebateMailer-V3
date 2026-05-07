@@ -12,6 +12,8 @@ use App\Http\Controllers\ImportUploadController;
 use App\Http\Controllers\ImportWorkbookAnalysisController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TemplatePageController;
+use App\Http\Controllers\TemplateCanvasCompositionUpdateController;
+use App\Http\Controllers\TemplatePartUpdateController;
 use App\Http\Controllers\TemplateSectionStoreController;
 use App\Http\Controllers\TemplateStructureUpdateController;
 use App\Http\Controllers\TemplateStoreController;
@@ -71,6 +73,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/templates/{mailTemplate}/sections', [TemplateSectionStoreController::class, 'store'])
         ->middleware('permission:'.PermissionName::TemplatesManage->value)
         ->name('templates.sections.store');
+    Route::put('/templates/{mailTemplate}/canvas-composition', [TemplateCanvasCompositionUpdateController::class, 'update'])
+        ->middleware('permission:'.PermissionName::TemplatesManage->value)
+        ->name('templates.canvas.update');
+    Route::put('/templates/{mailTemplate}/parts', [TemplatePartUpdateController::class, 'update'])
+        ->middleware('permission:'.PermissionName::TemplatesManage->value)
+        ->name('templates.parts.update');
     Route::put('/templates/{mailTemplate}/structure', [TemplateStructureUpdateController::class, 'update'])
         ->middleware('permission:'.PermissionName::TemplatesManage->value)
         ->name('templates.structure.update');

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MailTemplate;
+use App\Models\MailTemplateCanvas;
 use App\Services\Templates\BuildMailTemplateCanvasCompositionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -42,10 +43,11 @@ class BuildMailTemplateCanvasCompositionTest extends TestCase
         ]);
 
         $composition = app(BuildMailTemplateCanvasCompositionService::class)->build($mailTemplate);
+        $canvas = MailTemplateCanvas::query()->where('legacy_mail_template_id', $mailTemplate->id)->firstOrFail();
 
         $this->assertNotNull($composition);
-        $this->assertSame($mailTemplate->id, $composition['canvasId']);
-        $this->assertSame('prototype-monolith-bridge', $composition['storageModel']);
+        $this->assertSame($canvas->id, $composition['canvasId']);
+        $this->assertSame('composition-db', $composition['storageModel']);
         $this->assertCount(6, $composition['partSelections']);
         $this->assertSame('subject', $composition['partSelections'][0]['partType']);
         $this->assertSame(1, $composition['partSelections'][0]['maxActiveVersions']);
@@ -57,6 +59,6 @@ class BuildMailTemplateCanvasCompositionTest extends TestCase
         $this->assertSame('tong-hop-table', $composition['partSelections'][2]['partType']);
         $this->assertSame(2, $composition['partSelections'][2]['contentSummary']['rowCount']);
         $this->assertFalse($composition['partSelections'][3]['isConfigured']);
-        $this->assertSame('legacy-mail-template-'.$mailTemplate->id.':tong-hop-table', $composition['partSelections'][2]['selectedVersion']['versionKey']);
+        $this->assertStringStartsWith('template-part-version-', $composition['partSelections'][2]['selectedVersion']['versionKey']);
     }
 }

@@ -7,6 +7,11 @@ use App\Models\User;
 
 class UpdateMailTemplateStructureService
 {
+    public function __construct(
+        private readonly SyncLegacyMailTemplateToCompositionService $syncLegacyMailTemplateToCompositionService,
+    ) {
+    }
+
     /**
      * @param  array{version: string, sections: array<int, array<string, mixed>>}  $payload
      */
@@ -44,6 +49,8 @@ class UpdateMailTemplateStructureService
             ],
             'updated_by' => $user->id,
         ])->save();
+
+        $this->syncLegacyMailTemplateToCompositionService->syncMailTemplate($mailTemplate);
 
         return $mailTemplate->refresh();
     }

@@ -46,7 +46,7 @@ class TemplatesSectionStoreTest extends TestCase
 
         $mailTemplate->refresh();
 
-        $this->assertSame('2.2-E', $mailTemplate->structure_json['version']);
+        $this->assertSame('2.0-R5', $mailTemplate->structure_json['version']);
         $this->assertCount(3, $mailTemplate->structure_json['sections']);
         $this->assertSame('tong-hop-table', $mailTemplate->structure_json['sections'][2]['type']);
         $this->assertSame('Table Chế độ tháng', $mailTemplate->structure_json['sections'][2]['label']);

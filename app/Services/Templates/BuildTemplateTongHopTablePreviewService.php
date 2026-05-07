@@ -10,6 +10,8 @@ class BuildTemplateTongHopTablePreviewService
     public function __construct(
         private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
         private readonly GenerateTemplateRowNumberingService $generateTemplateRowNumberingService,
+        private readonly ResolveTemplateCanvasSectionService $resolveTemplateCanvasSectionService,
+        private readonly BuildRenderedTongHopRowsService $buildRenderedTongHopRowsService,
     ) {
     }
 
@@ -42,36 +44,13 @@ class BuildTemplateTongHopTablePreviewService
 
         $rows = $this->generateTemplateRowNumberingService->generate($section['rows'] ?? []);
         $valueMap = $this->buildValueMap($tongHop);
-        $errors = [];
-
-        $renderedRows = array_values(array_filter(array_map(function (array $row) use ($valueMap, &$errors): ?array {
-            $content = trim((string) $row['content']);
-            $columnKey = trim((string) ($row['columnKey'] ?? $content));
-            $value = $valueMap[$columnKey] ?? '';
-
-            if ($columnKey !== '' && ! array_key_exists($columnKey, $valueMap)) {
-                $errors[] = sprintf(
-                    'Dòng "%s" chưa tìm thấy dữ liệu tương ứng trong sheet Tổng hợp đã aggregate.',
-                    $content,
-                );
-            }
-
-            if (($row['hideWhenValueZero'] ?? false) && $this->isNumericZero($value)) {
-                return null;
-            }
-
-            return [
-                ...$row,
-                'columnKey' => $columnKey,
-                'value' => $value,
-            ];
-        }, $rows), static fn (?array $row): bool => $row !== null));
+        $rendered = $this->buildRenderedTongHopRowsService->build($rows, $valueMap);
 
         return [
             'title' => sprintf('Chế độ tháng %s', $sample['month']),
             'sourceSheet' => 'Tổng hợp',
-            'rows' => $renderedRows,
-            'errors' => $errors,
+            'rows' => $rendered['rows'],
+            'errors' => $rendered['errors'],
             'sample' => [
                 'batchId' => $sample['batchId'],
                 'batchCode' => $sample['batchCode'],
@@ -130,21 +109,7 @@ class BuildTemplateTongHopTablePreviewService
      */
     private function resolveTongHopSection(MailTemplate $mailTemplate): ?array
     {
-        $sections = $mailTemplate->structure_json['sections'] ?? [];
-
-        foreach ($sections as $section) {
-            if (! is_array($section)) {
-                continue;
-            }
-
-            if (($section['type'] ?? null) !== 'tong-hop-table') {
-                continue;
-            }
-
-            return $section;
-        }
-
-        return null;
+        return $this->resolveTemplateCanvasSectionService->resolve($mailTemplate, 'tong-hop-table');
     }
 
     /**
@@ -222,16 +187,5 @@ class BuildTemplateTongHopTablePreviewService
         ));
 
         return array_values(array_unique([...$fixedHeaders, ...$dynamicHeaders]));
-    }
-
-    private function isNumericZero(string $value): bool
-    {
-        $normalized = str_replace(',', '', trim($value));
-
-        if ($normalized === '' || ! preg_match('/^-?\d+(?:\.\d+)?$/', $normalized)) {
-            return false;
-        }
-
-        return (float) $normalized === 0.0;
     }
 }

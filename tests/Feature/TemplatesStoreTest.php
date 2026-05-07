@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\MailTemplateCanvas;
+use App\Models\TemplatePartVersion;
 use App\Models\MailTemplate;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -25,15 +27,13 @@ class TemplatesStoreTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('templates.store'), [
             'name' => 'Template chiết khấu tháng 02',
-            'subject_template' => 'Chế độ tháng {{tháng}} của khách hàng {{mã & tên khách hàng}}',
-            'greeting_template' => 'Kính gửi quý khách hàng {{mã & tên khách hàng}},',
         ]);
 
         $response->assertRedirect(route('templates.index'));
 
         $this->assertDatabaseHas('mail_templates', [
             'name' => 'Template chiết khấu tháng 02',
-            'subject_template' => 'Chế độ tháng {{tháng}} của khách hàng {{mã & tên khách hàng}}',
+            'subject_template' => '',
             'is_active' => false,
             'created_by' => $user->id,
             'updated_by' => $user->id,
@@ -41,14 +41,24 @@ class TemplatesStoreTest extends TestCase
 
         $mailTemplate = MailTemplate::query()->firstOrFail();
 
-        $this->assertSame('2.2-E', $mailTemplate->structure_json['version']);
+        $this->assertSame('2.0-R5', $mailTemplate->structure_json['version']);
         $this->assertCount(2, $mailTemplate->structure_json['sections']);
         $this->assertSame('subject', $mailTemplate->structure_json['sections'][0]['type']);
         $this->assertSame('Subject', $mailTemplate->structure_json['sections'][0]['label']);
-        $this->assertSame('Chế độ tháng {{tháng}} của khách hàng {{mã & tên khách hàng}}', $mailTemplate->structure_json['sections'][0]['content']);
+        $this->assertSame('', $mailTemplate->structure_json['sections'][0]['content']);
         $this->assertSame('greeting', $mailTemplate->structure_json['sections'][1]['type']);
         $this->assertSame('Lời chào', $mailTemplate->structure_json['sections'][1]['label']);
-        $this->assertSame('Kính gửi quý khách hàng {{mã & tên khách hàng}},', $mailTemplate->structure_json['sections'][1]['content']);
+        $this->assertSame('', $mailTemplate->structure_json['sections'][1]['content']);
+
+        $this->assertDatabaseHas('mail_template_canvases', [
+            'legacy_mail_template_id' => $mailTemplate->id,
+            'name' => 'Template chiết khấu tháng 02',
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->where('legacy_mail_template_id', $mailTemplate->id)->firstOrFail();
+
+        $this->assertSame(2, $canvas->partBindings()->count());
+        $this->assertSame(2, TemplatePartVersion::query()->where('legacy_mail_template_id', $mailTemplate->id)->count());
     }
 
     public function test_store_template_requires_manage_permission(): void
@@ -73,14 +83,10 @@ class TemplatesStoreTest extends TestCase
             ->from(route('templates.index'))
             ->post(route('templates.store'), [
                 'name' => '',
-                'subject_template' => '',
-                'greeting_template' => '',
             ])
             ->assertRedirect(route('templates.index'))
             ->assertSessionHasErrors([
                 'name',
-                'subject_template',
-                'greeting_template',
             ]);
     }
 

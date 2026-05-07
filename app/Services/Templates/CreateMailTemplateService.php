@@ -9,27 +9,39 @@ class CreateMailTemplateService
 {
     public function __construct(
         private readonly TemplateSectionCatalogService $templateSectionCatalogService,
+        private readonly SyncLegacyMailTemplateToCompositionService $syncLegacyMailTemplateToCompositionService,
+        private readonly HydrateLegacyMailTemplateFromCanvasService $hydrateLegacyMailTemplateFromCanvasService,
+        private readonly UpdateMailTemplateCanvasCompositionService $updateMailTemplateCanvasCompositionService,
     ) {
     }
 
     /**
-     * @param  array{name: string, subject_template: string, greeting_template: string}  $payload
+     * @param  array{name: string, subject_template?: string|null, greeting_template?: string|null}  $payload
      */
     public function create(User $user, array $payload): MailTemplate
     {
-        return MailTemplate::query()->create([
+        $subjectTemplate = trim((string) ($payload['subject_template'] ?? ''));
+        $greetingTemplate = trim((string) ($payload['greeting_template'] ?? ''));
+
+        $mailTemplate = MailTemplate::query()->create([
             'name' => $payload['name'],
-            'subject_template' => $payload['subject_template'],
+            'subject_template' => $subjectTemplate,
             'structure_json' => [
                 'version' => '2.2-E',
                 'sections' => $this->templateSectionCatalogService->defaultSections(
-                    $payload['subject_template'],
-                    $payload['greeting_template'],
+                    $subjectTemplate,
+                    $greetingTemplate,
                 ),
             ],
             'is_active' => false,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
+
+        $this->syncLegacyMailTemplateToCompositionService->syncMailTemplate($mailTemplate);
+        $canvas = $this->updateMailTemplateCanvasCompositionService->update($mailTemplate, ['subject', 'greeting']);
+        $this->hydrateLegacyMailTemplateFromCanvasService->hydrate($mailTemplate, $canvas);
+
+        return $mailTemplate->refresh();
     }
 }

@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import type { PageProps } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
 import TemplateBuilderCanvas from '@/Components/templates/TemplateBuilderCanvas.vue';
 import TemplateCreateFormCard from '@/Components/templates/TemplateCreateFormCard.vue';
 import TemplateVariableContractCard from '@/Components/templates/TemplateVariableContractCard.vue';
+import TemplatePartVersionsCard from '@/Components/templates/TemplatePartVersionsCard.vue';
 import TemplateSubjectPreviewCard from '@/Components/templates/TemplateSubjectPreviewCard.vue';
 import TemplateGreetingPreviewCard from '@/Components/templates/TemplateGreetingPreviewCard.vue';
 import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTongHopTablePreviewCard.vue';
@@ -16,7 +18,7 @@ import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 import AppLayout from '../../layout/AppLayout.vue';
 
-defineProps<{
+const props = defineProps<{
     title: string;
     description: string;
     currentSlice: {
@@ -78,8 +80,9 @@ defineProps<{
                 versionKey: string;
                 versionLabel: string;
                 selectionMode: string;
-                mailTemplateId: number;
-            };
+                mailTemplateId?: number;
+                versionNo?: number;
+            } | null;
             contentSummary: {
                 hasContent: boolean;
                 rowCount: number;
@@ -87,6 +90,27 @@ defineProps<{
             };
         }>;
     } | null;
+    partVersionGroups: Array<{
+        partType: string;
+        code: string;
+        label: string;
+        kind: 'text' | 'table';
+        sourceSheet: string | null;
+        maxActiveVersions: number;
+        selectedVersionId: number | null;
+        versionCount: number;
+        activeVersionCount: number;
+        versions: Array<{
+            id: number;
+            versionNo: number;
+            versionLabel: string;
+            isActive: boolean;
+            hasTextTemplate: boolean;
+            rowCount: number;
+            legacyMailTemplateId: number | null;
+            updatedAt: string | null;
+        }>;
+    }>;
     subjectPreview: {
         templateText: string;
         renderedText: string;
@@ -164,6 +188,35 @@ defineProps<{
 }>();
 
 const page = usePage<PageProps>();
+const tongHopDraftSections = ref<Array<{
+    type: string;
+    label?: string;
+    description?: string;
+    kind?: 'text' | 'table';
+    sourceSheet?: string | null;
+    content?: string;
+    rows?: Array<{
+        content: string;
+        indentLevel?: number;
+        rowType?: 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+        columnKey?: string | null;
+        hideWhenValueZero?: boolean;
+        isBold?: boolean;
+        numbering: string;
+        styleRole: 'parent' | 'child' | 'neutral';
+        fontWeight: 'bold' | 'regular';
+    }>;
+}>>([]);
+
+const partVersionGroupByType = computed(() =>
+    Object.fromEntries(
+        (props.partVersionGroups ?? []).map((group) => [group.partType, group]),
+    ) as Record<string, (typeof props.partVersionGroups)[number]>,
+);
+
+const tongHopDraftSection = computed(() =>
+    tongHopDraftSections.value.find((section) => section.type === 'tong-hop-table') ?? null,
+);
 </script>
 
 <template>
@@ -245,7 +298,7 @@ const page = usePage<PageProps>();
                     <TabPanels class="mt-4">
                         <TabPanel value="0">
                             <div class="space-y-6">
-                                <TemplateCreateFormCard v-if="canManageTemplates" :variables="templateVariables" />
+                                <TemplateCreateFormCard v-if="canManageTemplates" />
 
                                 <Card v-if="canvasComposition" class="sakai-panel rounded-[2rem] border-0">
                                     <template #content>
@@ -259,7 +312,7 @@ const page = usePage<PageProps>();
                                                         {{ canvasComposition.canvasName }}
                                                     </h2>
                                                     <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                        Slice `2.0-R1` chốt lại đúng bản chất: canvas chỉ là lớp ghép các part, chưa phải nơi lưu version đầy đủ của từng part.
+                                                        Slice `2.0-R3` đã chuyển write path sang từng part và canvas composition. `mail_templates` hiện chỉ còn là bridge đọc cho UI legacy.
                                                     </p>
                                                 </div>
 
@@ -290,7 +343,7 @@ const page = usePage<PageProps>();
                                                         <div class="flex flex-wrap gap-2">
                                                             <Tag :value="part.maxActiveVersions === 1 ? '1 version active' : `${part.maxActiveVersions} version active`" severity="warn" rounded />
                                                             <Tag v-if="part.sourceSheet" :value="`Sheet: ${part.sourceSheet}`" severity="info" rounded />
-                                                            <Tag :value="part.selectedVersion.versionLabel" severity="contrast" rounded />
+                                                            <Tag v-if="part.selectedVersion" :value="part.selectedVersion.versionLabel" severity="contrast" rounded />
                                                         </div>
 
                                                         <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
@@ -308,17 +361,42 @@ const page = usePage<PageProps>();
                                     </template>
                                 </Card>
 
-                                <TemplateBuilderCanvas
-                                    :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
-                                    :section-catalog="templateParts"
-                                    :tong-hop-binding-options="tongHopBindingOptions"
-                                />
+                                <Card class="sakai-panel rounded-[2rem] border-0">
+                                    <template #content>
+                                        <div class="space-y-4">
+                                            <div>
+                                                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
+                                                    Canvas workspace
+                                                </p>
+                                                <h2 class="mt-3 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                    Bề mặt ghép version vào email template
+                                                </h2>
+                                                <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                    Tab `Canvas chính` chỉ còn chịu trách nhiệm composition: xem trạng thái ghép, kiểm tra template list và theo dõi part nào đang được chọn trong canvas. Việc sửa nội dung thật được chuyển xuống các tab part riêng.
+                                                </p>
+                                            </div>
 
-                                <TemplateVariableContractCard
-                                    :variables="templateVariables"
-                                    :can-manage-templates="canManageTemplates"
-                                />
+                                            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                                <article
+                                                    v-for="part in templateParts"
+                                                    :key="part.code"
+                                                    class="rounded-[1.2rem] border p-4"
+                                                    :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
+                                                >
+                                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-500">
+                                                        {{ part.code }}
+                                                    </p>
+                                                    <h3 class="mt-2 text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                        {{ part.label }}
+                                                    </h3>
+                                                    <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                        {{ part.description }}
+                                                    </p>
+                                                </article>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </Card>
 
                                 <Card class="sakai-panel rounded-[2rem] border-0">
                                     <template #content>
@@ -381,46 +459,6 @@ const page = usePage<PageProps>();
 
                                 <Card class="sakai-panel rounded-[2rem] border-0">
                                     <template #content>
-                                        <div class="space-y-5">
-                                            <div>
-                                                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                                    6 phần chính
-                                                </p>
-                                                <h2 class="mt-3 text-2xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                    Khung template email đã được mở đường
-                                                </h2>
-                                                <p class="mt-3 text-base leading-7" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                    Màn này là điểm bắt đầu để đi tới visual builder thật cho subject, lời chào và 4 bảng dữ liệu theo từng sheet nguồn.
-                                                </p>
-                                            </div>
-
-                                            <div class="grid gap-4 md:grid-cols-2">
-                                                <article
-                                                    v-for="part in templateParts"
-                                                    :key="part.code"
-                                                    class="rounded-[1.4rem] border p-5"
-                                                    :style="{
-                                                        borderColor: 'var(--dashboard-panel-border)',
-                                                        background: 'var(--dashboard-card-bg)',
-                                                    }"
-                                                >
-                                                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-teal-500">
-                                                        {{ part.code }}
-                                                    </p>
-                                                    <h3 class="mt-3 text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                        {{ part.label }}
-                                                    </h3>
-                                                    <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                        {{ part.description }}
-                                                    </p>
-                                                </article>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </Card>
-
-                                <Card class="sakai-panel rounded-[2rem] border-0">
-                                    <template #content>
                                         <div class="space-y-4">
                                             <div>
                                                 <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
@@ -469,6 +507,12 @@ const page = usePage<PageProps>();
 
                         <TabPanel value="1">
                             <div class="space-y-6">
+                                <TemplatePartVersionsCard
+                                    title="Version của Subject"
+                                    description="Chọn và theo dõi version hiện có của part `Subject`. Builder phía dưới chỉnh trực tiếp version đang được ghép vào canvas."
+                                    :group="partVersionGroupByType['subject'] ?? null"
+                                />
+
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
                                     :can-manage-templates="canManageTemplates"
@@ -477,12 +521,23 @@ const page = usePage<PageProps>();
                                     :visible-section-types="['subject']"
                                 />
 
+                                <TemplateVariableContractCard
+                                    :variables="templateVariables"
+                                    :can-manage-templates="canManageTemplates"
+                                />
+
                                 <TemplateSubjectPreviewCard :preview="subjectPreview" />
                             </div>
                         </TabPanel>
 
                         <TabPanel value="2">
                             <div class="space-y-6">
+                                <TemplatePartVersionsCard
+                                    title="Version của Lời chào"
+                                    description="Part `Lời chào` có lifecycle riêng với policy active khác `Subject`. Tab này chỉ tập trung vào version của lời chào."
+                                    :group="partVersionGroupByType['greeting'] ?? null"
+                                />
+
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
                                     :can-manage-templates="canManageTemplates"
@@ -491,26 +546,48 @@ const page = usePage<PageProps>();
                                     :visible-section-types="['greeting']"
                                 />
 
+                                <TemplateVariableContractCard
+                                    :variables="templateVariables"
+                                    :can-manage-templates="canManageTemplates"
+                                />
+
                                 <TemplateGreetingPreviewCard :preview="greetingPreview" />
                             </div>
                         </TabPanel>
 
                         <TabPanel value="3">
                             <div class="space-y-6">
+                                <TemplatePartVersionsCard
+                                    title="Version của Bảng chế độ tháng"
+                                    description="Quản lý version độc lập cho part `Tổng hợp`. Canvas chỉ ghép một version đang chọn của part này."
+                                    :group="partVersionGroupByType['tong-hop-table'] ?? null"
+                                />
+
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :visible-section-types="['tong-hop-table']"
+                                    @draft-change="tongHopDraftSections = $event"
                                 />
 
-                                <TemplateTongHopTablePreviewCard :preview="tongHopTablePreview" />
+                                <TemplateTongHopTablePreviewCard
+                                    :preview="tongHopTablePreview"
+                                    :draft-section="tongHopDraftSection"
+                                    :binding-options="tongHopBindingOptions"
+                                />
                             </div>
                         </TabPanel>
 
                         <TabPanel value="4">
                             <div class="space-y-6">
+                                <TemplatePartVersionsCard
+                                    title="Version của Bảng chương trình khoán đặc biệt"
+                                    description="Part `Khoán NPP` có version riêng, active riêng và được ghép linh động vào canvas."
+                                    :group="partVersionGroupByType['khoan-npp-table'] ?? null"
+                                />
+
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
                                     :can-manage-templates="canManageTemplates"
@@ -539,6 +616,12 @@ const page = usePage<PageProps>();
 
                         <TabPanel value="5">
                             <div class="space-y-6">
+                                <TemplatePartVersionsCard
+                                    title="Version của Bảng chiết khấu cám cá"
+                                    description="Part `Cám cá` được quản lý như một tập version độc lập với canvas."
+                                    :group="partVersionGroupByType['cam-ca-table'] ?? null"
+                                />
+
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
                                     :can-manage-templates="canManageTemplates"
@@ -567,6 +650,12 @@ const page = usePage<PageProps>();
 
                         <TabPanel value="6">
                             <div class="space-y-6">
+                                <TemplatePartVersionsCard
+                                    title="Version của Bảng chiết khấu Key Account"
+                                    description="Part `Key Account` có lifecycle version riêng và chỉ được ghép vào canvas qua composition binding."
+                                    :group="partVersionGroupByType['key-account-table'] ?? null"
+                                />
+
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
                                     :can-manage-templates="canManageTemplates"

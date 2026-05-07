@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\MailTemplate;
+use App\Models\MailTemplateCanvas;
 use App\Models\ImportBatch;
 use App\Models\ImportBatchAggregatedRecord;
+use App\Services\Templates\SyncLegacyMailTemplateToCompositionService;
 use App\Services\Templates\BuildTemplateTongHopTablePreviewService;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -33,11 +35,12 @@ class TemplatesPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
                 ->where('title', 'Thiết kế mẫu email')
-                ->where('currentSlice.code', '2.0-R1')
+                ->where('currentSlice.code', '2.0-R5')
                 ->where('canManageTemplates', true)
                 ->has('writeCapabilities', 4)
                 ->where('writeCapabilities.0', 'Tạo template mới')
                 ->has('templateParts', 6)
+                ->has('partVersionGroups', 6)
                 ->has('templateVariables', 4)
                 ->has('tongHopBindingOptions')
                 ->where('templateVariables.0.token', '{{tháng}}')
@@ -65,7 +68,7 @@ class TemplatesPageTest extends TestCase
                 ->where('templateParts.5.type', 'key-account-table')
                 ->where('templateList', [])
                 ->where('activeTemplateId', null)
-                ->where('nextSlice.code', '2.0-R2')
+                ->where('nextSlice.code', '2.3-E')
             );
     }
 
@@ -243,6 +246,9 @@ class TemplatesPageTest extends TestCase
             ],
         ]);
 
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncAll();
+        $activeCanvas = MailTemplateCanvas::query()->where('legacy_mail_template_id', $activeTemplate->id)->firstOrFail();
+
         $this->actingAs($user)
             ->get(route('templates.index'))
             ->assertOk()
@@ -250,8 +256,8 @@ class TemplatesPageTest extends TestCase
                 ->component('Templates/Index')
                 ->where('activeTemplateId', $activeTemplate->id)
                 ->where('builderTemplate.id', $activeTemplate->id)
-                ->where('canvasComposition.canvasId', $activeTemplate->id)
-                ->where('canvasComposition.storageModel', 'prototype-monolith-bridge')
+                ->where('canvasComposition.canvasId', $activeCanvas->id)
+                ->where('canvasComposition.storageModel', 'composition-db')
                 ->has('canvasComposition.partSelections', 6)
                 ->where('canvasComposition.partSelections.0.partType', 'subject')
                 ->where('canvasComposition.partSelections.0.maxActiveVersions', 1)
@@ -282,7 +288,7 @@ class TemplatesPageTest extends TestCase
                 ->where('templateList.1.id', $inactiveTemplate->id)
                 ->where('templateList.1.isActive', false)
                 ->where('templateList.1.statusLabel', 'Ngừng hoạt động')
-                ->where('templateList.1.sectionCount', 2)
+                ->where('templateList.1.sectionCount', 1)
             );
     }
 

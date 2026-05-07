@@ -3,12 +3,14 @@
 namespace App\Services\Templates;
 
 use App\Models\MailTemplate;
+use App\Models\MailTemplateCanvas;
 use App\Support\Templates\TemplatePartType;
 
 class BuildMailTemplateCanvasCompositionService
 {
     public function __construct(
         private readonly TemplatePartCatalogService $templatePartCatalogService,
+        private readonly ResolveMailTemplateCanvasService $resolveMailTemplateCanvasService,
     ) {
     }
 
@@ -17,25 +19,28 @@ class BuildMailTemplateCanvasCompositionService
      */
     public function build(?MailTemplate $mailTemplate): ?array
     {
-        if (! $mailTemplate) {
-            return null;
-        }
+        $canvas = $this->resolveMailTemplateCanvasService->resolve($mailTemplate);
 
-        $sections = collect($mailTemplate->structure_json['sections'] ?? [])
-            ->filter(static fn (mixed $section): bool => is_array($section))
-            ->mapWithKeys(static fn (array $section): array => [
-                (string) ($section['type'] ?? '') => $section,
-            ]);
+        return $canvas ? $this->buildFromCanvas($canvas) : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildFromCanvas(MailTemplateCanvas $canvas): array
+    {
+        $bindings = $canvas->partBindings
+            ->filter(fn ($binding): bool => $binding->templatePart !== null)
+            ->keyBy(fn ($binding): string => $binding->templatePart->type);
 
         return [
-            'canvasId' => $mailTemplate->getKey(),
-            'canvasName' => $mailTemplate->name,
-            'storageModel' => 'prototype-monolith-bridge',
+            'canvasId' => $canvas->getKey(),
+            'canvasName' => $canvas->name,
+            'storageModel' => 'composition-db',
             'partSelections' => array_map(
-                fn (TemplatePartType $partType): array => $this->buildPartSelection(
-                    $mailTemplate,
+                fn (TemplatePartType $partType): array => $this->buildCanvasPartSelection(
                     $partType,
-                    $sections->get($partType->value),
+                    $bindings->get($partType->value),
                 ),
                 TemplatePartType::cases(),
             ),
@@ -43,12 +48,12 @@ class BuildMailTemplateCanvasCompositionService
     }
 
     /**
-     * @param  array<string, mixed>|null  $section
      * @return array<string, mixed>
      */
-    private function buildPartSelection(MailTemplate $mailTemplate, TemplatePartType $partType, ?array $section): array
+    private function buildCanvasPartSelection(TemplatePartType $partType, mixed $binding): array
     {
         $definition = $this->templatePartCatalogService->definition($partType);
+        $version = $binding?->templatePartVersion;
 
         return [
             'partType' => $definition['type'],
@@ -58,24 +63,23 @@ class BuildMailTemplateCanvasCompositionService
             'sourceSheet' => $definition['sourceSheet'],
             'maxActiveVersions' => $definition['maxActiveVersions'],
             'activePolicy' => $definition['maxActiveVersions'] === 1 ? 'single-active' : 'multi-active',
-            'isConfigured' => is_array($section),
-            'selectedVersion' => [
-                'versionKey' => sprintf('legacy-mail-template-%d:%s', $mailTemplate->getKey(), $partType->value),
-                'versionLabel' => sprintf('Legacy %s', $definition['label']),
-                'selectionMode' => 'prototype-inline',
-                'mailTemplateId' => $mailTemplate->getKey(),
+            'isConfigured' => $version !== null,
+            'selectedVersion' => $version === null ? null : [
+                'versionKey' => sprintf('template-part-version-%d', $version->getKey()),
+                'versionLabel' => $version->version_label,
+                'selectionMode' => 'composition-binding',
+                'versionNo' => $version->version_no,
             ],
-            'contentSummary' => $this->buildContentSummary($partType, $section),
+            'contentSummary' => $this->buildVersionContentSummary($partType, $version),
         ];
     }
 
     /**
-     * @param  array<string, mixed>|null  $section
      * @return array<string, mixed>
      */
-    private function buildContentSummary(TemplatePartType $partType, ?array $section): array
+    private function buildVersionContentSummary(TemplatePartType $partType, mixed $version): array
     {
-        if (! is_array($section)) {
+        if ($version === null) {
             return [
                 'hasContent' => false,
                 'rowCount' => 0,
@@ -84,7 +88,7 @@ class BuildMailTemplateCanvasCompositionService
         }
 
         if ($partType->kind() === 'text') {
-            $content = trim((string) ($section['content'] ?? ''));
+            $content = trim((string) ($version->text_template ?? ''));
 
             return [
                 'hasContent' => $content !== '',
@@ -93,7 +97,7 @@ class BuildMailTemplateCanvasCompositionService
             ];
         }
 
-        $rows = $section['rows'] ?? [];
+        $rows = $version->structure_json['rows'] ?? [];
 
         return [
             'hasContent' => is_array($rows) && count($rows) > 0,

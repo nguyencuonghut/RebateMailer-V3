@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import Draggable from 'vuedraggable';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
@@ -22,6 +22,28 @@ const props = defineProps<{
     visibleSectionTypes?: string[];
 }>();
 
+const emit = defineEmits<{
+    'draft-change': [sections: Array<{
+        type: string;
+        label?: string;
+        description?: string;
+        kind?: 'text' | 'table';
+        sourceSheet?: string | null;
+        content?: string;
+        rows?: Array<{
+            content: string;
+            indentLevel?: number;
+            rowType?: 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+            columnKey?: string | null;
+            hideWhenValueZero?: boolean;
+            isBold?: boolean;
+            numbering: string;
+            styleRole: 'parent' | 'child' | 'neutral';
+            fontWeight: 'bold' | 'regular';
+        }>;
+    }>]
+}>();
+
 const {
     sectionDraft,
     catalogItems,
@@ -36,7 +58,8 @@ const {
     toggleTongHopRowBold,
     toggleTongHopHideWhenZero,
     updateTongHopColumnKey,
-    saveStructure,
+    saveCanvasComposition,
+    savePart,
     tongHopSectionType,
 } = useTemplateBuilderCanvas(
     () => props.template,
@@ -73,6 +96,35 @@ const visibleSectionCount = computed(() => visibleSectionDraft.value.length);
 const visibleTableSectionCount = computed(() =>
     visibleSectionDraft.value.filter((section) => section.kind === 'table').length,
 );
+
+const isSinglePartView = computed(() => isFilteredView.value && visibleSectionDraft.value.length === 1);
+const activePartType = computed(() => visibleSectionDraft.value[0]?.type ?? null);
+
+const saveButtonLabel = computed(() => {
+    if (isSinglePartView.value) {
+        return 'Lưu phần này';
+    }
+
+    return 'Lưu canvas';
+});
+
+const handleSave = (): void => {
+    if (isSinglePartView.value && activePartType.value) {
+        savePart(activePartType.value);
+
+        return;
+    }
+
+    saveCanvasComposition();
+};
+
+watch(
+    sectionDraft,
+    (sections) => {
+        emit('draft-change', sections);
+    },
+    { deep: true, immediate: true },
+);
 </script>
 
 <template>
@@ -97,10 +149,10 @@ const visibleTableSectionCount = computed(() =>
                         <Tag :value="`${visibleTableSectionCount} bảng đang mở row editor`" severity="contrast" rounded />
                         <Button
                             v-if="canManageTemplates && template"
-                            label="Lưu cấu trúc"
+                            :label="saveButtonLabel"
                             size="small"
                             :disabled="!hasUnsavedChanges"
-                            @click="saveStructure"
+                            @click="handleSave"
                         />
                     </div>
                 </div>
@@ -216,8 +268,31 @@ const visibleTableSectionCount = computed(() =>
                                         Sheet nguồn: {{ element.sourceSheet }}
                                     </p>
 
-                                    <p v-if="!isFilteredView" class="mt-3 text-sm leading-6 whitespace-pre-line" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                        {{ element.content ?? element.description ?? 'Section này chưa có nội dung text trực tiếp.' }}
+                                    <div v-if="element.kind === 'text'" class="mt-3">
+                                        <Textarea
+                                            v-if="isFilteredView && canManageTemplates"
+                                            v-model="element.content"
+                                            auto-resize
+                                            rows="4"
+                                            fluid
+                                            :pt="{ root: { class: 'font-medium' } }"
+                                            placeholder="Nhập nội dung của phần template"
+                                        />
+                                        <p
+                                            v-else
+                                            class="text-sm leading-6 whitespace-pre-line"
+                                            :style="{ color: 'var(--dashboard-muted-text)' }"
+                                        >
+                                            {{ element.content ?? element.description ?? 'Section này chưa có nội dung text trực tiếp.' }}
+                                        </p>
+                                    </div>
+
+                                    <p
+                                        v-else-if="!isFilteredView"
+                                        class="mt-3 text-sm leading-6 whitespace-pre-line"
+                                        :style="{ color: 'var(--dashboard-muted-text)' }"
+                                    >
+                                        {{ element.description ?? 'Section này chưa có nội dung text trực tiếp.' }}
                                     </p>
 
                                     <div
@@ -245,7 +320,7 @@ const visibleTableSectionCount = computed(() =>
                                                 </p>
                                             </div>
 
-                                            <div v-if="canManageTemplates" class="flex flex-wrap gap-2 xl:flex-nowrap xl:justify-end">
+                                            <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap gap-2 xl:flex-nowrap xl:justify-end">
                                                 <template v-if="element.type === tongHopSectionType">
                                                     <Button label="Mục cha" size="small" variant="outlined" @click="addTongHopRow(element.type, 'parent')" />
                                                     <Button label="Dữ liệu" size="small" variant="outlined" @click="addTongHopRow(element.type, 'data')" />
@@ -320,6 +395,7 @@ const visibleTableSectionCount = computed(() =>
                                                                 <InputText
                                                                     v-model="row.content"
                                                                     fluid
+                                                                    :disabled="!isFilteredView || !canManageTemplates"
                                                                     :pt="{ root: { class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal' } }"
                                                                     placeholder="Nhập tên dòng sẽ hiển thị trong bảng email"
                                                                 />
@@ -334,12 +410,13 @@ const visibleTableSectionCount = computed(() =>
                                                                     filter
                                                                     show-clear
                                                                     fluid
+                                                                    :disabled="!isFilteredView || !canManageTemplates"
                                                                     placeholder="Chọn key dữ liệu đã parse"
                                                                     @update:model-value="updateTongHopColumnKey(element.type, row.renderKey, $event)"
                                                                 />
                                                             </div>
 
-                                                            <div v-if="canManageTemplates" class="flex flex-wrap items-center gap-2 xl:ml-auto xl:flex-nowrap">
+                                                            <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap items-center gap-2 xl:ml-auto xl:flex-nowrap">
                                                                 <Button
                                                                     :label="row.isBold ? 'B đậm' : 'B thường'"
                                                                     size="small"
@@ -348,7 +425,7 @@ const visibleTableSectionCount = computed(() =>
                                                                     @click="toggleTongHopRowBold(element.type, row.renderKey)"
                                                                 />
                                                                 <Button
-                                                                    :label="row.hideWhenValueZero ? 'Ẩn khi = 0' : 'Hiện cả = 0'"
+                                                                    :label="row.hideWhenValueZero ? 'Ẩn khi = 0 hoặc rỗng' : 'Hiện cả = 0 hoặc rỗng'"
                                                                     size="small"
                                                                     :severity="row.hideWhenValueZero ? 'warn' : 'secondary'"
                                                                     variant="outlined"
@@ -399,7 +476,7 @@ const visibleTableSectionCount = computed(() =>
                                                                 </div>
                                                             </div>
 
-                                                            <div v-if="canManageTemplates" class="flex flex-wrap items-center gap-2">
+                                                            <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap items-center gap-2">
                                                                 <Button
                                                                     label="Giảm cấp"
                                                                     variant="outlined"
@@ -435,6 +512,7 @@ const visibleTableSectionCount = computed(() =>
                                                                 auto-resize
                                                                 rows="3"
                                                                 fluid
+                                                                :disabled="!isFilteredView || !canManageTemplates"
                                                                 :pt="{
                                                                     root: {
                                                                         class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal',

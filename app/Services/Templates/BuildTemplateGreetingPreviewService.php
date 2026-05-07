@@ -9,6 +9,7 @@ class BuildTemplateGreetingPreviewService
     public function __construct(
         private readonly RenderTemplateTextPreviewService $renderTemplateTextPreviewService,
         private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
+        private readonly ResolveTemplateCanvasSectionService $resolveTemplateCanvasSectionService,
     ) {
     }
 
@@ -48,20 +49,6 @@ class BuildTemplateGreetingPreviewService
 
     private function resolveGreetingTemplate(MailTemplate $mailTemplate): string
     {
-        $sections = $mailTemplate->structure_json['sections'] ?? [];
-
-        foreach ($sections as $section) {
-            if (! is_array($section)) {
-                continue;
-            }
-
-            if (($section['type'] ?? null) !== 'greeting') {
-                continue;
-            }
-
-            return trim((string) ($section['content'] ?? ''));
-        }
-
-        return '';
+        return trim((string) ($this->resolveTemplateCanvasSectionService->resolve($mailTemplate, 'greeting')['content'] ?? ''));
     }
 }

@@ -8,6 +8,7 @@ class TemplateSectionCatalogService
 {
     public function __construct(
         private readonly TemplatePartCatalogService $templatePartCatalogService,
+        private readonly ResolveTemplateCanvasSectionService $resolveTemplateCanvasSectionService,
     ) {
     }
 
@@ -43,9 +44,15 @@ class TemplateSectionCatalogService
      */
     public function buildSectionForTemplate(MailTemplate $mailTemplate, string $type): array
     {
+        $resolvedSection = $this->resolveTemplateCanvasSectionService->resolve($mailTemplate, $type);
+
         $section = $this->buildSectionPayload(
             $type,
-            $type === 'subject' ? $mailTemplate->subject_template : $this->resolveGreetingContent($mailTemplate),
+            match ($type) {
+                'subject' => trim((string) ($resolvedSection['content'] ?? $mailTemplate->subject_template)),
+                'greeting' => trim((string) ($resolvedSection['content'] ?? $this->resolveGreetingContent($mailTemplate))),
+                default => '',
+            },
         );
 
         if (($section['kind'] ?? null) === 'table') {

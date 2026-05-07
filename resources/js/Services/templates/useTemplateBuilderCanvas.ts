@@ -190,7 +190,7 @@ function buildTongHopDraftRow(rowType: TongHopRowType): BuilderRow {
         content: '',
         rowType,
         columnKey: null,
-        hideWhenValueZero: false,
+        hideWhenValueZero: true,
         isBold: rowType === 'parent' || rowType === 'total',
     };
 }
@@ -250,7 +250,16 @@ export function useTemplateBuilderCanvas(
             return;
         }
 
-        router.post(route('templates.sections.store', activeTemplate.id), { type }, { preserveScroll: true });
+        router.put(
+            route('templates.canvas.update', activeTemplate.id),
+            {
+                partTypes: Array.from(new Set([
+                    ...sectionDraft.value.map((section) => section.type),
+                    type,
+                ])),
+            },
+            { preserveScroll: true },
+        );
     };
 
     const findSection = (sectionType: string): RenderableBuilderSection | undefined =>
@@ -425,6 +434,59 @@ export function useTemplateBuilderCanvas(
         row.columnKey = columnKey;
     };
 
+    const saveCanvasComposition = (): void => {
+        const activeTemplate = template();
+
+        if (!activeTemplate || !canManageTemplates()) {
+            return;
+        }
+
+        router.put(
+            route('templates.canvas.update', activeTemplate.id),
+            {
+                partTypes: sectionDraft.value.map((section) => section.type),
+            },
+            {
+                preserveScroll: true,
+            },
+        );
+    };
+
+    const savePart = (partType: string): void => {
+        const activeTemplate = template();
+
+        if (!activeTemplate || !canManageTemplates()) {
+            return;
+        }
+
+        const section = sectionDraft.value.find((item) => item.type === partType);
+
+        if (!section) {
+            return;
+        }
+
+        router.put(
+            route('templates.parts.update', activeTemplate.id),
+            {
+                partType,
+                content: section.kind === 'text' ? (section.content ?? '') : undefined,
+                section: section.kind === 'table'
+                    ? {
+                        type: section.type,
+                        label: section.label,
+                        description: section.description,
+                        kind: section.kind,
+                        sourceSheet: section.sourceSheet,
+                        rows: serializeRows(section.type, section.rows ?? []),
+                    }
+                    : undefined,
+            },
+            {
+                preserveScroll: true,
+            },
+        );
+    };
+
     const saveStructure = (): void => {
         const activeTemplate = template();
 
@@ -471,6 +533,8 @@ export function useTemplateBuilderCanvas(
         toggleTongHopHideWhenZero,
         updateTongHopColumnKey,
         saveStructure,
+        saveCanvasComposition,
+        savePart,
         rehydrateSectionRows,
         tongHopSectionType: TONG_HOP_SECTION_TYPE,
     };

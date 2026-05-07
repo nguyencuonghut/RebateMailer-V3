@@ -20,7 +20,7 @@ class StoreMailTemplateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'subject_template' => [
-                'required',
+                'nullable',
                 'string',
                 'max:1000',
                 fn (string $attribute, mixed $value, \Closure $fail) => $this->validateVariables(
@@ -30,7 +30,7 @@ class StoreMailTemplateRequest extends FormRequest
                 ),
             ],
             'greeting_template' => [
-                'required',
+                'nullable',
                 'string',
                 'max:5000',
                 fn (string $attribute, mixed $value, \Closure $fail) => $this->validateVariables(

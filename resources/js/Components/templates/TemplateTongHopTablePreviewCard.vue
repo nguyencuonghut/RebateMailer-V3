@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 
-defineProps<{
+const props = defineProps<{
     preview: {
         title: string;
         sourceSheet: string;
@@ -28,6 +29,25 @@ defineProps<{
             month: string;
         };
     } | null;
+    draftSection?: {
+        type: string;
+        rows?: Array<{
+            content: string;
+            indentLevel?: number;
+            rowType?: string;
+            columnKey?: string | null;
+            hideWhenValueZero?: boolean;
+            isBold?: boolean;
+            numbering: string;
+            styleRole: string;
+            fontWeight: string;
+        }>;
+    } | null;
+    bindingOptions?: Array<{
+        key: string;
+        label: string;
+        valuePreview: string;
+    }>;
 }>();
 
 const formatPreviewValue = (content: string, value: string): string => {
@@ -39,6 +59,46 @@ const formatPreviewValue = (content: string, value: string): string => {
         ? value
         : formatImportNumber(value, value);
 };
+
+const shouldHideWhenValueZero = (value: string): boolean => {
+    const normalized = value.replaceAll(',', '').trim();
+
+    if (normalized === '') {
+        return true;
+    }
+
+    if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) {
+        return false;
+    }
+
+    return Number(normalized) === 0;
+};
+
+const effectivePreviewRows = computed(() => {
+    if (!props.preview) {
+        return [];
+    }
+
+    if (!props.draftSection?.rows?.length) {
+        return props.preview.rows;
+    }
+
+    const valueMap = new Map((props.bindingOptions ?? []).map((option) => [option.key, option.valuePreview]));
+
+    return props.draftSection.rows.flatMap((row) => {
+        const columnKey = row.columnKey?.trim() || row.content.trim();
+        const value = valueMap.get(columnKey) ?? '';
+
+        if (row.hideWhenValueZero && shouldHideWhenValueZero(value)) {
+            return [];
+        }
+
+        return [{
+            ...row,
+            value,
+        }];
+    });
+});
 </script>
 
 <template>
@@ -95,19 +155,16 @@ const formatPreviewValue = (content: string, value: string): string => {
                                 </thead>
                                 <tbody>
                                     <tr
-                                        v-for="row in preview.rows"
+                                        v-for="row in effectivePreviewRows"
                                         :key="`${row.numbering}-${row.content}-${row.indentLevel}`"
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
                                         <td class="px-4 py-3 align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                            {{ row.numbering || '—' }}
+                                            {{ row.numbering }}
                                         </td>
-                                        <td class="px-4 py-3 align-top" :style="{ paddingLeft: `${1 + row.indentLevel * 1.25}rem`, color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }">
+                                        <td class="px-4 py-3 align-top" :style="{ paddingLeft: `${1 + (row.indentLevel ?? 0) * 1.25}rem`, color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }">
                                             <div>{{ row.content }}</div>
-                                            <div v-if="row.columnKey" class="mt-1 text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                [{{ row.columnKey }}]
-                                            </div>
                                         </td>
                                         <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 500 }">
                                             {{ formatPreviewValue(row.content, row.value) }}
