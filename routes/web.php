@@ -11,6 +11,10 @@ use App\Http\Controllers\ImportTongHopPreviewController;
 use App\Http\Controllers\ImportUploadController;
 use App\Http\Controllers\ImportWorkbookAnalysisController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TemplatePageController;
+use App\Http\Controllers\TemplateSectionStoreController;
+use App\Http\Controllers\TemplateStructureUpdateController;
+use App\Http\Controllers\TemplateStoreController;
 use App\Http\Controllers\UserManagementController;
 use App\Support\Authorization\PermissionName;
 use Illuminate\Support\Facades\Route;
@@ -58,14 +62,18 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.preview-aggregated');
 
-    Route::get('/templates', function () {
-        return Inertia::render('ModulePage', [
-            'title' => 'Thiết kế mẫu email',
-            'description' => 'Quản lý subject, body và mapping dữ liệu cho từng mẫu email rebate.',
-            'capability' => 'Tạo và rà soát template email theo từng chương trình.',
-            'status' => 'Sẵn sàng triển khai',
-        ]);
-    })->middleware('permission:'.PermissionName::TemplatesView->value)->name('templates.index');
+    Route::get('/templates', [TemplatePageController::class, 'index'])
+        ->middleware('permission:'.PermissionName::TemplatesView->value)
+        ->name('templates.index');
+    Route::post('/templates', [TemplateStoreController::class, 'store'])
+        ->middleware('permission:'.PermissionName::TemplatesManage->value)
+        ->name('templates.store');
+    Route::post('/templates/{mailTemplate}/sections', [TemplateSectionStoreController::class, 'store'])
+        ->middleware('permission:'.PermissionName::TemplatesManage->value)
+        ->name('templates.sections.store');
+    Route::put('/templates/{mailTemplate}/structure', [TemplateStructureUpdateController::class, 'update'])
+        ->middleware('permission:'.PermissionName::TemplatesManage->value)
+        ->name('templates.structure.update');
 
     Route::get('/mail', function () {
         return Inertia::render('ModulePage', [
