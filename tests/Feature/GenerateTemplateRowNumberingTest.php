@@ -92,4 +92,23 @@ class GenerateTemplateRowNumberingTest extends TestCase
         $this->assertSame('I', $result[2]['numbering']);
         $this->assertSame('1', $result[3]['numbering']);
     }
+
+    public function test_it_treats_khoan_npp_semantic_rows_as_non_numbered_builder_rows(): void
+    {
+        $service = new GenerateTemplateRowNumberingService;
+
+        $result = $service->generate([
+            ['content' => '', 'rowType' => 'program-loop'],
+            ['content' => '', 'rowType' => 'blank'],
+            ['content' => 'Cộng', 'rowType' => 'total'],
+            ['content' => 'Bằng chữ:', 'rowType' => 'in-words'],
+        ]);
+
+        $this->assertSame('', $result[0]['numbering']);
+        $this->assertSame('neutral', $result[0]['styleRole']);
+        $this->assertSame('', $result[1]['numbering']);
+        $this->assertSame('', $result[2]['numbering']);
+        $this->assertSame('bold', $result[2]['fontWeight']);
+        $this->assertSame('', $result[3]['numbering']);
+    }
 }

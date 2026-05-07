@@ -10,6 +10,8 @@ export type TemplateSectionDefinition = {
 };
 
 export type TongHopRowType = 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+export type KhoanNppRowType = 'program-loop' | 'blank' | 'total' | 'in-words';
+export type TemplateTableRowType = TongHopRowType | KhoanNppRowType;
 
 export type TongHopBindingOption = {
     key: string;
@@ -20,7 +22,7 @@ export type TongHopBindingOption = {
 export type BuilderRow = {
     content: string;
     indentLevel?: number;
-    rowType?: TongHopRowType;
+    rowType?: TemplateTableRowType;
     columnKey?: string | null;
     hideWhenValueZero?: boolean;
     isBold?: boolean;
@@ -59,6 +61,7 @@ type RenderableBuilderSection = Omit<BuilderSection, 'rows'> & {
 };
 
 const TONG_HOP_SECTION_TYPE = 'tong-hop-table';
+const KHOAN_NPP_SECTION_TYPE = 'khoan-npp-table';
 
 function toRoman(number: number): string {
     const map: Array<[number, string]> = [
@@ -126,7 +129,7 @@ function buildTongHopRows(sectionType: string, rows: BuilderRow[]): RenderableBu
     let childCounter = 0;
 
     return rows.map((row, rowIndex) => {
-        const rowType: TongHopRowType = row.rowType ?? 'blank';
+        const rowType = (row.rowType as TongHopRowType | undefined) ?? 'blank';
         const indentLevel = rowType === 'child' ? 1 : 0;
         const defaultBold = rowType === 'parent' || rowType === 'total';
         const isBold = row.isBold ?? defaultBold;
@@ -160,10 +163,37 @@ function buildTongHopRows(sectionType: string, rows: BuilderRow[]): RenderableBu
     });
 }
 
+function buildKhoanNppRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
+    return rows.map((row, rowIndex) => {
+        const rowType: KhoanNppRowType = (row.rowType as KhoanNppRowType | undefined) ?? 'blank';
+        const defaultBold = rowType === 'total';
+        const isBold = row.isBold ?? defaultBold;
+
+        return {
+            ...row,
+            indentLevel: 0,
+            rowType,
+            columnKey: null,
+            hideWhenValueZero: true,
+            isBold,
+            numbering: '',
+            styleRole: 'neutral',
+            fontWeight: isBold ? 'bold' : 'regular',
+            renderKey: `${sectionType}-row-${rowIndex}`,
+        };
+    });
+}
+
 function buildNumberedRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
-    return sectionType === TONG_HOP_SECTION_TYPE
-        ? buildTongHopRows(sectionType, rows)
-        : buildLegacyRows(sectionType, rows);
+    if (sectionType === TONG_HOP_SECTION_TYPE) {
+        return buildTongHopRows(sectionType, rows);
+    }
+
+    if (sectionType === KHOAN_NPP_SECTION_TYPE) {
+        return buildKhoanNppRows(sectionType, rows);
+    }
+
+    return buildLegacyRows(sectionType, rows);
 }
 
 function buildRenderableSection(section: BuilderSection, index: number): RenderableBuilderSection {
@@ -177,11 +207,11 @@ function buildRenderableSection(section: BuilderSection, index: number): Rendera
 function serializeRows(sectionType: string, rows: RenderableBuilderRow[]): BuilderRow[] {
     return rows.map((row) => ({
         content: row.content,
-        indentLevel: sectionType === TONG_HOP_SECTION_TYPE ? undefined : (row.indentLevel ?? 0),
-        rowType: sectionType === TONG_HOP_SECTION_TYPE ? (row.rowType ?? 'blank') : undefined,
+        indentLevel: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE ? undefined : (row.indentLevel ?? 0),
+        rowType: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE ? (row.rowType ?? 'blank') : undefined,
         columnKey: sectionType === TONG_HOP_SECTION_TYPE ? (row.columnKey ?? null) : undefined,
-        hideWhenValueZero: sectionType === TONG_HOP_SECTION_TYPE ? (row.hideWhenValueZero ?? false) : undefined,
-        isBold: sectionType === TONG_HOP_SECTION_TYPE ? row.isBold ?? false : undefined,
+        hideWhenValueZero: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE ? (row.hideWhenValueZero ?? false) : undefined,
+        isBold: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE ? row.isBold ?? false : undefined,
     }));
 }
 
@@ -195,17 +225,50 @@ function buildTongHopDraftRow(rowType: TongHopRowType): BuilderRow {
     };
 }
 
+function buildKhoanNppDraftRow(rowType: KhoanNppRowType): BuilderRow {
+    return {
+        content: rowType === 'total' ? 'Cộng' : rowType === 'in-words' ? 'Bằng chữ:' : '',
+        rowType,
+        hideWhenValueZero: true,
+        isBold: rowType === 'total',
+    };
+}
+
 export function useTemplateBuilderCanvas(
     template: () => BuilderTemplate | null,
     canManageTemplates: () => boolean,
     sectionCatalog: () => TemplateSectionDefinition[],
 ) {
     const sectionDraft = ref<RenderableBuilderSection[]>([]);
+    const saveValidationErrors = ref<Record<string, string>>({});
+    const saveValidationTarget = ref<string | null>(null);
+    const saveValidationScope = ref<'part' | 'canvas' | null>(null);
+    const saveValidationSummary = ref<string | null>(null);
+
+    const clearSaveValidationState = (): void => {
+        saveValidationErrors.value = {};
+        saveValidationTarget.value = null;
+        saveValidationScope.value = null;
+        saveValidationSummary.value = null;
+    };
+
+    const setSaveValidationState = (
+        scope: 'part' | 'canvas',
+        target: string | null,
+        errors: Record<string, string>,
+        summary: string,
+    ): void => {
+        saveValidationScope.value = scope;
+        saveValidationTarget.value = target;
+        saveValidationErrors.value = { ...errors };
+        saveValidationSummary.value = summary;
+    };
 
     watch(
         template,
         (activeTemplate) => {
             sectionDraft.value = activeTemplate?.structure.sections?.map(buildRenderableSection) ?? [];
+            clearSaveValidationState();
         },
         { immediate: true },
     );
@@ -258,7 +321,20 @@ export function useTemplateBuilderCanvas(
                     type,
                 ])),
             },
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    clearSaveValidationState();
+                },
+                onError: (errors) => {
+                    setSaveValidationState(
+                        'canvas',
+                        null,
+                        errors,
+                        'Không thể lưu canvas. Một hoặc nhiều cấu hình phần đang không hợp lệ.',
+                    );
+                },
+            },
         );
     };
 
@@ -358,6 +434,25 @@ export function useTemplateBuilderCanvas(
         );
     };
 
+    const addKhoanNppRow = (sectionType: string, rowType: KhoanNppRowType): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KHOAN_NPP_SECTION_TYPE) {
+            return;
+        }
+
+        const rows = serializeRows(section.type, section.rows ?? []);
+
+        if (rowType === 'program-loop' && rows.some((row) => row.rowType === 'program-loop')) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(section.type, [
+            ...rows,
+            buildKhoanNppDraftRow(rowType),
+        ]);
+    };
+
     const addTongHopChildRow = (sectionType: string, parentRowKey: string): void => {
         const section = findSection(sectionType);
 
@@ -386,6 +481,24 @@ export function useTemplateBuilderCanvas(
         const section = findSection(sectionType);
 
         if (!section || section.type !== TONG_HOP_SECTION_TYPE) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(
+            section.type,
+            serializeRows(section.type, section.rows).map((row, index) => ({
+                ...row,
+                isBold: section.rows[index]?.renderKey === rowKey
+                    ? !(row.isBold ?? false)
+                    : (row.isBold ?? false),
+            })),
+        );
+    };
+
+    const toggleKhoanNppRowBold = (sectionType: string, rowKey: string): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KHOAN_NPP_SECTION_TYPE) {
             return;
         }
 
@@ -448,6 +561,17 @@ export function useTemplateBuilderCanvas(
             },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    clearSaveValidationState();
+                },
+                onError: (errors) => {
+                    setSaveValidationState(
+                        'canvas',
+                        null,
+                        errors,
+                        'Không thể lưu canvas. Một hoặc nhiều cấu hình phần đang không hợp lệ.',
+                    );
+                },
             },
         );
     };
@@ -483,6 +607,17 @@ export function useTemplateBuilderCanvas(
             },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    clearSaveValidationState();
+                },
+                onError: (errors) => {
+                    setSaveValidationState(
+                        'part',
+                        partType,
+                        errors,
+                        'Không thể lưu phần này. Một hoặc nhiều dòng cấu hình chưa hợp lệ.',
+                    );
+                },
             },
         );
     };
@@ -512,6 +647,17 @@ export function useTemplateBuilderCanvas(
             },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    clearSaveValidationState();
+                },
+                onError: (errors) => {
+                    setSaveValidationState(
+                        'canvas',
+                        null,
+                        errors,
+                        'Không thể lưu cấu trúc template. Một hoặc nhiều phần đang không hợp lệ.',
+                    );
+                },
             },
         );
     };
@@ -528,14 +674,22 @@ export function useTemplateBuilderCanvas(
         increaseIndent,
         decreaseIndent,
         addTongHopRow,
+        addKhoanNppRow,
         addTongHopChildRow,
         toggleTongHopRowBold,
+        toggleKhoanNppRowBold,
         toggleTongHopHideWhenZero,
         updateTongHopColumnKey,
         saveStructure,
         saveCanvasComposition,
         savePart,
         rehydrateSectionRows,
+        clearSaveValidationState,
+        saveValidationErrors,
+        saveValidationTarget,
+        saveValidationScope,
+        saveValidationSummary,
         tongHopSectionType: TONG_HOP_SECTION_TYPE,
+        khoanNppSectionType: KHOAN_NPP_SECTION_TYPE,
     };
 }

@@ -12,6 +12,7 @@ import {
     type BuilderTemplate,
     type TemplateSectionDefinition,
     type TongHopBindingOption,
+    type TemplateTableRowType,
 } from '@/Services/templates/useTemplateBuilderCanvas';
 
 const props = defineProps<{
@@ -33,7 +34,7 @@ const emit = defineEmits<{
         rows?: Array<{
             content: string;
             indentLevel?: number;
-            rowType?: 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+            rowType?: TemplateTableRowType;
             columnKey?: string | null;
             hideWhenValueZero?: boolean;
             isBold?: boolean;
@@ -54,13 +55,20 @@ const {
     increaseIndent,
     decreaseIndent,
     addTongHopRow,
+    addKhoanNppRow,
     addTongHopChildRow,
     toggleTongHopRowBold,
+    toggleKhoanNppRowBold,
     toggleTongHopHideWhenZero,
     updateTongHopColumnKey,
     saveCanvasComposition,
     savePart,
+    saveValidationErrors,
+    saveValidationScope,
+    saveValidationSummary,
+    saveValidationTarget,
     tongHopSectionType,
+    khoanNppSectionType,
 } = useTemplateBuilderCanvas(
     () => props.template,
     () => props.canManageTemplates,
@@ -99,6 +107,47 @@ const visibleTableSectionCount = computed(() =>
 
 const isSinglePartView = computed(() => isFilteredView.value && visibleSectionDraft.value.length === 1);
 const activePartType = computed(() => visibleSectionDraft.value[0]?.type ?? null);
+
+const visibleSaveValidationErrors = computed(() => {
+    if (saveValidationScope.value === 'part') {
+        return saveValidationTarget.value === activePartType.value
+            ? saveValidationErrors.value
+            : {};
+    }
+
+    return saveValidationErrors.value;
+});
+
+const visibleSaveValidationSummary = computed(() => {
+    if (saveValidationScope.value === 'part' && saveValidationTarget.value !== activePartType.value) {
+        return null;
+    }
+
+    return saveValidationSummary.value;
+});
+
+const builderValidationMessages = computed(() => {
+    const rowErrorPattern = /^section\.rows\.\d+\./;
+
+    return Array.from(
+        new Set(
+            Object.entries(visibleSaveValidationErrors.value)
+                .filter(([key]) => !rowErrorPattern.test(key))
+                .map(([, message]) => message),
+        ),
+    );
+});
+
+const textPartContentError = computed(() => visibleSaveValidationErrors.value.content ?? null);
+
+const getRowValidationMessages = (rowIndex: number): string[] =>
+    Array.from(
+        new Set(
+            Object.entries(visibleSaveValidationErrors.value)
+                .filter(([key]) => key.startsWith(`section.rows.${rowIndex}.`))
+                .map(([, message]) => message),
+        ),
+    );
 
 const saveButtonLabel = computed(() => {
     if (isSinglePartView.value) {
@@ -140,7 +189,7 @@ watch(
                             Canvas template email
                         </h2>
                         <p class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                            Canvas hiện đọc trực tiếp từ <code>structure_json</code> và mount bằng <code>vuedraggable</code>. Với bảng <code>Chế độ tháng</code>, builder đã tách riêng row type, mapping key và rule <code>ẩn khi = 0</code>.
+                            Canvas hiện đọc trực tiếp từ <code>structure_json</code> và mount bằng <code>vuedraggable</code>. Các table section đang được tách dần sang semantic row model riêng theo từng sheet nguồn.
                         </p>
                     </div>
 
@@ -233,6 +282,34 @@ watch(
                         </p>
                     </div>
 
+                    <div
+                        v-if="visibleSaveValidationSummary"
+                        class="rounded-[1.4rem] border px-5 py-4"
+                        :style="{
+                            borderColor: 'rgba(239, 68, 68, 0.36)',
+                            background: 'rgba(239, 68, 68, 0.08)',
+                        }"
+                    >
+                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
+                            Không thể lưu cấu hình
+                        </p>
+                        <p class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                            {{ visibleSaveValidationSummary }}
+                        </p>
+                        <ul
+                            v-if="builderValidationMessages.length > 0"
+                            class="mt-3 space-y-2 text-sm leading-6"
+                            :style="{ color: 'var(--dashboard-strong-text)' }"
+                        >
+                            <li
+                                v-for="message in builderValidationMessages"
+                                :key="message"
+                            >
+                                {{ message }}
+                            </li>
+                        </ul>
+                    </div>
+
                     <div class="rounded-[1.6rem] border p-4 sm:p-5" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                         <Draggable
                             :model-value="visibleSectionDraft"
@@ -278,6 +355,12 @@ watch(
                                             :pt="{ root: { class: 'font-medium' } }"
                                             placeholder="Nhập nội dung của phần template"
                                         />
+                                        <small
+                                            v-if="isFilteredView && canManageTemplates && textPartContentError"
+                                            class="mt-2 block text-sm text-red-400"
+                                        >
+                                            {{ textPartContentError }}
+                                        </small>
                                         <p
                                             v-else
                                             class="text-sm leading-6 whitespace-pre-line"
@@ -314,6 +397,9 @@ watch(
                                                     <template v-if="element.type === tongHopSectionType">
                                                         Thiết kế đúng semantics cho bảng Chế độ tháng: dòng trống, mục cha, mục con, tổng cộng, dòng chữ và mapping key từ dữ liệu đã parse.
                                                     </template>
+                                                    <template v-else-if="element.type === khoanNppSectionType">
+                                                        Bảng Khoán NPP không map theo tên cột tĩnh. Dòng dữ liệu thật phải lặp từ các `programItems[]` đã parse ra từ từng cụm `CT i | SL | đ/kg | Thành tiền`.
+                                                    </template>
                                                     <template v-else>
                                                         Thêm, xóa và kéo thả thứ tự dòng trong chính table section này.
                                                     </template>
@@ -327,6 +413,12 @@ watch(
                                                     <Button label="Trống" size="small" variant="outlined" @click="addTongHopRow(element.type, 'blank')" />
                                                     <Button label="Tổng cộng" size="small" severity="success" variant="outlined" @click="addTongHopRow(element.type, 'total')" />
                                                     <Button label="Dòng chữ" size="small" severity="warn" variant="outlined" @click="addTongHopRow(element.type, 'text')" />
+                                                </template>
+                                                <template v-else-if="element.type === khoanNppSectionType">
+                                                    <Button label="Dòng CT" size="small" variant="outlined" @click="addKhoanNppRow(element.type, 'program-loop')" />
+                                                    <Button label="Trống" size="small" variant="outlined" @click="addKhoanNppRow(element.type, 'blank')" />
+                                                    <Button label="Tổng cộng" size="small" severity="success" variant="outlined" @click="addKhoanNppRow(element.type, 'total')" />
+                                                    <Button label="Dòng chữ" size="small" severity="warn" variant="outlined" @click="addKhoanNppRow(element.type, 'in-words')" />
                                                 </template>
                                                 <Button
                                                     v-else
@@ -447,6 +539,109 @@ watch(
                                                                 />
                                                             </div>
                                                         </div>
+
+                                                        <div v-if="getRowValidationMessages(rowIndex).length > 0" class="rounded-[0.9rem] border px-4 py-3" :style="{ borderColor: 'rgba(239, 68, 68, 0.36)', background: 'rgba(239, 68, 68, 0.08)' }">
+                                                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+                                                                Lỗi dòng {{ rowIndex + 1 }}
+                                                            </p>
+                                                            <ul class="mt-2 space-y-1 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                <li
+                                                                    v-for="message in getRowValidationMessages(rowIndex)"
+                                                                    :key="`${row.renderKey}-${message}`"
+                                                                >
+                                                                    {{ message }}
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+
+                                                    <div v-else-if="element.type === khoanNppSectionType" class="space-y-3">
+                                                        <div class="flex flex-col gap-3 xl:flex-row xl:items-start">
+                                                            <div class="flex items-center gap-2 xl:w-[18rem]">
+                                                                <button
+                                                                    type="button"
+                                                                    class="template-row-handle inline-flex h-9 w-9 items-center justify-center rounded-full border text-sm"
+                                                                    :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                >
+                                                                    ↕
+                                                                </button>
+
+                                                                <Tag
+                                                                    :value="row.rowType === 'program-loop' ? 'Dòng CT' : row.rowType === 'total' ? 'Tổng cộng' : row.rowType === 'in-words' ? 'Dòng chữ' : 'Trống'"
+                                                                    :severity="row.rowType === 'program-loop' ? 'contrast' : row.rowType === 'total' ? 'success' : row.rowType === 'in-words' ? 'warn' : 'secondary'"
+                                                                    rounded
+                                                                />
+
+                                                                <div class="min-w-0">
+                                                                    <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                        Dòng {{ rowIndex + 1 }}
+                                                                    </p>
+                                                                    <p class="text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                                        {{ row.rowType === 'program-loop' ? 'STT auto tăng theo số CT render thực tế' : 'Không đánh STT' }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="min-w-0 flex-1 xl:max-w-none">
+                                                                <template v-if="row.rowType === 'program-loop'">
+                                                                    <div
+                                                                        class="rounded-[0.85rem] border px-4 py-2.5 text-sm leading-6"
+                                                                        :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                    >
+                                                                        Lặp qua các CT có dữ liệu thật từ <code>programItems[]</code>. Preview và email sẽ ẩn CT nếu cả `Nội dung | SL | đ/kg | Thành tiền` đều bằng `0` hoặc rỗng.
+                                                                    </div>
+                                                                </template>
+                                                                <template v-else-if="row.rowType === 'blank'">
+                                                                    <div
+                                                                        class="rounded-[0.85rem] border px-4 py-2.5 text-sm leading-6"
+                                                                        :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                    >
+                                                                        Dòng trống để tạo khoảng cách giữa block dữ liệu và dòng tổng kết.
+                                                                    </div>
+                                                                </template>
+                                                                <template v-else>
+                                                                    <InputText
+                                                                        v-model="row.content"
+                                                                        fluid
+                                                                        :disabled="!isFilteredView || !canManageTemplates"
+                                                                        :pt="{ root: { class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal' } }"
+                                                                        :placeholder="row.rowType === 'total' ? 'Nhập label tổng, ví dụ: Cộng' : 'Nhập label dòng chữ, ví dụ: Bằng chữ:'"
+                                                                    />
+                                                                </template>
+                                                            </div>
+
+                                                            <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap items-center gap-2 xl:ml-auto xl:flex-nowrap">
+                                                                <Button
+                                                                    v-if="row.rowType === 'total' || row.rowType === 'in-words'"
+                                                                    :label="row.isBold ? 'B đậm' : 'B thường'"
+                                                                    size="small"
+                                                                    :severity="row.isBold ? 'info' : 'secondary'"
+                                                                    variant="outlined"
+                                                                    @click="toggleKhoanNppRowBold(element.type, row.renderKey)"
+                                                                />
+                                                                <Button
+                                                                    label="Xóa dòng"
+                                                                    severity="danger"
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    @click="removeRow(element.type, row.renderKey)"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div v-if="getRowValidationMessages(rowIndex).length > 0" class="rounded-[0.9rem] border px-4 py-3" :style="{ borderColor: 'rgba(239, 68, 68, 0.36)', background: 'rgba(239, 68, 68, 0.08)' }">
+                                                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+                                                                Lỗi dòng {{ rowIndex + 1 }}
+                                                            </p>
+                                                            <ul class="mt-2 space-y-1 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                <li
+                                                                    v-for="message in getRowValidationMessages(rowIndex)"
+                                                                    :key="`${row.renderKey}-${message}`"
+                                                                >
+                                                                    {{ message }}
+                                                                </li>
+                                                            </ul>
+                                                        </div>
                                                     </div>
 
                                                     <div v-else class="flex flex-col gap-3">
@@ -520,6 +715,20 @@ watch(
                                                                 }"
                                                                 placeholder="Nhập nội dung dòng của bảng"
                                                             />
+                                                        </div>
+
+                                                        <div v-if="getRowValidationMessages(rowIndex).length > 0" class="rounded-[0.9rem] border px-4 py-3" :style="{ borderColor: 'rgba(239, 68, 68, 0.36)', background: 'rgba(239, 68, 68, 0.08)' }">
+                                                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+                                                                Lỗi dòng {{ rowIndex + 1 }}
+                                                            </p>
+                                                            <ul class="mt-2 space-y-1 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                <li
+                                                                    v-for="message in getRowValidationMessages(rowIndex)"
+                                                                    :key="`${row.renderKey}-${message}`"
+                                                                >
+                                                                    {{ message }}
+                                                                </li>
+                                                            </ul>
                                                         </div>
                                                     </div>
                                                 </article>

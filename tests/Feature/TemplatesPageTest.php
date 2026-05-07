@@ -35,7 +35,7 @@ class TemplatesPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
                 ->where('title', 'Thiết kế mẫu email')
-                ->where('currentSlice.code', '2.0-R5')
+                ->where('currentSlice.code', '2.3-E')
                 ->where('canManageTemplates', true)
                 ->has('writeCapabilities', 4)
                 ->where('writeCapabilities.0', 'Tạo template mới')
@@ -52,6 +52,7 @@ class TemplatesPageTest extends TestCase
                 ->where('subjectPreview', null)
                 ->where('greetingPreview', null)
                 ->where('tongHopTablePreview', null)
+                ->where('khoanNppTablePreview', null)
                 ->where('templateParts.0.code', 'subject')
                 ->where('templateParts.0.type', 'subject')
                 ->where('templateParts.0.maxActiveVersions', 1)
@@ -68,7 +69,7 @@ class TemplatesPageTest extends TestCase
                 ->where('templateParts.5.type', 'key-account-table')
                 ->where('templateList', [])
                 ->where('activeTemplateId', null)
-                ->where('nextSlice.code', '2.3-E')
+                ->where('nextSlice.code', '2.3-F')
             );
     }
 
@@ -392,6 +393,98 @@ class TemplatesPageTest extends TestCase
                 ->where('tongHopTablePreview.rows.5.content', 'Bằng chữ:')
                 ->where('tongHopTablePreview.rows.5.value', 'Mười triệu chín trăm chín mươi nghìn hai trăm năm mươi đồng chẵn.')
                 ->where('tongHopTablePreview.errors', [])
+            );
+    }
+
+    public function test_templates_page_can_render_khoan_npp_table_preview_from_real_aggregate_payload(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template preview Khoán NPP',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-E',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'khoan-npp-table',
+                        'label' => 'Table Chương trình khoán đặc biệt',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Khoán NPP',
+                        'rows' => [
+                            ['content' => '', 'rowType' => 'program-loop', 'hideWhenValueZero' => true, 'isBold' => false],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => true, 'isBold' => true],
+                            ['content' => 'Bằng chữ:', 'rowType' => 'in-words', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-KHOAN-NPP-PREVIEW',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '90300',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Khoán NPP'],
+            'aggregated_payload' => [
+                'customerCode' => '90300',
+                'customerFullName' => '90300 - Công ty A',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Khoán NPP'],
+                'tongHop' => null,
+                'khoanNpp' => [
+                    'month' => '03.2026',
+                    'customerCode' => '90300',
+                    'customerFullName' => '90300 - Công ty A',
+                    'address' => 'Địa chỉ A',
+                    'feedCategory' => 'Feed A',
+                    'grandTotal' => '24371500',
+                    'totalInWords' => 'Hai mươi bốn triệu, ba trăm bảy mươi mốt nghìn, năm trăm đồng chẵn.',
+                    'programItems' => [
+                        ['programIndex' => 1, 'content' => 'CT 1', 'quantity' => '59170', 'supportRate' => '200', 'amount' => '11834000'],
+                        ['programIndex' => 2, 'content' => 'CT 2', 'quantity' => '15375', 'supportRate' => '100', 'amount' => '1537500'],
+                        ['programIndex' => 3, 'content' => 'CT 3', 'quantity' => '', 'supportRate' => '', 'amount' => '6000000'],
+                        ['programIndex' => 4, 'content' => '', 'quantity' => '', 'supportRate' => '', 'amount' => '0'],
+                    ],
+                ],
+                'camCa' => null,
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('builderTemplate.id', $template->id)
+                ->where('khoanNppTablePreview.sample.batchCode', 'IMP-KHOAN-NPP-PREVIEW')
+                ->where('khoanNppTablePreview.sample.customerCode', '90300')
+                ->where('khoanNppTablePreview.title', 'Chương trình khoán đặc biệt tháng 03.2026')
+                ->has('khoanNppTablePreview.rows', 5)
+                ->where('khoanNppTablePreview.rows.0.numbering', '1')
+                ->where('khoanNppTablePreview.rows.0.content', 'CT 1')
+                ->where('khoanNppTablePreview.rows.0.quantity', '59170')
+                ->where('khoanNppTablePreview.rows.1.numbering', '2')
+                ->where('khoanNppTablePreview.rows.1.content', 'CT 2')
+                ->where('khoanNppTablePreview.rows.2.numbering', '3')
+                ->where('khoanNppTablePreview.rows.2.content', 'CT 3')
+                ->where('khoanNppTablePreview.rows.3.content', 'Cộng')
+                ->where('khoanNppTablePreview.rows.3.amount', '24371500')
+                ->where('khoanNppTablePreview.rows.4.content', 'Bằng chữ:')
+                ->where('khoanNppTablePreview.errors', [])
             );
     }
 

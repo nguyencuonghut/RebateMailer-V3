@@ -113,4 +113,94 @@ class TemplatesPartUpdateTest extends TestCase
         $this->assertSame('data', $tongHopVersion->structure_json['rows'][0]['rowType']);
         $this->assertSame('Tổng sản lượng (gồm cám thủy sản)', $mailTemplate->fresh()->structure_json['sections'][2]['rows'][0]['content']);
     }
+
+    public function test_user_with_manage_permission_can_persist_khoan_npp_semantic_rows_through_part_route(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template Khoán NPP',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.3-E',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                    ['type' => 'khoan-npp-table', 'label' => 'Table Chương trình khoán đặc biệt', 'kind' => 'table', 'sourceSheet' => 'Khoán NPP', 'rows' => []],
+                ],
+            ],
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncMailTemplate($mailTemplate);
+
+        $this->actingAs($user)
+            ->put(route('templates.parts.update', $mailTemplate), [
+                'partType' => 'khoan-npp-table',
+                'section' => [
+                    'type' => 'khoan-npp-table',
+                    'label' => 'Table Chương trình khoán đặc biệt',
+                    'description' => 'Lấy dữ liệu từ sheet Khoán NPP.',
+                    'kind' => 'table',
+                    'sourceSheet' => 'Khoán NPP',
+                    'rows' => [
+                        ['content' => '', 'rowType' => 'program-loop', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => true, 'isBold' => true],
+                        ['content' => 'Bằng chữ:', 'rowType' => 'in-words', 'hideWhenValueZero' => true, 'isBold' => false],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('templates.index'));
+
+        $mailTemplate->refresh();
+
+        $this->assertSame('khoan-npp-table', $mailTemplate->structure_json['sections'][2]['type']);
+        $this->assertCount(3, $mailTemplate->structure_json['sections'][2]['rows']);
+        $this->assertSame('program-loop', $mailTemplate->structure_json['sections'][2]['rows'][0]['rowType']);
+        $this->assertSame('total', $mailTemplate->structure_json['sections'][2]['rows'][1]['rowType']);
+        $this->assertSame('in-words', $mailTemplate->structure_json['sections'][2]['rows'][2]['rowType']);
+    }
+
+    public function test_part_update_returns_row_level_validation_errors_for_invalid_table_rows(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template invalid table row',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.3-E',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                    ['type' => 'khoan-npp-table', 'label' => 'Table Chương trình khoán đặc biệt', 'kind' => 'table', 'sourceSheet' => 'Khoán NPP', 'rows' => []],
+                ],
+            ],
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncMailTemplate($mailTemplate);
+
+        $this->actingAs($user)
+            ->from(route('templates.index'))
+            ->put(route('templates.parts.update', $mailTemplate), [
+                'partType' => 'khoan-npp-table',
+                'section' => [
+                    'type' => 'khoan-npp-table',
+                    'label' => 'Table Chương trình khoán đặc biệt',
+                    'description' => 'Lấy dữ liệu từ sheet Khoán NPP.',
+                    'kind' => 'table',
+                    'sourceSheet' => 'Khoán NPP',
+                    'rows' => [
+                        ['content' => '', 'rowType' => 'sai-row-type'],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('templates.index'))
+            ->assertSessionHasErrors([
+                'section.rows.0.rowType',
+            ]);
+    }
 }

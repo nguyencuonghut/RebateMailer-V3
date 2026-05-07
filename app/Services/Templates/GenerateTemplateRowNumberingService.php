@@ -98,7 +98,7 @@ class GenerateTemplateRowNumberingService
                 $childCounter++;
                 $numbering = (string) $childCounter;
                 $styleRole = 'child';
-            } elseif (in_array($rowType, ['total', 'text', 'blank', 'data'], true)) {
+            } elseif (in_array($rowType, ['total', 'text', 'blank', 'data', 'program-loop', 'in-words'], true)) {
                 $styleRole = 'neutral';
             }
 

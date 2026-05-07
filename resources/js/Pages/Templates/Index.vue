@@ -9,6 +9,8 @@ import TemplatePartVersionsCard from '@/Components/templates/TemplatePartVersion
 import TemplateSubjectPreviewCard from '@/Components/templates/TemplateSubjectPreviewCard.vue';
 import TemplateGreetingPreviewCard from '@/Components/templates/TemplateGreetingPreviewCard.vue';
 import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTongHopTablePreviewCard.vue';
+import TemplateKhoanNppTablePreviewCard from '@/Components/templates/TemplateKhoanNppTablePreviewCard.vue';
+import type { TemplateTableRowType } from '@/Services/templates/useTemplateBuilderCanvas';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import Tabs from 'primevue/tabs';
@@ -161,6 +163,39 @@ const props = defineProps<{
             month: string;
         };
     } | null;
+    khoanNppTablePreview: {
+        title: string;
+        sourceSheet: string;
+        rows: Array<{
+            rowType: string;
+            numbering: string;
+            content: string;
+            quantity: string;
+            supportRate: string;
+            amount: string;
+            fontWeight: string;
+            styleRole: string;
+        }>;
+        errors: string[];
+        sample: {
+            batchId: number;
+            batchCode: string;
+            customerCode: string;
+            customerFullName: string;
+            month: string;
+        };
+        sampleData: {
+            programItems: Array<{
+                programIndex?: number;
+                content?: string;
+                quantity?: string;
+                supportRate?: string;
+                amount?: string;
+            }>;
+            grandTotal: string;
+            totalInWords: string;
+        };
+    } | null;
     tongHopBindingOptions: Array<{
         key: string;
         label: string;
@@ -198,7 +233,26 @@ const tongHopDraftSections = ref<Array<{
     rows?: Array<{
         content: string;
         indentLevel?: number;
-        rowType?: 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+        rowType?: TemplateTableRowType;
+        columnKey?: string | null;
+        hideWhenValueZero?: boolean;
+        isBold?: boolean;
+        numbering: string;
+        styleRole: 'parent' | 'child' | 'neutral';
+        fontWeight: 'bold' | 'regular';
+    }>;
+}>>([]);
+const khoanNppDraftSections = ref<Array<{
+    type: string;
+    label?: string;
+    description?: string;
+    kind?: 'text' | 'table';
+    sourceSheet?: string | null;
+    content?: string;
+    rows?: Array<{
+        content: string;
+        indentLevel?: number;
+        rowType?: TemplateTableRowType;
         columnKey?: string | null;
         hideWhenValueZero?: boolean;
         isBold?: boolean;
@@ -216,6 +270,9 @@ const partVersionGroupByType = computed(() =>
 
 const tongHopDraftSection = computed(() =>
     tongHopDraftSections.value.find((section) => section.type === 'tong-hop-table') ?? null,
+);
+const khoanNppDraftSection = computed(() =>
+    khoanNppDraftSections.value.find((section) => section.type === 'khoan-npp-table') ?? null,
 );
 </script>
 
@@ -594,23 +651,13 @@ const tongHopDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :visible-section-types="['khoan-npp-table']"
+                                    @draft-change="khoanNppDraftSections = $event"
                                 />
 
-                                <Card class="sakai-panel rounded-[2rem] border-0">
-                                    <template #content>
-                                        <div class="space-y-3">
-                                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                                Bảng chương trình khoán đặc biệt
-                                            </p>
-                                            <h2 class="text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                Tab này sẽ nhận preview riêng cho dữ liệu `Khoán NPP`
-                                            </h2>
-                                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                Tab này giờ đã có builder canvas riêng cho section Khoán NPP. Phần preview dữ liệu thật sẽ được nối tiếp ở lát kế tiếp.
-                                            </p>
-                                        </div>
-                                    </template>
-                                </Card>
+                                <TemplateKhoanNppTablePreviewCard
+                                    :preview="khoanNppTablePreview"
+                                    :draft-section="khoanNppDraftSection"
+                                />
                             </div>
                         </TabPanel>
 

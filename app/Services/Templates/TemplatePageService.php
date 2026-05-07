@@ -13,6 +13,7 @@ class TemplatePageService
         private readonly BuildTemplateSubjectPreviewService $buildTemplateSubjectPreviewService,
         private readonly BuildTemplateGreetingPreviewService $buildTemplateGreetingPreviewService,
         private readonly BuildTemplateTongHopTablePreviewService $buildTemplateTongHopTablePreviewService,
+        private readonly BuildTemplateKhoanNppTablePreviewService $buildTemplateKhoanNppTablePreviewService,
         private readonly BuildMailTemplateCanvasCompositionService $buildMailTemplateCanvasCompositionService,
         private readonly BuildTemplatePartVersionOverviewService $buildTemplatePartVersionOverviewService,
         private readonly BuildTemplateStructureFromCanvasService $buildTemplateStructureFromCanvasService,
@@ -36,8 +37,8 @@ class TemplatePageService
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
             'currentSlice' => [
-                'code' => '2.0-R5',
-                'label' => 'Migrate prototype sang composition model hoàn chỉnh',
+                'code' => '2.3-E',
+                'label' => 'Preview Table Chương trình khoán đặc biệt từ sheet Khoán NPP',
             ],
             'canManageTemplates' => $canManageTemplates,
             'writeCapabilities' => [
@@ -68,10 +69,11 @@ class TemplatePageService
             'subjectPreview' => $this->buildTemplateSubjectPreviewService->build($selectedTemplate),
             'greetingPreview' => $this->buildTemplateGreetingPreviewService->build($selectedTemplate),
             'tongHopTablePreview' => $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate),
+            'khoanNppTablePreview' => $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate),
             'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions(),
             'nextSlice' => [
-                'code' => '2.3-E',
-                'label' => 'Preview Table Chương trình khoán đặc biệt từ sheet Khoán NPP',
+                'code' => '2.3-F',
+                'label' => 'Preview Table Chiết khấu cám cá từ sheet Cám cá',
             ],
         ];
     }
