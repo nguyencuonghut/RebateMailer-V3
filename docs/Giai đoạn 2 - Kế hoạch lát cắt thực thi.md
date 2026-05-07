@@ -115,7 +115,164 @@
   - `Lời chào` là một flow riêng
   - mỗi bảng dữ liệu là một flow riêng gắn với đúng sheet nguồn
 
+## 3.3. Đính chính kiến trúc cốt lõi
+
+- Mô hình hiện tại `mail_templates.subject_template + structure_json` là quá monolithic cho bài toán thật.
+- Kiến trúc đúng phải phản ánh 2 lớp:
+  - `template part`: một bộ phận tái sử dụng được, có nhiều `version`, có `active/inactive`
+  - `email template canvas`: một bản phối linh động ghép từ nhiều `template part version`
+- Một email template hoàn chỉnh không phải là một blob JSON tự thân, mà là một composition từ **một version bất kỳ** của từng part.
+- Ví dụ composition hợp lệ:
+  - `subject_v1`
+  - `greeting_v1`
+  - `tong_hop_table_v1`
+  - `khoan_npp_table_v2`
+  - `cam_ca_table_v2`
+  - `key_account_table_v4`
+- Dãy `v1/v2/v4` ở ví dụ trên chỉ để minh họa rằng mỗi part có thể chọn một version khác nhau; không mang ý nghĩa cố định version nào phải đi với version nào.
+
+## 3.4. Hệ quả nghiệp vụ đã chốt
+
+- `Subject`:
+  - thay đổi ít
+  - thường chỉ có `1 version active`
+- `Lời chào`:
+  - thay đổi ít
+  - có thể đồng thời tồn tại khoảng `2 version active` để chọn ghép vào canvas
+- `4 bảng dữ liệu`:
+  - thay đổi theo tháng
+  - mỗi loại bảng có nhiều `version`
+  - tại mỗi thời điểm chỉ có `1 version active` theo từng loại bảng
+- Một `email template canvas` phải được phép ghép linh động từ các version đang có, không ép tất cả phần phải cùng chung một version line.
+
+## 3.5. Định hướng refactor BE / DB / FE
+
+### Backend
+
+- Tách rõ aggregate root:
+  - `template part`
+  - `template part version`
+  - `mail template canvas`
+  - `mail template canvas part bindings`
+- Không dùng 1 action `templates.structure.update` để lưu cả canvas nữa.
+- Mỗi phần phải có write path riêng:
+  - lưu `subject version`
+  - lưu `greeting version`
+  - lưu `table version` theo từng loại bảng
+- Canvas chỉ lưu quan hệ chọn version nào của từng part.
+
+### Database
+
+- Cần refactor schema hiện tại khỏi mô hình 1 bảng `mail_templates` ôm hết mọi thứ.
+- Hướng đúng:
+  - `template_parts`
+    - định danh part gốc: `subject`, `greeting`, `tong-hop-table`, `khoan-npp-table`, `cam-ca-table`, `key-account-table`
+  - `template_part_versions`
+    - nội dung/version của từng part
+    - với `subject/greeting`: text template
+    - với các bảng: `structure_json` của builder
+    - có `status`, `version_no`, `effective_month` nếu cần về sau
+  - `mail_template_canvases`
+    - metadata của một canvas email
+  - `mail_template_canvas_parts`
+    - binding từ canvas sang version cụ thể của từng part
+- Ràng buộc active phải đi theo `part type`, không còn chỉ là “1 template active toàn hệ thống”.
+
+### Frontend
+
+- UI `/templates` phải tách làm 2 mode:
+  - quản lý `part versions`
+  - quản lý `canvas composition`
+- Trong từng tab:
+  - `Subject` và `Lời chào` phải có danh sách version riêng + editor riêng
+  - mỗi bảng phải có builder riêng + version list riêng
+- Canvas không còn là nơi edit trực tiếp toàn bộ dữ liệu gốc của tất cả part, mà là nơi chọn/ghép version.
+
+## 3.6. Trạng thái code hiện tại cần coi là bước đệm
+
+- Những gì đã làm đến hiện tại ở `/templates` vẫn hữu ích như prototype UI/UX:
+  - page thật
+  - permission
+  - builder canvas
+  - preview
+- Tuy nhiên lớp persistence hiện tại chỉ phù hợp như bước đệm.
+- Các slice tiếp theo phải đi theo refactor dần từ monolith sang composition model, không tiếp tục mở rộng `mail_templates.structure_json` như nguồn sự thật cuối cùng.
+
 ## 4. Danh sách lát cắt
+
+### Slice 2.0-R1 - Tách domain model `template part` và `canvas`
+
+- **Loại:** `AFK`
+- **Blocked by:** Không có
+- **Mục tiêu:** chốt lại backend/domain model để các phần template có version riêng, canvas chỉ làm composition.
+- **Kết quả demo:** tài liệu + code model/service ban đầu phản ánh rõ:
+  - `template part`
+  - `template part version`
+  - `mail template canvas`
+- **Acceptance criteria:**
+  - không coi `mail_templates.structure_json` là nguồn sự thật cuối cùng nữa
+  - mọi phần chính đều map được sang một `part type`
+  - canvas model không chứa business content đầy đủ của tất cả part
+
+### Slice 2.0-R2 - Refactor schema DB sang `part versions + canvas bindings`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.0-R1`
+- **Mục tiêu:** thay persistence monolith bằng schema composition.
+- **Kết quả demo:** DB có thể lưu:
+  - nhiều version của `subject`
+  - nhiều version của `greeting`
+  - nhiều version của từng bảng
+  - một canvas ghép tới đúng version đã chọn
+- **Acceptance criteria:**
+  - có migration mới cho:
+    - `template_parts`
+    - `template_part_versions`
+    - `mail_template_canvases`
+    - `mail_template_canvas_parts`
+  - có strategy migrate dữ liệu prototype hiện tại sang schema mới
+  - active state được quản lý đúng theo `part type`
+
+### Slice 2.0-R3 - Refactor API write path theo từng phần
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.0-R2`
+- **Mục tiêu:** không còn `saveStructure()` một cục cho toàn canvas.
+- **Kết quả demo:** mỗi tab có action save riêng xuống DB.
+- **Acceptance criteria:**
+  - `subject` save riêng
+  - `greeting` save riêng
+  - từng bảng save riêng
+  - canvas composition save riêng
+
+### Slice 2.0-R4 - Refactor UI `/templates` thành 2 bề mặt: `Part Versions` và `Canvas Composition`
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.0-R3`
+- **Mục tiêu:** FE phản ánh đúng bản chất domain mới.
+- **Kết quả demo:** người dùng phân biệt rõ:
+  - đang sửa một `version` của part
+  - hay đang ghép canvas từ các version đã có
+- **Acceptance criteria:**
+  - UI có list version theo từng part
+  - UI có state active/inactive cho từng version
+  - UI có canvas composer để chọn version cho từng phần
+
+### Slice 2.0-R5 - Migrate prototype hiện tại sang mô hình mới
+
+- **Loại:** `AFK`
+- **Blocked by:** `Slice 2.0-R4`
+- **Mục tiêu:** bảo toàn những gì đã dựng ở prototype builder hiện tại.
+- **Kết quả demo:** dữ liệu đang có trong `mail_templates` cũ được chuyển sang `part version` + `canvas`.
+- **Acceptance criteria:**
+  - có migration/command chuyển dữ liệu
+  - preview hiện tại vẫn render được từ mô hình mới
+  - không mất các section đã thiết kế ở prototype
+
+### Ghi chú thực thi
+
+- Các slice `2.1+` bên dưới được hiểu là các lát cắt UI/prototype đã hoặc đang mở đường.
+- Trước khi đi sâu thêm vào builder cho `Khoán NPP`, `Cám cá`, `Key Account`, cần ưu tiên hoàn tất chuỗi refactor `2.0-R1 -> 2.0-R5`.
 
 ### Slice 2.1-A - Mở đường vào màn Quản lý template
 
