@@ -553,6 +553,85 @@ class TemplatesPageTest extends TestCase
             );
     }
 
+    public function test_templates_page_does_not_report_error_for_valid_parsed_tong_hop_headers_that_are_blank_for_current_customer(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template header hợp lệ nhưng rỗng',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-D',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'tong-hop-table',
+                        'label' => 'Table Chế độ tháng',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Tổng hợp',
+                        'rows' => [
+                            ['content' => 'Khoán tháng', 'rowType' => 'child', 'columnKey' => 'Khoán tháng', 'hideWhenValueZero' => true, 'isBold' => false],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'columnKey' => 'Cộng', 'hideWhenValueZero' => false, 'isBold' => true],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-TONG-HOP-BLANK-HEADER',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Tổng hợp' => [
+                        'fixedHeaders' => ['Tháng', 'Mã số', 'Mã & tên khách hàng', 'Tổng cộng'],
+                        'dynamicHeaders' => ['Khoán tháng'],
+                    ],
+                ],
+            ],
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '19220',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '19220',
+                'customerFullName' => '19220 - Công ty F',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Tổng hợp'],
+                'tongHop' => [
+                    'month' => '03.2026',
+                    'customerCode' => '19220',
+                    'customerFullName' => '19220 - Công ty F',
+                    'grandTotal' => '102854250',
+                    'dynamicItems' => [],
+                ],
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('tongHopTablePreview.rows', 1)
+                ->where('tongHopTablePreview.rows.0.content', 'Cộng')
+                ->where('tongHopTablePreview.rows.0.value', '102854250')
+                ->where('tongHopTablePreview.errors', [])
+            );
+    }
+
     public function test_templates_page_exposes_subject_preview_error_for_legacy_unknown_variable(): void
     {
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();

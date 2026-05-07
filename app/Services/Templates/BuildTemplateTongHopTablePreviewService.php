@@ -44,6 +44,7 @@ class BuildTemplateTongHopTablePreviewService
 
         $rows = $this->generateTemplateRowNumberingService->generate($section['rows'] ?? []);
         $valueMap = $this->buildValueMap($tongHop);
+        $valueMap = $this->mergeParsedColumnHeadersIntoValueMap($sample['batchId'] ?? null, $valueMap);
         $rendered = $this->buildRenderedTongHopRowsService->build($rows, $valueMap);
 
         return [
@@ -87,6 +88,7 @@ class BuildTemplateTongHopTablePreviewService
         $valueMap = is_array($sample['aggregatedPayload']['tongHop'] ?? null)
             ? $this->buildValueMap($sample['aggregatedPayload']['tongHop'])
             : [];
+        $valueMap = $this->mergeParsedColumnHeadersIntoValueMap($sample['batchId'] ?? null, $valueMap);
 
         $optionKeys = array_values(array_unique([
             ...$columnHeaders,
@@ -187,5 +189,20 @@ class BuildTemplateTongHopTablePreviewService
         ));
 
         return array_values(array_unique([...$fixedHeaders, ...$dynamicHeaders]));
+    }
+
+    /**
+     * @param  array<string, string>  $valueMap
+     * @return array<string, string>
+     */
+    private function mergeParsedColumnHeadersIntoValueMap(mixed $batchId, array $valueMap): array
+    {
+        foreach ($this->resolveParsedColumnHeaders($batchId) as $header) {
+            if (! array_key_exists($header, $valueMap)) {
+                $valueMap[$header] = '';
+            }
+        }
+
+        return $valueMap;
     }
 }
