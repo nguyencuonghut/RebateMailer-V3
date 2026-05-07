@@ -9,49 +9,58 @@ class BuildTemplatePreviewSampleService
     /**
      * @return array<string, mixed>|null
      */
-    public function build(): ?array
+    public function build(?string $requiredSource = null): ?array
     {
-        $importBatch = ImportBatch::query()
+        $batches = ImportBatch::query()
             ->whereIn('status', ['aggregated', 'validated_ready', 'validated_with_warnings'])
             ->whereHas('aggregatedRecords')
             ->orderByDesc('started_at')
             ->orderByDesc('id')
-            ->first();
+            ->get();
 
-        if (! $importBatch) {
-            return null;
+        foreach ($batches as $importBatch) {
+            $sampleRecord = $importBatch->aggregatedRecords()
+                ->orderBy('customer_code')
+                ->get()
+                ->first(function ($record) use ($requiredSource): bool {
+                    if ($requiredSource === null) {
+                        return true;
+                    }
+
+                    return is_array($record->aggregated_payload)
+                        && data_get($record->aggregated_payload, $requiredSource) !== null;
+                });
+
+            if (! $sampleRecord) {
+                continue;
+            }
+
+            $payload = $sampleRecord->aggregated_payload;
+
+            $month = $this->resolveField($payload, 'month');
+            $customerFullName = trim((string) ($payload['customerFullName'] ?? ''));
+            $address = $this->resolveField($payload, 'address');
+            $feedCategory = $this->resolveField($payload, 'feedCategory');
+
+            return [
+                'batchId' => $importBatch->getKey(),
+                'batchCode' => $importBatch->batch_code,
+                'customerCode' => (string) ($payload['customerCode'] ?? ''),
+                'customerFullName' => $customerFullName,
+                'month' => $month,
+                'address' => $address,
+                'feedCategory' => $feedCategory,
+                'aggregatedPayload' => $payload,
+                'variables' => [
+                    '{{tháng}}' => $month,
+                    '{{mã & tên khách hàng}}' => $customerFullName,
+                    '{{địa chỉ}}' => $address,
+                    '{{thức ăn chăn nuôi}}' => $feedCategory,
+                ],
+            ];
         }
 
-        $sampleRecord = $importBatch->aggregatedRecords()
-            ->orderBy('customer_code')
-            ->first();
-
-        if (! $sampleRecord) {
-            return null;
-        }
-
-        $payload = $sampleRecord->aggregated_payload;
-
-        $month = $this->resolveField($payload, 'month');
-        $customerFullName = trim((string) ($payload['customerFullName'] ?? ''));
-        $address = $this->resolveField($payload, 'address');
-        $feedCategory = $this->resolveField($payload, 'feedCategory');
-
-        return [
-            'batchId' => $importBatch->getKey(),
-            'batchCode' => $importBatch->batch_code,
-            'customerCode' => (string) ($payload['customerCode'] ?? ''),
-            'customerFullName' => $customerFullName,
-            'month' => $month,
-            'address' => $address,
-            'feedCategory' => $feedCategory,
-            'variables' => [
-                '{{tháng}}' => $month,
-                '{{mã & tên khách hàng}}' => $customerFullName,
-                '{{địa chỉ}}' => $address,
-                '{{thức ăn chăn nuôi}}' => $feedCategory,
-            ],
-        ];
+        return null;
     }
 
     /**

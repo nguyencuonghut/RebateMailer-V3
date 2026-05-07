@@ -14,7 +14,7 @@ class UpdateMailTemplateStructureService
     {
         $mailTemplate->forceFill([
             'structure_json' => [
-                'version' => '2.2-E',
+                'version' => $payload['version'],
                 'sections' => array_map(
                     fn (array $section): array => array_filter([
                         'type' => $section['type'],
@@ -28,6 +28,12 @@ class UpdateMailTemplateStructureService
                                 fn (array $row): array => [
                                     'content' => $row['content'],
                                     'indentLevel' => max(0, min(4, (int) ($row['indentLevel'] ?? 0))),
+                                    'rowType' => $row['rowType'] ?? null,
+                                    'columnKey' => $row['columnKey'] ?? null,
+                                    'hideWhenValueZero' => (bool) ($row['hideWhenValueZero'] ?? false),
+                                    'isBold' => array_key_exists('isBold', $row)
+                                        ? (bool) $row['isBold']
+                                        : null,
                                 ],
                                 $section['rows'],
                             ))

@@ -213,4 +213,65 @@ class TemplatesStructureUpdateTest extends TestCase
                 'sections.1.content',
             ]);
     }
+
+    public function test_user_with_manage_permission_can_save_semantic_rows_for_tong_hop_table(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template semantic rows',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.3-D',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                    ['type' => 'tong-hop-table', 'label' => 'Table Chế độ tháng', 'kind' => 'table', 'sourceSheet' => 'Tổng hợp', 'rows' => []],
+                ],
+            ],
+            'is_active' => false,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)->put(route('templates.structure.update', $mailTemplate), [
+            'version' => '2.3-D',
+            'sections' => [
+                ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                [
+                    'type' => 'tong-hop-table',
+                    'label' => 'Table Chế độ tháng',
+                    'kind' => 'table',
+                    'sourceSheet' => 'Tổng hợp',
+                    'rows' => [
+                        [
+                            'content' => 'Tổng sản lượng (gồm cám thủy sản)',
+                            'rowType' => 'data',
+                            'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)',
+                            'hideWhenValueZero' => false,
+                            'isBold' => false,
+                        ],
+                        [
+                            'content' => 'Tiền chiết khấu theo Hóa đơn',
+                            'rowType' => 'parent',
+                            'columnKey' => 'Tiền chiết khấu theo Hóa đơn',
+                            'hideWhenValueZero' => false,
+                            'isBold' => true,
+                        ],
+                    ],
+                ],
+            ],
+        ])->assertRedirect(route('templates.index'));
+
+        $mailTemplate->refresh();
+
+        $this->assertSame('data', $mailTemplate->structure_json['sections'][2]['rows'][0]['rowType']);
+        $this->assertSame('Tổng sản lượng (gồm cám thủy sản)', $mailTemplate->structure_json['sections'][2]['rows'][0]['columnKey']);
+        $this->assertFalse($mailTemplate->structure_json['sections'][2]['rows'][0]['hideWhenValueZero']);
+        $this->assertFalse($mailTemplate->structure_json['sections'][2]['rows'][0]['isBold']);
+        $this->assertSame('parent', $mailTemplate->structure_json['sections'][2]['rows'][1]['rowType']);
+        $this->assertSame('Tiền chiết khấu theo Hóa đơn', $mailTemplate->structure_json['sections'][2]['rows'][1]['columnKey']);
+        $this->assertTrue($mailTemplate->structure_json['sections'][2]['rows'][1]['isBold']);
+    }
 }

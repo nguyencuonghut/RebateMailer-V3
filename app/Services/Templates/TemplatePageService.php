@@ -11,6 +11,7 @@ class TemplatePageService
         private readonly TemplateVariableCatalogService $templateVariableCatalogService,
         private readonly BuildTemplateSubjectPreviewService $buildTemplateSubjectPreviewService,
         private readonly BuildTemplateGreetingPreviewService $buildTemplateGreetingPreviewService,
+        private readonly BuildTemplateTongHopTablePreviewService $buildTemplateTongHopTablePreviewService,
     ) {
     }
 
@@ -28,8 +29,8 @@ class TemplatePageService
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
             'currentSlice' => [
-                'code' => '2.3-C',
-                'label' => 'Thiết kế và preview riêng cho Lời chào',
+                'code' => '2.3-D',
+                'label' => 'Thiết kế và preview Table Chế độ tháng',
             ],
             'canManageTemplates' => $canManageTemplates,
             'writeCapabilities' => [
@@ -54,9 +55,11 @@ class TemplatePageService
             'builderTemplate' => $builderTemplate,
             'subjectPreview' => $this->buildTemplateSubjectPreviewService->build($selectedTemplate),
             'greetingPreview' => $this->buildTemplateGreetingPreviewService->build($selectedTemplate),
+            'tongHopTablePreview' => $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate),
+            'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions(),
             'nextSlice' => [
-                'code' => '2.3-D',
-                'label' => 'Thiết kế và preview Table Chế độ tháng',
+                'code' => '2.3-E',
+                'label' => 'Thiết kế và preview Table Chương trình khoán đặc biệt',
             ],
         ];
     }

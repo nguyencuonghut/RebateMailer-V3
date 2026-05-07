@@ -33,32 +33,34 @@ const { form, insertVariable, submitCreate } = useTemplateCreateForm();
                 </div>
 
                 <form class="space-y-4" @submit.prevent="submitCreate">
-                    <div class="space-y-2">
-                        <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Tên template</label>
-                        <InputText v-model="form.name" fluid />
-                        <small v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</small>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Subject template</label>
-                        <InputText v-model="form.subject_template" fluid />
-                        <div class="flex flex-wrap gap-2">
-                            <Button
-                                v-for="variable in props.variables"
-                                :key="`subject-${variable.token}`"
-                                type="button"
-                                size="small"
-                                variant="outlined"
-                                :label="variable.token"
-                                @click="insertVariable('subject_template', variable.token)"
-                            />
+                    <div class="grid gap-4 xl:grid-cols-[minmax(14rem,0.8fr)_minmax(0,1fr)]">
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Tên template</label>
+                            <InputText v-model="form.name" fluid />
+                            <small v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</small>
                         </div>
-                        <small v-if="form.errors.subject_template" class="text-red-500">{{ form.errors.subject_template }}</small>
+
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Subject template</label>
+                            <InputText v-model="form.subject_template" fluid />
+                            <div class="flex flex-wrap gap-2">
+                                <Button
+                                    v-for="variable in props.variables"
+                                    :key="`subject-${variable.token}`"
+                                    type="button"
+                                    size="small"
+                                    variant="outlined"
+                                    :label="variable.token"
+                                    @click="insertVariable('subject_template', variable.token)"
+                                />
+                            </div>
+                            <small v-if="form.errors.subject_template" class="text-red-500">{{ form.errors.subject_template }}</small>
+                        </div>
                     </div>
 
                     <div class="space-y-2">
                         <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Lời chào</label>
-                        <Textarea v-model="form.greeting_template" rows="5" auto-resize fluid />
+                        <Textarea v-model="form.greeting_template" rows="4" auto-resize fluid />
                         <div class="flex flex-wrap gap-2">
                             <Button
                                 v-for="variable in props.variables"
@@ -73,7 +75,9 @@ const { form, insertVariable, submitCreate } = useTemplateCreateForm();
                         <small v-if="form.errors.greeting_template" class="text-red-500">{{ form.errors.greeting_template }}</small>
                     </div>
 
-                    <Button type="submit" label="Tạo template" :loading="form.processing" />
+                    <div class="flex justify-end">
+                        <Button type="submit" label="Tạo template" :loading="form.processing" />
+                    </div>
                 </form>
             </div>
         </template>

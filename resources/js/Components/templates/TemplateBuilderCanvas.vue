@@ -1,21 +1,77 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import Draggable from 'vuedraggable';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import Button from 'primevue/button';
 import Textarea from 'primevue/textarea';
-import { useTemplateBuilderCanvas, type BuilderTemplate, type TemplateSectionDefinition } from '@/Services/templates/useTemplateBuilderCanvas';
+import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
+import {
+    useTemplateBuilderCanvas,
+    type BuilderTemplate,
+    type TemplateSectionDefinition,
+    type TongHopBindingOption,
+} from '@/Services/templates/useTemplateBuilderCanvas';
 
 const props = defineProps<{
     template: BuilderTemplate | null;
     canManageTemplates: boolean;
     sectionCatalog: TemplateSectionDefinition[];
+    tongHopBindingOptions: TongHopBindingOption[];
+    visibleSectionTypes?: string[];
 }>();
 
-const { sectionDraft, sectionCount, catalogItems, tableSectionCount, hasUnsavedChanges, addSection, addRow, removeRow, increaseIndent, decreaseIndent, saveStructure } = useTemplateBuilderCanvas(
+const {
+    sectionDraft,
+    catalogItems,
+    hasUnsavedChanges,
+    addSection,
+    addRow,
+    removeRow,
+    increaseIndent,
+    decreaseIndent,
+    addTongHopRow,
+    addTongHopChildRow,
+    toggleTongHopRowBold,
+    toggleTongHopHideWhenZero,
+    updateTongHopColumnKey,
+    saveStructure,
+    tongHopSectionType,
+} = useTemplateBuilderCanvas(
     () => props.template,
     () => props.canManageTemplates,
     () => props.sectionCatalog,
+);
+
+const activeVisibleSectionTypes = computed(() => props.visibleSectionTypes ?? []);
+
+const isFilteredView = computed(() => activeVisibleSectionTypes.value.length > 0);
+
+const visibleCatalogItems = computed(() => {
+    if (!isFilteredView.value) {
+        return catalogItems.value;
+    }
+
+    const allowedTypes = new Set(activeVisibleSectionTypes.value);
+
+    return catalogItems.value.filter((item) => allowedTypes.has(item.type));
+});
+
+const visibleSectionDraft = computed(() => {
+    if (!isFilteredView.value) {
+        return sectionDraft.value;
+    }
+
+    const allowedTypes = new Set(activeVisibleSectionTypes.value);
+
+    return sectionDraft.value.filter((section) => allowedTypes.has(section.type));
+});
+
+const visibleSectionCount = computed(() => visibleSectionDraft.value.length);
+
+const visibleTableSectionCount = computed(() =>
+    visibleSectionDraft.value.filter((section) => section.kind === 'table').length,
 );
 </script>
 
@@ -32,13 +88,13 @@ const { sectionDraft, sectionCount, catalogItems, tableSectionCount, hasUnsavedC
                             Canvas template email
                         </h2>
                         <p class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                            Canvas hiện đọc trực tiếp từ <code>structure_json</code> và mount bằng <code>vuedraggable</code>. Lát cắt này tự áp format mặc định: dòng cha đậm, dòng con regular, đồng bộ với hierarchy và numbering hiện có.
+                            Canvas hiện đọc trực tiếp từ <code>structure_json</code> và mount bằng <code>vuedraggable</code>. Với bảng <code>Chế độ tháng</code>, builder đã tách riêng row type, mapping key và rule <code>ẩn khi = 0</code>.
                         </p>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Tag :value="`${sectionCount} section trong canvas`" severity="info" rounded />
-                        <Tag :value="`${tableSectionCount} bảng đang mở row editor`" severity="contrast" rounded />
+                        <Tag :value="`${visibleSectionCount} section trong canvas`" severity="info" rounded />
+                        <Tag :value="`${visibleTableSectionCount} bảng đang mở row editor`" severity="contrast" rounded />
                         <Button
                             v-if="canManageTemplates && template"
                             label="Lưu cấu trúc"
@@ -58,19 +114,19 @@ const { sectionDraft, sectionCount, catalogItems, tableSectionCount, hasUnsavedC
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-500">
-                                    Catalog 6 phần chính
+                                    {{ isFilteredView ? 'Catalog section đang mở' : 'Catalog 6 phần chính' }}
                                 </p>
                                 <h3 class="mt-2 text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    Chọn đúng section nghiệp vụ để thêm vào canvas
+                                    {{ isFilteredView ? 'Section đúng với tab hiện tại' : 'Chọn đúng section nghiệp vụ để thêm vào canvas' }}
                                 </h3>
                             </div>
 
-                            <Tag :value="`${catalogItems.filter((item) => item.isAdded).length}/6 section đã có`" severity="success" rounded />
+                            <Tag :value="`${visibleCatalogItems.filter((item) => item.isAdded).length}/${visibleCatalogItems.length} section đã có`" severity="success" rounded />
                         </div>
 
                         <div class="mt-4 grid gap-3 xl:grid-cols-2">
                             <article
-                                v-for="section in catalogItems"
+                                v-for="section in visibleCatalogItems"
                                 :key="section.type"
                                 class="rounded-[1.2rem] border p-4"
                                 :style="{
@@ -127,21 +183,23 @@ const { sectionDraft, sectionCount, catalogItems, tableSectionCount, hasUnsavedC
 
                     <div class="rounded-[1.6rem] border p-4 sm:p-5" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                         <Draggable
-                            v-model="sectionDraft"
+                            :model-value="visibleSectionDraft"
                             item-key="renderKey"
                             :disabled="true"
                             ghost-class="opacity-60"
-                            class="space-y-3"
+                            :class="isFilteredView ? 'space-y-0' : 'space-y-3'"
                         >
                             <template #item="{ element, index }">
                                 <article
-                                    class="rounded-[1.25rem] border p-4"
-                                    :style="{
-                                        borderColor: 'rgba(20, 184, 166, 0.24)',
-                                        background: 'rgba(15, 23, 42, 0.04)',
-                                    }"
+                                    :class="isFilteredView ? 'p-0' : 'rounded-[1.25rem] border p-4'"
+                                    :style="isFilteredView
+                                        ? {}
+                                        : {
+                                            borderColor: 'rgba(20, 184, 166, 0.24)',
+                                            background: 'rgba(15, 23, 42, 0.04)',
+                                        }"
                                 >
-                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div v-if="!isFilteredView" class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
                                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-500">
                                                 Section {{ index + 1 }}
@@ -154,38 +212,54 @@ const { sectionDraft, sectionCount, catalogItems, tableSectionCount, hasUnsavedC
                                         <Tag :value="element.type" severity="success" rounded />
                                     </div>
 
-                                    <p v-if="element.sourceSheet" class="mt-3 text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                    <p v-if="!isFilteredView && element.sourceSheet" class="mt-3 text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
                                         Sheet nguồn: {{ element.sourceSheet }}
                                     </p>
 
-                                    <p class="mt-3 text-sm leading-6 whitespace-pre-line" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    <p v-if="!isFilteredView" class="mt-3 text-sm leading-6 whitespace-pre-line" :style="{ color: 'var(--dashboard-muted-text)' }">
                                         {{ element.content ?? element.description ?? 'Section này chưa có nội dung text trực tiếp.' }}
                                     </p>
 
                                     <div
                                         v-if="element.kind === 'table'"
-                                        class="mt-4 rounded-[1rem] border p-4"
-                                        :style="{
-                                            borderColor: 'rgba(20, 184, 166, 0.18)',
-                                            background: 'var(--dashboard-card-bg)',
-                                        }"
+                                        :class="isFilteredView ? 'space-y-4' : 'mt-4 rounded-[1rem] border p-4'"
+                                        :style="isFilteredView
+                                            ? {}
+                                            : {
+                                                borderColor: 'rgba(20, 184, 166, 0.18)',
+                                                background: 'var(--dashboard-card-bg)',
+                                            }"
                                     >
-                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <div>
+                                        <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                            <div class="xl:max-w-[26rem] xl:flex-none">
                                                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-teal-500">
                                                     Table rows
                                                 </p>
                                                 <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                    Thêm, xóa và kéo thả thứ tự dòng trong chính table section này.
+                                                    <template v-if="element.type === tongHopSectionType">
+                                                        Thiết kế đúng semantics cho bảng Chế độ tháng: dòng trống, mục cha, mục con, tổng cộng, dòng chữ và mapping key từ dữ liệu đã parse.
+                                                    </template>
+                                                    <template v-else>
+                                                        Thêm, xóa và kéo thả thứ tự dòng trong chính table section này.
+                                                    </template>
                                                 </p>
                                             </div>
 
-                                            <Button
-                                                v-if="canManageTemplates"
-                                                label="Thêm dòng"
-                                                size="small"
-                                                @click="addRow(element.type)"
-                                            />
+                                            <div v-if="canManageTemplates" class="flex flex-wrap gap-2 xl:flex-nowrap xl:justify-end">
+                                                <template v-if="element.type === tongHopSectionType">
+                                                    <Button label="Mục cha" size="small" variant="outlined" @click="addTongHopRow(element.type, 'parent')" />
+                                                    <Button label="Dữ liệu" size="small" variant="outlined" @click="addTongHopRow(element.type, 'data')" />
+                                                    <Button label="Trống" size="small" variant="outlined" @click="addTongHopRow(element.type, 'blank')" />
+                                                    <Button label="Tổng cộng" size="small" severity="success" variant="outlined" @click="addTongHopRow(element.type, 'total')" />
+                                                    <Button label="Dòng chữ" size="small" severity="warn" variant="outlined" @click="addTongHopRow(element.type, 'text')" />
+                                                </template>
+                                                <Button
+                                                    v-else
+                                                    label="Thêm dòng"
+                                                    size="small"
+                                                    @click="addRow(element.type)"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div
@@ -215,7 +289,90 @@ const { sectionDraft, sectionCount, catalogItems, tableSectionCount, hasUnsavedC
                                                         background: 'var(--dashboard-app-bg)',
                                                     }"
                                                 >
-                                                    <div class="flex flex-col gap-3">
+                                                    <div v-if="element.type === tongHopSectionType" class="space-y-3">
+                                                        <div class="flex flex-col gap-3 xl:flex-row xl:items-start">
+                                                            <div class="flex items-center gap-2 xl:w-[18rem]">
+                                                                <button
+                                                                    type="button"
+                                                                    class="template-row-handle inline-flex h-9 w-9 items-center justify-center rounded-full border text-sm"
+                                                                    :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                >
+                                                                    ↕
+                                                                </button>
+
+                                                                <Tag
+                                                                    :value="row.rowType === 'blank' ? 'Trống' : row.rowType === 'parent' ? 'Mục cha' : row.rowType === 'child' ? 'Mục con' : row.rowType === 'data' ? 'Dữ liệu' : row.rowType === 'total' ? 'Tổng cộng' : 'Dòng chữ'"
+                                                                    :severity="row.rowType === 'parent' ? 'info' : row.rowType === 'child' ? 'secondary' : row.rowType === 'data' ? 'contrast' : row.rowType === 'total' ? 'success' : row.rowType === 'text' ? 'warn' : 'contrast'"
+                                                                    rounded
+                                                                />
+
+                                                                <div class="min-w-0">
+                                                                    <p class="text-sm" :class="row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal'" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                        {{ row.numbering || '—' }} · Dòng {{ rowIndex + 1 }}
+                                                                    </p>
+                                                                    <p class="text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                                        {{ row.rowType === 'child' ? 'Hiển thị số nguyên' : row.rowType === 'parent' ? 'Hiển thị số La Mã' : 'Không đánh số' }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="min-w-0 flex-1 xl:max-w-none">
+                                                                <InputText
+                                                                    v-model="row.content"
+                                                                    fluid
+                                                                    :pt="{ root: { class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal' } }"
+                                                                    placeholder="Nhập tên dòng sẽ hiển thị trong bảng email"
+                                                                />
+                                                            </div>
+
+                                                            <div class="xl:w-[18rem]">
+                                                                <Select
+                                                                    :model-value="row.columnKey ?? null"
+                                                                    :options="tongHopBindingOptions"
+                                                                    option-label="label"
+                                                                    option-value="key"
+                                                                    filter
+                                                                    show-clear
+                                                                    fluid
+                                                                    placeholder="Chọn key dữ liệu đã parse"
+                                                                    @update:model-value="updateTongHopColumnKey(element.type, row.renderKey, $event)"
+                                                                />
+                                                            </div>
+
+                                                            <div v-if="canManageTemplates" class="flex flex-wrap items-center gap-2 xl:ml-auto xl:flex-nowrap">
+                                                                <Button
+                                                                    :label="row.isBold ? 'B đậm' : 'B thường'"
+                                                                    size="small"
+                                                                    :severity="row.isBold ? 'info' : 'secondary'"
+                                                                    variant="outlined"
+                                                                    @click="toggleTongHopRowBold(element.type, row.renderKey)"
+                                                                />
+                                                                <Button
+                                                                    :label="row.hideWhenValueZero ? 'Ẩn khi = 0' : 'Hiện cả = 0'"
+                                                                    size="small"
+                                                                    :severity="row.hideWhenValueZero ? 'warn' : 'secondary'"
+                                                                    variant="outlined"
+                                                                    @click="toggleTongHopHideWhenZero(element.type, row.renderKey)"
+                                                                />
+                                                                <Button
+                                                                    v-if="row.rowType === 'parent'"
+                                                                    label="+ Mục con"
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    @click="addTongHopChildRow(element.type, row.renderKey)"
+                                                                />
+                                                                <Button
+                                                                    label="Xóa dòng"
+                                                                    severity="danger"
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    @click="removeRow(element.type, row.renderKey)"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div v-else class="flex flex-col gap-3">
                                                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                                             <div class="flex items-center gap-2">
                                                                 <button

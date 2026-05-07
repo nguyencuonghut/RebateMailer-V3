@@ -9,9 +9,21 @@ export type TemplateSectionDefinition = {
     sourceSheet: string | null;
 };
 
+export type TongHopRowType = 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+
+export type TongHopBindingOption = {
+    key: string;
+    label: string;
+    valuePreview: string;
+};
+
 export type BuilderRow = {
     content: string;
     indentLevel?: number;
+    rowType?: TongHopRowType;
+    columnKey?: string | null;
+    hideWhenValueZero?: boolean;
+    isBold?: boolean;
 };
 
 export type BuilderSection = {
@@ -37,7 +49,7 @@ export type BuilderTemplate = {
 type RenderableBuilderRow = BuilderRow & {
     renderKey: string;
     numbering: string;
-    styleRole: 'parent' | 'child';
+    styleRole: 'parent' | 'child' | 'neutral';
     fontWeight: 'bold' | 'regular';
 };
 
@@ -46,13 +58,7 @@ type RenderableBuilderSection = Omit<BuilderSection, 'rows'> & {
     rows: RenderableBuilderRow[];
 };
 
-function buildRenderableSection(section: BuilderSection, index: number): RenderableBuilderSection {
-    return {
-        ...section,
-        renderKey: `${section.type}-${index}`,
-        rows: buildNumberedRows(section.type, section.rows ?? []),
-    };
-}
+const TONG_HOP_SECTION_TYPE = 'tong-hop-table';
 
 function toRoman(number: number): string {
     const map: Array<[number, string]> = [
@@ -84,7 +90,7 @@ function toRoman(number: number): string {
     return result;
 }
 
-function buildNumberedRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
+function buildLegacyRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
     const counters = new Map<number, number>();
 
     return rows.map((row, rowIndex) => {
@@ -96,17 +102,97 @@ function buildNumberedRows(sectionType: string, rows: BuilderRow[]): RenderableB
 
         counters.set(indentLevel, (counters.get(indentLevel) ?? 0) + 1);
 
+        const isBold = row.isBold ?? (indentLevel === 0);
+
         return {
             ...row,
             indentLevel,
+            rowType: row.rowType,
+            columnKey: row.columnKey ?? null,
+            hideWhenValueZero: row.hideWhenValueZero ?? false,
+            isBold,
             numbering: indentLevel === 0
                 ? toRoman(counters.get(0) ?? 1)
                 : String(counters.get(indentLevel) ?? 1),
             styleRole: indentLevel === 0 ? 'parent' : 'child',
-            fontWeight: indentLevel === 0 ? 'bold' : 'regular',
+            fontWeight: isBold ? 'bold' : 'regular',
             renderKey: `${sectionType}-row-${rowIndex}`,
         };
     });
+}
+
+function buildTongHopRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
+    let parentCounter = 0;
+    let childCounter = 0;
+
+    return rows.map((row, rowIndex) => {
+        const rowType: TongHopRowType = row.rowType ?? 'blank';
+        const indentLevel = rowType === 'child' ? 1 : 0;
+        const defaultBold = rowType === 'parent' || rowType === 'total';
+        const isBold = row.isBold ?? defaultBold;
+
+        let numbering = '';
+        let styleRole: 'parent' | 'child' | 'neutral' = 'neutral';
+
+        if (rowType === 'parent') {
+            parentCounter += 1;
+            childCounter = 0;
+            numbering = toRoman(parentCounter);
+            styleRole = 'parent';
+        } else if (rowType === 'child') {
+            childCounter += 1;
+            numbering = String(childCounter);
+            styleRole = 'child';
+        }
+
+        return {
+            ...row,
+            indentLevel,
+            rowType,
+            columnKey: row.columnKey ?? null,
+            hideWhenValueZero: row.hideWhenValueZero ?? false,
+            isBold,
+            numbering,
+            styleRole,
+            fontWeight: isBold ? 'bold' : 'regular',
+            renderKey: `${sectionType}-row-${rowIndex}`,
+        };
+    });
+}
+
+function buildNumberedRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
+    return sectionType === TONG_HOP_SECTION_TYPE
+        ? buildTongHopRows(sectionType, rows)
+        : buildLegacyRows(sectionType, rows);
+}
+
+function buildRenderableSection(section: BuilderSection, index: number): RenderableBuilderSection {
+    return {
+        ...section,
+        renderKey: `${section.type}-${index}`,
+        rows: buildNumberedRows(section.type, section.rows ?? []),
+    };
+}
+
+function serializeRows(sectionType: string, rows: RenderableBuilderRow[]): BuilderRow[] {
+    return rows.map((row) => ({
+        content: row.content,
+        indentLevel: sectionType === TONG_HOP_SECTION_TYPE ? undefined : (row.indentLevel ?? 0),
+        rowType: sectionType === TONG_HOP_SECTION_TYPE ? (row.rowType ?? 'blank') : undefined,
+        columnKey: sectionType === TONG_HOP_SECTION_TYPE ? (row.columnKey ?? null) : undefined,
+        hideWhenValueZero: sectionType === TONG_HOP_SECTION_TYPE ? (row.hideWhenValueZero ?? false) : undefined,
+        isBold: sectionType === TONG_HOP_SECTION_TYPE ? row.isBold ?? false : undefined,
+    }));
+}
+
+function buildTongHopDraftRow(rowType: TongHopRowType): BuilderRow {
+    return {
+        content: '',
+        rowType,
+        columnKey: null,
+        hideWhenValueZero: false,
+        isBold: rowType === 'parent' || rowType === 'total',
+    };
 }
 
 export function useTemplateBuilderCanvas(
@@ -164,26 +250,25 @@ export function useTemplateBuilderCanvas(
             return;
         }
 
-        router.post(
-            route('templates.sections.store', activeTemplate.id),
-            { type },
-            {
-                preserveScroll: true,
-            },
-        );
+        router.post(route('templates.sections.store', activeTemplate.id), { type }, { preserveScroll: true });
+    };
+
+    const findSection = (sectionType: string): RenderableBuilderSection | undefined =>
+        sectionDraft.value.find((item) => item.type === sectionType && item.kind === 'table');
+
+    const rehydrateSectionRows = (section: RenderableBuilderSection): void => {
+        section.rows = buildNumberedRows(section.type, serializeRows(section.type, section.rows ?? []));
     };
 
     const addRow = (sectionType: string): void => {
-        const section = sectionDraft.value.find((item) => item.type === sectionType && item.kind === 'table');
+        const section = findSection(sectionType);
 
         if (!section) {
             return;
         }
 
-        const nextIndex = section.rows?.length ?? 0;
-
         section.rows = buildNumberedRows(section.type, [
-            ...section.rows,
+            ...serializeRows(section.type, section.rows ?? []),
             {
                 content: '',
                 indentLevel: 0,
@@ -192,7 +277,7 @@ export function useTemplateBuilderCanvas(
     };
 
     const removeRow = (sectionType: string, rowKey: string): void => {
-        const section = sectionDraft.value.find((item) => item.type === sectionType && item.kind === 'table');
+        const section = findSection(sectionType);
 
         if (!section) {
             return;
@@ -200,49 +285,144 @@ export function useTemplateBuilderCanvas(
 
         section.rows = buildNumberedRows(
             section.type,
-            section.rows
-                .filter((row) => row.renderKey !== rowKey)
-                .map((row) => ({
-                    content: row.content,
-                    indentLevel: row.indentLevel ?? 0,
-                })),
+            serializeRows(section.type, section.rows.filter((row) => row.renderKey !== rowKey)),
         );
     };
 
     const increaseIndent = (sectionType: string, rowKey: string): void => {
-        const section = sectionDraft.value.find((item) => item.type === sectionType && item.kind === 'table');
+        const section = findSection(sectionType);
 
-        if (!section) {
+        if (!section || section.type === TONG_HOP_SECTION_TYPE) {
             return;
         }
 
         section.rows = buildNumberedRows(
             section.type,
-            section.rows.map((row) => ({
-                content: row.content,
-                indentLevel: row.renderKey === rowKey
-                    ? Math.min(4, (row.indentLevel ?? 0) + 1)
-                    : (row.indentLevel ?? 0),
-            })),
+            serializeRows(section.type, section.rows).map((row, index) => {
+                const renderKey = section.rows[index]?.renderKey;
+
+                return {
+                    ...row,
+                    indentLevel: renderKey === rowKey
+                        ? Math.min(4, (row.indentLevel ?? 0) + 1)
+                        : (row.indentLevel ?? 0),
+                };
+            }),
         );
     };
 
     const decreaseIndent = (sectionType: string, rowKey: string): void => {
-        const section = sectionDraft.value.find((item) => item.type === sectionType && item.kind === 'table');
+        const section = findSection(sectionType);
 
-        if (!section) {
+        if (!section || section.type === TONG_HOP_SECTION_TYPE) {
             return;
         }
 
         section.rows = buildNumberedRows(
             section.type,
-            section.rows.map((row) => ({
-                content: row.content,
-                indentLevel: row.renderKey === rowKey
-                    ? Math.max(0, (row.indentLevel ?? 0) - 1)
-                    : (row.indentLevel ?? 0),
+            serializeRows(section.type, section.rows).map((row, index) => {
+                const renderKey = section.rows[index]?.renderKey;
+
+                return {
+                    ...row,
+                    indentLevel: renderKey === rowKey
+                        ? Math.max(0, (row.indentLevel ?? 0) - 1)
+                        : (row.indentLevel ?? 0),
+                };
+            }),
+        );
+    };
+
+    const addTongHopRow = (sectionType: string, rowType: TongHopRowType): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== TONG_HOP_SECTION_TYPE) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(
+            section.type,
+            [
+                ...serializeRows(section.type, section.rows ?? []),
+                buildTongHopDraftRow(rowType),
+            ],
+        );
+    };
+
+    const addTongHopChildRow = (sectionType: string, parentRowKey: string): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== TONG_HOP_SECTION_TYPE) {
+            return;
+        }
+
+        const rows = serializeRows(section.type, section.rows ?? []);
+        const parentIndex = section.rows.findIndex((row) => row.renderKey === parentRowKey);
+
+        if (parentIndex === -1) {
+            return;
+        }
+
+        let insertIndex = parentIndex + 1;
+
+        while (insertIndex < rows.length && rows[insertIndex]?.rowType === 'child') {
+            insertIndex += 1;
+        }
+
+        rows.splice(insertIndex, 0, buildTongHopDraftRow('child'));
+        section.rows = buildNumberedRows(section.type, rows);
+    };
+
+    const toggleTongHopRowBold = (sectionType: string, rowKey: string): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== TONG_HOP_SECTION_TYPE) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(
+            section.type,
+            serializeRows(section.type, section.rows).map((row, index) => ({
+                ...row,
+                isBold: section.rows[index]?.renderKey === rowKey
+                    ? !(row.isBold ?? false)
+                    : (row.isBold ?? false),
             })),
         );
+    };
+
+    const toggleTongHopHideWhenZero = (sectionType: string, rowKey: string): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== TONG_HOP_SECTION_TYPE) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(
+            section.type,
+            serializeRows(section.type, section.rows).map((row, index) => ({
+                ...row,
+                hideWhenValueZero: section.rows[index]?.renderKey === rowKey
+                    ? !(row.hideWhenValueZero ?? false)
+                    : (row.hideWhenValueZero ?? false),
+            })),
+        );
+    };
+
+    const updateTongHopColumnKey = (sectionType: string, rowKey: string, columnKey: string | null): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== TONG_HOP_SECTION_TYPE) {
+            return;
+        }
+
+        const row = section.rows.find((item) => item.renderKey === rowKey);
+
+        if (!row) {
+            return;
+        }
+
+        row.columnKey = columnKey;
     };
 
     const saveStructure = (): void => {
@@ -255,7 +435,7 @@ export function useTemplateBuilderCanvas(
         router.put(
             route('templates.structure.update', activeTemplate.id),
             {
-                version: '2.2-E',
+                version: '2.3-D',
                 sections: sectionDraft.value.map((section) => ({
                     type: section.type,
                     label: section.label,
@@ -264,10 +444,7 @@ export function useTemplateBuilderCanvas(
                     sourceSheet: section.sourceSheet,
                     content: section.content,
                     rows: section.kind === 'table'
-                        ? (section.rows ?? []).map((row) => ({
-                            content: row.content,
-                            indentLevel: row.indentLevel ?? 0,
-                        }))
+                        ? serializeRows(section.type, section.rows ?? [])
                         : undefined,
                 })),
             },
@@ -288,6 +465,13 @@ export function useTemplateBuilderCanvas(
         removeRow,
         increaseIndent,
         decreaseIndent,
+        addTongHopRow,
+        addTongHopChildRow,
+        toggleTongHopRowBold,
+        toggleTongHopHideWhenZero,
+        updateTongHopColumnKey,
         saveStructure,
+        rehydrateSectionRows,
+        tongHopSectionType: TONG_HOP_SECTION_TYPE,
     };
 }

@@ -49,4 +49,47 @@ class GenerateTemplateRowNumberingTest extends TestCase
         $this->assertSame('2', $result[3]['numbering']);
         $this->assertSame('II', $result[4]['numbering']);
     }
+
+    public function test_it_supports_semantic_row_types_for_tong_hop_rows(): void
+    {
+        $service = new GenerateTemplateRowNumberingService;
+
+        $result = $service->generate([
+            ['content' => 'Tổng sản lượng', 'rowType' => 'blank', 'columnKey' => 'Tổng sản lượng'],
+            ['content' => 'Tiền chiết khấu theo Hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Tiền chiết khấu theo Hóa đơn'],
+            ['content' => 'Thưởng cam kết tháng', 'rowType' => 'child', 'columnKey' => 'Thưởng cam kết tháng'],
+            ['content' => 'Cộng', 'rowType' => 'total', 'columnKey' => 'Cộng'],
+            ['content' => 'Bằng chữ:', 'rowType' => 'text', 'columnKey' => 'Bằng chữ'],
+        ]);
+
+        $this->assertSame('', $result[0]['numbering']);
+        $this->assertSame('neutral', $result[0]['styleRole']);
+        $this->assertSame('I', $result[1]['numbering']);
+        $this->assertSame('parent', $result[1]['styleRole']);
+        $this->assertSame('1', $result[2]['numbering']);
+        $this->assertSame('child', $result[2]['styleRole']);
+        $this->assertSame('', $result[3]['numbering']);
+        $this->assertSame('bold', $result[3]['fontWeight']);
+        $this->assertSame('', $result[4]['numbering']);
+        $this->assertSame('regular', $result[4]['fontWeight']);
+    }
+
+    public function test_it_does_not_assign_numbering_for_top_level_data_rows(): void
+    {
+        $service = new GenerateTemplateRowNumberingService;
+
+        $result = $service->generate([
+            ['content' => 'Tổng sản lượng (gồm cám thủy sản)', 'rowType' => 'data', 'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)'],
+            ['content' => 'Doanh thu (gồm cám thủy sản)', 'rowType' => 'data', 'columnKey' => 'Doanh thu (gồm cám thủy sản)'],
+            ['content' => 'Tiền chiết khấu theo Hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Tiền chiết khấu theo Hóa đơn'],
+            ['content' => 'Thưởng cam kết tháng', 'rowType' => 'child', 'columnKey' => 'Thưởng cam kết tháng'],
+        ]);
+
+        $this->assertSame('', $result[0]['numbering']);
+        $this->assertSame('neutral', $result[0]['styleRole']);
+        $this->assertSame('', $result[1]['numbering']);
+        $this->assertSame('neutral', $result[1]['styleRole']);
+        $this->assertSame('I', $result[2]['numbering']);
+        $this->assertSame('1', $result[3]['numbering']);
+    }
 }
