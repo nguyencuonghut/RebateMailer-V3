@@ -7,11 +7,12 @@ use App\Models\MailTemplate;
 class TemplatePageService
 {
     public function __construct(
-        private readonly TemplateSectionCatalogService $templateSectionCatalogService,
+        private readonly TemplatePartCatalogService $templatePartCatalogService,
         private readonly TemplateVariableCatalogService $templateVariableCatalogService,
         private readonly BuildTemplateSubjectPreviewService $buildTemplateSubjectPreviewService,
         private readonly BuildTemplateGreetingPreviewService $buildTemplateGreetingPreviewService,
         private readonly BuildTemplateTongHopTablePreviewService $buildTemplateTongHopTablePreviewService,
+        private readonly BuildMailTemplateCanvasCompositionService $buildMailTemplateCanvasCompositionService,
     ) {
     }
 
@@ -29,8 +30,8 @@ class TemplatePageService
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
             'currentSlice' => [
-                'code' => '2.3-D',
-                'label' => 'Thiết kế và preview Table Chế độ tháng',
+                'code' => '2.0-R1',
+                'label' => 'Tách domain model template part và canvas',
             ],
             'canManageTemplates' => $canManageTemplates,
             'writeCapabilities' => [
@@ -43,8 +44,8 @@ class TemplatePageService
             'templateParts' => $this->buildTemplateParts(),
             'templateVariables' => $this->templateVariableCatalogService->all(),
             'constraints' => [
-                'Chỉ có một template hoạt động tại một thời điểm.',
-                'Template phải hỗ trợ hierarchy cha/con và STT tự tăng.',
+                'Canvas email là lớp composition, không phải nơi chứa trực tiếp toàn bộ version của mọi part.',
+                'Mỗi part có lifecycle version riêng và policy active riêng theo loại part.',
                 'Preview sẽ dùng dữ liệu aggregate thật từ hệ thống, không dùng dữ liệu minh họa tự dựng.',
                 'Subject và lời chào chỉ được dùng các biến đã được xác nhận trong contract.',
             ],
@@ -53,13 +54,14 @@ class TemplatePageService
                 ->where('is_active', true)
                 ->value('id'),
             'builderTemplate' => $builderTemplate,
+            'canvasComposition' => $this->buildMailTemplateCanvasCompositionService->build($selectedTemplate),
             'subjectPreview' => $this->buildTemplateSubjectPreviewService->build($selectedTemplate),
             'greetingPreview' => $this->buildTemplateGreetingPreviewService->build($selectedTemplate),
             'tongHopTablePreview' => $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate),
             'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions(),
             'nextSlice' => [
-                'code' => '2.3-E',
-                'label' => 'Thiết kế và preview Table Chương trình khoán đặc biệt',
+                'code' => '2.0-R2',
+                'label' => 'Refactor schema DB sang part versions và canvas bindings',
             ],
         ];
     }
@@ -69,14 +71,15 @@ class TemplatePageService
      */
     private function buildTemplateParts(): array
     {
-        return collect($this->templateSectionCatalogService->all())
-            ->map(fn (array $section): array => [
-                'code' => str_replace('-table', '', $section['type']),
-                'type' => $section['type'],
-                'label' => $section['label'],
-                'description' => $section['description'],
-                'kind' => $section['kind'],
-                'sourceSheet' => $section['sourceSheet'],
+        return collect($this->templatePartCatalogService->all())
+            ->map(fn (array $part): array => [
+                'code' => $part['code'],
+                'type' => $part['type'],
+                'label' => $part['label'],
+                'description' => $part['description'],
+                'kind' => $part['kind'],
+                'sourceSheet' => $part['sourceSheet'],
+                'maxActiveVersions' => $part['maxActiveVersions'],
             ])
             ->values()
             ->all();

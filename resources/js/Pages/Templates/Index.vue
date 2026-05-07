@@ -61,6 +61,32 @@ defineProps<{
             }>;
         };
     } | null;
+    canvasComposition: {
+        canvasId: number;
+        canvasName: string;
+        storageModel: string;
+        partSelections: Array<{
+            partType: string;
+            code: string;
+            label: string;
+            kind: 'text' | 'table';
+            sourceSheet: string | null;
+            maxActiveVersions: number;
+            activePolicy: string;
+            isConfigured: boolean;
+            selectedVersion: {
+                versionKey: string;
+                versionLabel: string;
+                selectionMode: string;
+                mailTemplateId: number;
+            };
+            contentSummary: {
+                hasContent: boolean;
+                rowCount: number;
+                textLength: number;
+            };
+        }>;
+    } | null;
     subjectPreview: {
         templateText: string;
         renderedText: string;
@@ -123,6 +149,7 @@ defineProps<{
         description: string;
         kind: 'text' | 'table';
         sourceSheet: string | null;
+        maxActiveVersions: number;
     }>;
     templateVariables: Array<{
         token: string;
@@ -219,6 +246,67 @@ const page = usePage<PageProps>();
                         <TabPanel value="0">
                             <div class="space-y-6">
                                 <TemplateCreateFormCard v-if="canManageTemplates" :variables="templateVariables" />
+
+                                <Card v-if="canvasComposition" class="sakai-panel rounded-[2rem] border-0">
+                                    <template #content>
+                                        <div class="space-y-4">
+                                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div>
+                                                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
+                                                        Canvas Composition
+                                                    </p>
+                                                    <h2 class="mt-3 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                        {{ canvasComposition.canvasName }}
+                                                    </h2>
+                                                    <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                        Slice `2.0-R1` chốt lại đúng bản chất: canvas chỉ là lớp ghép các part, chưa phải nơi lưu version đầy đủ của từng part.
+                                                    </p>
+                                                </div>
+
+                                                <Tag :value="canvasComposition.storageModel" severity="info" rounded />
+                                            </div>
+
+                                            <div class="grid gap-3 xl:grid-cols-2">
+                                                <article
+                                                    v-for="part in canvasComposition.partSelections"
+                                                    :key="part.partType"
+                                                    class="rounded-[1.2rem] border p-4"
+                                                    :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
+                                                >
+                                                    <div class="flex flex-col gap-3">
+                                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                                            <div>
+                                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-500">
+                                                                    {{ part.code }}
+                                                                </p>
+                                                                <h3 class="mt-2 text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                    {{ part.label }}
+                                                                </h3>
+                                                            </div>
+
+                                                            <Tag :value="part.isConfigured ? 'Đã ghép vào canvas' : 'Chưa cấu hình'" :severity="part.isConfigured ? 'success' : 'secondary'" rounded />
+                                                        </div>
+
+                                                        <div class="flex flex-wrap gap-2">
+                                                            <Tag :value="part.maxActiveVersions === 1 ? '1 version active' : `${part.maxActiveVersions} version active`" severity="warn" rounded />
+                                                            <Tag v-if="part.sourceSheet" :value="`Sheet: ${part.sourceSheet}`" severity="info" rounded />
+                                                            <Tag :value="part.selectedVersion.versionLabel" severity="contrast" rounded />
+                                                        </div>
+
+                                                        <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                            <template v-if="part.kind === 'text'">
+                                                                Text length: {{ part.contentSummary.textLength }} ký tự
+                                                            </template>
+                                                            <template v-else>
+                                                                Row count: {{ part.contentSummary.rowCount }}
+                                                            </template>
+                                                        </p>
+                                                    </div>
+                                                </article>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </Card>
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"

@@ -6,55 +6,17 @@ use App\Models\MailTemplate;
 
 class TemplateSectionCatalogService
 {
+    public function __construct(
+        private readonly TemplatePartCatalogService $templatePartCatalogService,
+    ) {
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
     public function all(): array
     {
-        return [
-            [
-                'type' => 'subject',
-                'label' => 'Subject',
-                'description' => 'Dòng tiêu đề email với biến tháng và khách hàng.',
-                'kind' => 'text',
-                'sourceSheet' => null,
-            ],
-            [
-                'type' => 'greeting',
-                'label' => 'Lời chào',
-                'description' => 'Khối lời chào và thông tin khách hàng ở đầu body email.',
-                'kind' => 'text',
-                'sourceSheet' => null,
-            ],
-            [
-                'type' => 'tong-hop-table',
-                'label' => 'Table Chế độ tháng',
-                'description' => 'Lấy dữ liệu từ sheet Tổng hợp.',
-                'kind' => 'table',
-                'sourceSheet' => 'Tổng hợp',
-            ],
-            [
-                'type' => 'khoan-npp-table',
-                'label' => 'Table Chương trình khoán đặc biệt',
-                'description' => 'Lấy dữ liệu từ sheet Khoán NPP.',
-                'kind' => 'table',
-                'sourceSheet' => 'Khoán NPP',
-            ],
-            [
-                'type' => 'cam-ca-table',
-                'label' => 'Table Chiết khấu cám cá',
-                'description' => 'Lấy dữ liệu từ sheet Cám cá.',
-                'kind' => 'table',
-                'sourceSheet' => 'Cám cá',
-            ],
-            [
-                'type' => 'key-account-table',
-                'label' => 'Table Chiết khấu Key Account',
-                'description' => 'Lấy dữ liệu từ sheet Key Account.',
-                'kind' => 'table',
-                'sourceSheet' => 'Key Account',
-            ],
-        ];
+        return $this->templatePartCatalogService->all();
     }
 
     /**
