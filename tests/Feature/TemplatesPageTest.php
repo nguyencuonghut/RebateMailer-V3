@@ -269,24 +269,21 @@ class TemplatesPageTest extends TestCase
                 ->where('builderTemplate.structure.sections.0.type', 'subject')
                 ->where('builderTemplate.structure.sections.2.sourceSheet', 'Key Account')
                 ->where('builderTemplate.structure.sections.2.rows.0.indentLevel', 1)
-                ->where('selectedSubjectPreviewRecordId', $firstRecord->id)
+                ->where('selectedPreviewRecordId', $firstRecord->id)
                 ->where('subjectPreview.sample.batchCode', 'IMP-SUBJECT-PREVIEW')
                 ->where('subjectPreview.sample.recordId', $firstRecord->id)
                 ->where('subjectPreview.sample.customerCode', '11008')
                 ->where('subjectPreview.sample.month', '02.2026')
                 ->where('subjectPreview.renderedText', 'Chế độ tháng 02.2026 - Key Account 11008 - Siêu thị Key Account A')
                 ->where('subjectPreview.errors', [])
-                ->has('subjectPreviewCustomers', 1)
-                ->where('subjectPreviewCustomers.0.recordId', $firstRecord->id)
-                ->where('selectedGreetingPreviewRecordId', $firstRecord->id)
+                ->has('previewCustomerOptions', 1)
+                ->where('previewCustomerOptions.0.recordId', $firstRecord->id)
                 ->where('greetingPreview.sample.batchCode', 'IMP-SUBJECT-PREVIEW')
                 ->where('greetingPreview.sample.recordId', $firstRecord->id)
                 ->where('greetingPreview.sample.address', 'Địa chỉ mẫu')
                 ->where('greetingPreview.sample.feedCategory', 'Thức ăn mẫu')
                 ->where('greetingPreview.renderedText', "Kính gửi 11008 - Siêu thị Key Account A,\nĐịa chỉ: Địa chỉ mẫu\nNhóm thức ăn: Thức ăn mẫu")
                 ->where('greetingPreview.errors', [])
-                ->has('greetingPreviewCustomers', 1)
-                ->where('greetingPreviewCustomers.0.recordId', $firstRecord->id)
                 ->has('templateList', 2)
                 ->where('templateList.0.id', $activeTemplate->id)
                 ->where('templateList.0.name', 'Template đang hoạt động')
@@ -298,6 +295,91 @@ class TemplatesPageTest extends TestCase
                 ->where('templateList.1.isActive', false)
                 ->where('templateList.1.statusLabel', 'Ngừng hoạt động')
                 ->where('templateList.1.sectionCount', 1)
+            );
+    }
+
+    public function test_templates_page_filters_all_preview_contexts_by_selected_preview_batch(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template preview theo batch',
+            'subject_template' => 'Chế độ tháng {{tháng}} - {{mã & tên khách hàng}}',
+            'structure_json' => [
+                'version' => '2.0-R5',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}} - {{mã & tên khách hàng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    ['type' => 'tong-hop-table', 'label' => 'Table Chế độ tháng', 'sourceSheet' => 'Tổng hợp', 'rows' => [
+                        ['content' => 'Tổng sản lượng (gồm cám thủy sản)', 'rowType' => 'data', 'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)'],
+                    ]],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $batchMarch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-03',
+            'original_file_name' => 'march.xlsx',
+            'stored_path' => 'imports/tmp/march.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        $marchRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batchMarch->id,
+            'customer_code' => '90301',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90301',
+                'customerFullName' => '90301 - Công ty tháng 3',
+                'tongHop' => [
+                    'month' => '03.2026',
+                    'totalQuantity' => '100',
+                ],
+            ],
+        ]);
+
+        $batchApril = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-04',
+            'original_file_name' => 'april.xlsx',
+            'stored_path' => 'imports/tmp/april.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batchApril->id,
+            'customer_code' => '90302',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90302',
+                'customerFullName' => '90302 - Công ty tháng 4',
+                'tongHop' => [
+                    'month' => '04.2026',
+                    'totalQuantity' => '200',
+                ],
+            ],
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncAll();
+
+        $this->actingAs($user)
+            ->get(route('templates.index', ['preview_batch' => $batchMarch->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Templates/Index')
+                ->where('selectedPreviewBatchId', $batchMarch->id)
+                ->where('subjectPreview.sample.batchId', $batchMarch->id)
+                ->where('subjectPreview.sample.recordId', $marchRecord->id)
+                ->where('tongHopTablePreview.sample.batchId', $batchMarch->id)
+                ->where('tongHopTablePreview.sample.recordId', $marchRecord->id)
+                ->has('previewCustomerOptions', 1)
+                ->where('previewCustomerOptions.0.recordId', $marchRecord->id)
             );
     }
 
@@ -381,13 +463,13 @@ class TemplatesPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('builderTemplate.id', $template->id)
-                ->where('selectedTongHopPreviewRecordId', $firstRecord->id)
+                ->where('selectedPreviewRecordId', $firstRecord->id)
                 ->where('tongHopTablePreview.sample.batchCode', 'IMP-TONG-HOP-PREVIEW')
                 ->where('tongHopTablePreview.sample.recordId', $firstRecord->id)
                 ->where('tongHopTablePreview.sample.customerCode', '90300')
-                ->has('tongHopPreviewCustomers', 1)
-                ->where('tongHopPreviewCustomers.0.recordId', $firstRecord->id)
-                ->where('tongHopPreviewCustomers.0.customerCode', '90300')
+                ->has('previewCustomerOptions', 1)
+                ->where('previewCustomerOptions.0.recordId', $firstRecord->id)
+                ->where('previewCustomerOptions.0.customerCode', '90300')
                 ->where('tongHopTablePreview.title', 'Chế độ tháng 02.2026')
                 ->where('tongHopTablePreview.rows.0.numbering', '')
                 ->where('tongHopTablePreview.rows.0.content', 'Tổng sản lượng (gồm cám thủy sản)')
@@ -501,10 +583,10 @@ class TemplatesPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('templates.index', ['tong_hop_preview_record' => $selectedRecord->id]))
+            ->get(route('templates.index', ['preview_record' => $selectedRecord->id]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('selectedTongHopPreviewRecordId', $selectedRecord->id)
+                ->where('selectedPreviewRecordId', $selectedRecord->id)
                 ->where('tongHopTablePreview.sample.recordId', $selectedRecord->id)
                 ->where('tongHopTablePreview.sample.customerCode', '19220')
                 ->where('tongHopTablePreview.sample.customerFullName', 'Công ty B')
@@ -513,7 +595,7 @@ class TemplatesPageTest extends TestCase
                 ->where('tongHopTablePreview.rows.1.value', '777')
                 ->where('tongHopBindingOptions.2.key', 'Mã số')
                 ->where('tongHopBindingOptions.2.valuePreview', '19220')
-                ->has('tongHopPreviewCustomers', 2)
+                ->has('previewCustomerOptions', 2)
             );
     }
 
@@ -624,11 +706,11 @@ class TemplatesPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('builderTemplate.id', $template->id)
-                ->where('selectedCamCaPreviewRecordId', $firstRecord->id)
+                ->where('selectedPreviewRecordId', $firstRecord->id)
                 ->where('camCaTablePreview.sample.recordId', $firstRecord->id)
                 ->where('camCaTablePreview.sample.customerCode', '16068')
-                ->has('camCaPreviewCustomers', 1)
-                ->where('camCaPreviewCustomers.0.recordId', $firstRecord->id)
+                ->has('previewCustomerOptions', 1)
+                ->where('previewCustomerOptions.0.recordId', $firstRecord->id)
                 ->where('camCaTablePreview.title', 'Chiết khấu cám cá tháng 3-2026')
                 ->where('camCaTablePreview.rows.0.content', 'Tổng sản lượng')
                 ->where('camCaTablePreview.rows.0.value', '128500')
@@ -740,10 +822,10 @@ class TemplatesPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('templates.index', ['cam_ca_preview_record' => $selectedRecord->id]))
+            ->get(route('templates.index', ['preview_record' => $selectedRecord->id]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('selectedCamCaPreviewRecordId', $selectedRecord->id)
+                ->where('selectedPreviewRecordId', $selectedRecord->id)
                 ->where('camCaTablePreview.sample.recordId', $selectedRecord->id)
                 ->where('camCaTablePreview.sample.customerCode', '90182TS')
                 ->where('camCaTablePreview.sample.customerFullName', 'Khách B')
@@ -752,7 +834,7 @@ class TemplatesPageTest extends TestCase
                 ->where('camCaTablePreview.rows.1.value', '777')
                 ->where('camCaBindingOptions.0.key', 'Tổng sản lượng')
                 ->where('camCaBindingOptions.0.valuePreview', '555')
-                ->has('camCaPreviewCustomers', 2)
+                ->has('previewCustomerOptions', 2)
             );
     }
 
@@ -850,7 +932,7 @@ class TemplatesPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('builderTemplate.id', $template->id)
-                ->where('selectedKeyAccountPreviewRecordId', $firstRecord->id)
+                ->where('selectedPreviewRecordId', $firstRecord->id)
                 ->where('keyAccountTablePreview.sample.recordId', $firstRecord->id)
                 ->where('keyAccountTablePreview.sample.customerCode', '11008')
                 ->where('keyAccountTablePreview.title', 'Chiết khấu Key Account tháng 02.2026')
@@ -864,7 +946,7 @@ class TemplatesPageTest extends TestCase
                 ->where('keyAccountTablePreview.rows.4.amount', '147061500')
                 ->where('keyAccountBindingOptions.0.key', 'Tổng sản lượng')
                 ->where('keyAccountBindingOptions.0.defaultValueColumn', 'quantity')
-                ->has('keyAccountPreviewCustomers', 1)
+                ->has('previewCustomerOptions', 1)
             );
     }
 
@@ -962,10 +1044,10 @@ class TemplatesPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('templates.index', ['key_account_preview_record' => $selectedRecord->id]))
+            ->get(route('templates.index', ['preview_record' => $selectedRecord->id]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('selectedKeyAccountPreviewRecordId', $selectedRecord->id)
+                ->where('selectedPreviewRecordId', $selectedRecord->id)
                 ->where('keyAccountTablePreview.sample.recordId', $selectedRecord->id)
                 ->where('keyAccountTablePreview.sample.customerCode', '14799')
                 ->where('keyAccountTablePreview.sample.customerFullName', 'Khách B')
@@ -974,7 +1056,7 @@ class TemplatesPageTest extends TestCase
                 ->where('keyAccountTablePreview.rows.1.amount', '777')
                 ->where('keyAccountBindingOptions.0.key', 'Tổng sản lượng')
                 ->where('keyAccountBindingOptions.0.quantityPreview', '555')
-                ->has('keyAccountPreviewCustomers', 2)
+                ->has('previewCustomerOptions', 2)
             );
     }
 
@@ -1048,22 +1130,17 @@ class TemplatesPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('templates.index', [
-                'subject_preview_record' => $selectedRecord->id,
-                'greeting_preview_record' => $selectedRecord->id,
-            ]))
+            ->get(route('templates.index', ['preview_record' => $selectedRecord->id]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('selectedSubjectPreviewRecordId', $selectedRecord->id)
+                ->where('selectedPreviewRecordId', $selectedRecord->id)
                 ->where('subjectPreview.sample.recordId', $selectedRecord->id)
                 ->where('subjectPreview.sample.customerCode', '90302')
                 ->where('subjectPreview.renderedText', 'Chế độ tháng 03.2026 - 90302 - Công ty C')
-                ->where('selectedGreetingPreviewRecordId', $selectedRecord->id)
                 ->where('greetingPreview.sample.recordId', $selectedRecord->id)
                 ->where('greetingPreview.sample.address', 'Địa chỉ C')
                 ->where('greetingPreview.renderedText', "Kính gửi 90302 - Công ty C,\nĐịa chỉ: Địa chỉ C")
-                ->has('subjectPreviewCustomers', 2)
-                ->has('greetingPreviewCustomers', 2)
+                ->has('previewCustomerOptions', 2)
             );
     }
 
@@ -1143,11 +1220,11 @@ class TemplatesPageTest extends TestCase
                 ->where('builderTemplate.id', $template->id)
                 ->where('khoanNppTablePreview.sample.batchCode', 'IMP-KHOAN-NPP-PREVIEW')
                 ->where('khoanNppTablePreview.sample.customerCode', '90300')
-                ->where('selectedKhoanNppPreviewRecordId', $firstRecord->id)
+                ->where('selectedPreviewRecordId', $firstRecord->id)
                 ->where('khoanNppTablePreview.title', 'Chương trình khoán đặc biệt tháng 03.2026')
-                ->has('khoanNppPreviewCustomers', 1)
-                ->where('khoanNppPreviewCustomers.0.recordId', $firstRecord->id)
-                ->where('khoanNppPreviewCustomers.0.customerCode', '90300')
+                ->has('previewCustomerOptions', 1)
+                ->where('previewCustomerOptions.0.recordId', $firstRecord->id)
+                ->where('previewCustomerOptions.0.customerCode', '90300')
                 ->has('khoanNppTablePreview.rows', 5)
                 ->where('khoanNppTablePreview.rows.0.numbering', '1')
                 ->where('khoanNppTablePreview.rows.0.content', 'CT 1')
@@ -1258,16 +1335,16 @@ class TemplatesPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('templates.index', ['khoan_npp_preview_record' => $selectedRecord->id]))
+            ->get(route('templates.index', ['preview_record' => $selectedRecord->id]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('selectedKhoanNppPreviewRecordId', $selectedRecord->id)
+                ->where('selectedPreviewRecordId', $selectedRecord->id)
                 ->where('khoanNppTablePreview.sample.recordId', $selectedRecord->id)
                 ->where('khoanNppTablePreview.sample.customerCode', '19236')
                 ->where('khoanNppTablePreview.sample.customerFullName', 'Công ty B')
                 ->where('khoanNppTablePreview.title', 'Chương trình khoán đặc biệt tháng 04.2026')
                 ->where('khoanNppTablePreview.rows.0.content', 'CT B1')
-                ->has('khoanNppPreviewCustomers', 2)
+                ->has('previewCustomerOptions', 2)
             );
     }
 

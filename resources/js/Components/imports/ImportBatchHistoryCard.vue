@@ -12,9 +12,10 @@ import Tag from 'primevue/tag';
 const props = defineProps<{
     history: ImportHistoryItem[];
     activeBatchId: number | null;
+    canOpenTemplates: boolean;
 }>();
 
-const { historyRows, openBatch, isActiveBatch } = useImportBatchHistory(props.history, props.activeBatchId);
+const { historyRows, openBatch, openTemplates, isActiveBatch } = useImportBatchHistory(props.history, props.activeBatchId);
 const {
     filters,
     globalFilterFields,
@@ -76,13 +77,24 @@ const {
             <Column field="aggregatedRecordCountLabel" header="Aggregated" />
             <Column header="Mở lại">
                 <template #body="{ data }">
-                    <Button
-                        :label="isActiveBatch(data.id) ? 'Đang xem' : 'Mở batch'"
-                        :icon="isActiveBatch(data.id) ? 'pi pi-check' : 'pi pi-folder-open'"
-                        :severity="isActiveBatch(data.id) ? 'contrast' : 'secondary'"
-                        size="small"
-                        @click="openBatch(data.id)"
-                    />
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            :label="isActiveBatch(data.id) ? 'Đang xem' : 'Mở batch'"
+                            :icon="isActiveBatch(data.id) ? 'pi pi-check' : 'pi pi-folder-open'"
+                            :severity="isActiveBatch(data.id) ? 'contrast' : 'secondary'"
+                            size="small"
+                            @click="openBatch(data.id)"
+                        />
+                        <Button
+                            v-if="canOpenTemplates"
+                            label="Mở template"
+                            icon="pi pi-send"
+                            severity="info"
+                            size="small"
+                            outlined
+                            @click="openTemplates(data.id)"
+                        />
+                    </div>
                 </template>
             </Column>
         </DataTable>

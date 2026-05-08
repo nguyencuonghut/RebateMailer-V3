@@ -4,11 +4,13 @@ import type { ImportWorkbookBoundary, ImportWorkbookBoundaryActionConfig } from 
 import type { ImportUploadReceipt } from '@/Services/imports/useImportUploadFlow';
 import { getImportBatchStatusPresentation } from '@/Services/imports/useImportBatchStatusPresentation';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
+import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 
 const props = defineProps<{
     receipt: ImportUploadReceipt | null;
     canManageImports: boolean;
+    canOpenTemplates: boolean;
     analysisPrep: ImportWorkbookBoundaryActionConfig;
     workbookBoundary: ImportWorkbookBoundary | null;
     isAnalyzingWorkbook: boolean;
@@ -71,6 +73,17 @@ const importBatchStatusPresentation = computed(() =>
 
         <div class="rounded-[1.2rem] border border-dashed p-4 text-sm" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
             {{ receipt.nextStep }}
+        </div>
+
+        <div v-if="canOpenTemplates" class="flex justify-end">
+            <Button
+                label="Mở template theo batch này"
+                icon="pi pi-send"
+                severity="secondary"
+                size="small"
+                as="a"
+                :href="route('templates.index', { preview_batch: receipt.importBatch.id })"
+            />
         </div>
     </div>
 

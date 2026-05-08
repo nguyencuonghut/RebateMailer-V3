@@ -57,9 +57,21 @@ export const useImportBatchHistory = (
 
     const isActiveBatch = (batchId: number): boolean => activeBatchId === batchId;
 
+    const openTemplates = (batchId: number): void => {
+        router.get(
+            route('templates.index'),
+            { preview_batch: batchId },
+            {
+                preserveScroll: true,
+                preserveState: false,
+            },
+        );
+    };
+
     return {
         historyRows,
         openBatch,
+        openTemplates,
         isActiveBatch,
     };
 };

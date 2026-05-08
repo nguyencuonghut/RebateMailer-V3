@@ -2,6 +2,7 @@
 
 namespace App\Services\Templates;
 
+use App\Models\ImportBatch;
 use App\Models\ImportBatchAggregatedRecord;
 use Illuminate\Support\Collection;
 
@@ -18,10 +19,10 @@ class BuildTemplatePreviewSampleService
     /**
      * @return array<string, mixed>|null
      */
-    public function build(?string $requiredSource = null, ?int $aggregatedRecordId = null): ?array
+    public function build(?string $requiredSource = null, ?int $previewBatchId = null, ?int $aggregatedRecordId = null): ?array
     {
         if ($aggregatedRecordId !== null) {
-            $selectedRecord = $this->eligibleRecords($requiredSource)
+            $selectedRecord = $this->eligibleRecords($requiredSource, $previewBatchId)
                 ->firstWhere('id', $aggregatedRecordId);
 
             if ($selectedRecord) {
@@ -29,7 +30,7 @@ class BuildTemplatePreviewSampleService
             }
         }
 
-        $defaultRecord = $this->eligibleRecords($requiredSource)->first();
+        $defaultRecord = $this->eligibleRecords($requiredSource, $previewBatchId)->first();
 
         if (! $defaultRecord) {
             return null;
@@ -41,9 +42,9 @@ class BuildTemplatePreviewSampleService
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function buildCustomerOptions(?string $requiredSource = null): array
+    public function buildCustomerOptions(?string $requiredSource = null, ?int $previewBatchId = null): array
     {
-        return $this->eligibleRecords($requiredSource)
+        return $this->eligibleRecords($requiredSource, $previewBatchId)
             ->map(function (ImportBatchAggregatedRecord $record): array {
                 $payload = is_array($record->aggregated_payload) ? $record->aggregated_payload : [];
                 $customerCode = trim((string) ($payload['customerCode'] ?? $record->customer_code));
@@ -65,14 +66,58 @@ class BuildTemplatePreviewSampleService
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function buildBatchOptions(): array
+    {
+        return ImportBatch::query()
+            ->whereIn('status', $this->readyStatuses())
+            ->whereHas('aggregatedRecords')
+            ->with(['aggregatedRecords' => fn ($query) => $query->orderBy('customer_code')])
+            ->orderByDesc('id')
+            ->get()
+            ->map(function (ImportBatch $batch): array {
+                $firstRecord = $batch->aggregatedRecords->first();
+                $payload = is_array($firstRecord?->aggregated_payload) ? $firstRecord->aggregated_payload : [];
+                $month = $this->resolveField($payload, 'month');
+
+                return [
+                    'batchId' => $batch->getKey(),
+                    'batchCode' => (string) $batch->batch_code,
+                    'month' => $month,
+                    'recordCount' => $batch->aggregatedRecords->count(),
+                    'label' => $month !== ''
+                        ? sprintf('%s | Tháng %s', $batch->batch_code, $month)
+                        : (string) $batch->batch_code,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function resolveSelectedBatchId(?int $previewBatchId = null, ?string $requiredSource = null): ?int
+    {
+        $eligibleRecords = $this->eligibleRecords($requiredSource);
+
+        if ($previewBatchId !== null && $eligibleRecords->contains(
+            fn (ImportBatchAggregatedRecord $record): bool => (int) $record->import_batch_id === $previewBatchId,
+        )) {
+            return $previewBatchId;
+        }
+
+        return $eligibleRecords->first()?->import_batch_id;
+    }
+
+    /**
      * @return Collection<int, ImportBatchAggregatedRecord>
      */
-    private function eligibleRecords(?string $requiredSource = null): Collection
+    private function eligibleRecords(?string $requiredSource = null, ?int $previewBatchId = null): Collection
     {
         return ImportBatchAggregatedRecord::query()
             ->with('importBatch')
             ->whereHas('importBatch', fn ($query) => $query
                 ->whereIn('status', $this->readyStatuses()))
+            ->when($previewBatchId !== null, fn ($query) => $query->where('import_batch_id', $previewBatchId))
             ->orderByDesc('import_batch_id')
             ->orderBy('customer_code')
             ->get()

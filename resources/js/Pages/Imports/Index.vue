@@ -27,6 +27,11 @@ import { computed, watch } from 'vue';
 const props = defineProps<ImportPageProps>();
 
 const page = usePage<PageProps>();
+const canOpenTemplates = computed(() => {
+    const permissions = page.props.auth.user?.permissions ?? [];
+
+    return permissions.includes('templates.view') || permissions.includes('templates.manage');
+});
 const { acceptedSheetTags, disabledActionMessage } = useImportsIndexPage(props);
 const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, clearSelection, onFileChange } = useImportUploadCard(
     props.uploadPolicy.acceptedExtension,
@@ -259,6 +264,7 @@ const loadAggregateTab = async (): Promise<void> => {
                     <ImportBatchHistoryCard
                         :history="importHistory"
                         :active-batch-id="activeBatchId"
+                        :can-open-templates="canOpenTemplates"
                     />
                 </template>
             </Card>
@@ -271,6 +277,7 @@ const loadAggregateTab = async (): Promise<void> => {
                     <ImportPreviewShell
                         :receipt="uploadReceipt"
                         :can-manage-imports="canManageImports"
+                        :can-open-templates="canOpenTemplates"
                         :analysis-prep="analysisPrep"
                         :workbook-boundary="workbookBoundary"
                         :is-analyzing-workbook="false"

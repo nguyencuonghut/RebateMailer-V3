@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
-import Select from 'primevue/select';
-import { router } from '@inertiajs/vue3';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 
 const props = defineProps<{
@@ -41,15 +39,6 @@ const props = defineProps<{
             totalInWords: string;
         };
     } | null;
-    previewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedRecordId: number | null;
     bindingOptions: Array<{
         key: string;
         label: string;
@@ -74,26 +63,6 @@ const props = defineProps<{
         }>;
     } | null;
 }>();
-
-const isSwitchingCustomer = ref(false);
-
-const handlePreviewCustomerChange = (recordId: number | null): void => {
-    isSwitchingCustomer.value = true;
-
-    router.get(
-        route('templates.index'),
-        recordId ? { key_account_preview_record: recordId } : {},
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            only: ['keyAccountTablePreview', 'keyAccountPreviewCustomers', 'selectedKeyAccountPreviewRecordId', 'keyAccountBindingOptions'],
-            onFinish: () => {
-                isSwitchingCustomer.value = false;
-            },
-        },
-    );
-};
 
 const valueMap = computed(() =>
     new Map((props.bindingOptions ?? []).map((option) => [option.key, {
@@ -296,28 +265,8 @@ const formatCell = (value: string, rowType: string): string => {
                     />
                 </div>
 
-                <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
-                    <div class="rounded-[1.2rem] border px-4 py-3 text-sm leading-6" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)', color: 'var(--dashboard-muted-text)' }">
-                        Preview này dùng dữ liệu thật từ aggregated records của sheet `Key Account`. Các dòng CT được lặp từ `Nội dung CT i | SL | đ/kg | Thành tiền`.
-                    </div>
-
-                    <div>
-                        <label class="mb-2 block text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
-                            Khách preview
-                        </label>
-                        <Select
-                            :model-value="selectedRecordId"
-                            :options="previewCustomers"
-                            option-label="label"
-                            option-value="recordId"
-                            filter
-                            show-clear
-                            fluid
-                            :loading="isSwitchingCustomer"
-                            placeholder="Chọn khách từ dữ liệu aggregate"
-                            @update:model-value="handlePreviewCustomerChange"
-                        />
-                    </div>
+                <div class="rounded-[1.2rem] border px-4 py-3 text-sm leading-6" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)', color: 'var(--dashboard-muted-text)' }">
+                    Preview này dùng dữ liệu thật từ aggregated records của sheet `Key Account`. Các dòng CT được lặp từ `Nội dung CT i | SL | đ/kg | Thành tiền`, và toàn bộ preview đang bám vào preview context chung của page.
                 </div>
 
                 <div v-if="preview?.sample" class="flex flex-wrap gap-2">

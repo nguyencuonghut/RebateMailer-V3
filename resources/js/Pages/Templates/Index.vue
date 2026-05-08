@@ -15,6 +15,7 @@ import TemplateKeyAccountTablePreviewCard from '@/Components/templates/TemplateK
 import type { TemplateTableRowType } from '@/Services/templates/useTemplateBuilderCanvas';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
+import Select from 'primevue/select';
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
@@ -116,6 +117,23 @@ const props = defineProps<{
             updatedAt: string | null;
         }>;
     }>;
+    previewBatchOptions: Array<{
+        batchId: number;
+        batchCode: string;
+        month: string;
+        recordCount: number;
+        label: string;
+    }>;
+    selectedPreviewBatchId: number | null;
+    previewCustomerOptions: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedPreviewRecordId: number | null;
     subjectPreview: {
         templateText: string;
         renderedText: string;
@@ -129,15 +147,6 @@ const props = defineProps<{
             month: string;
         };
     } | null;
-    subjectPreviewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedSubjectPreviewRecordId: number | null;
     greetingPreview: {
         templateText: string;
         renderedText: string;
@@ -153,15 +162,6 @@ const props = defineProps<{
             feedCategory: string;
         };
     } | null;
-    greetingPreviewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedGreetingPreviewRecordId: number | null;
     tongHopTablePreview: {
         title: string;
         sourceSheet: string;
@@ -187,15 +187,6 @@ const props = defineProps<{
             month: string;
         };
     } | null;
-    tongHopPreviewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedTongHopPreviewRecordId: number | null;
     khoanNppTablePreview: {
         title: string;
         sourceSheet: string;
@@ -230,15 +221,6 @@ const props = defineProps<{
             totalInWords: string;
         };
     } | null;
-    khoanNppPreviewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedKhoanNppPreviewRecordId: number | null;
     camCaTablePreview: {
         title: string;
         sourceSheet: string;
@@ -269,15 +251,6 @@ const props = defineProps<{
             totalInWords: string;
         };
     } | null;
-    camCaPreviewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedCamCaPreviewRecordId: number | null;
     keyAccountTablePreview: {
         title: string;
         sourceSheet: string;
@@ -313,15 +286,6 @@ const props = defineProps<{
             totalInWords: string;
         };
     } | null;
-    keyAccountPreviewCustomers: Array<{
-        recordId: number;
-        customerCode: string;
-        customerFullName: string;
-        label: string;
-        batchCode: string;
-        month: string;
-    }>;
-    selectedKeyAccountPreviewRecordId: number | null;
     tongHopBindingOptions: Array<{
         key: string;
         label: string;
@@ -365,6 +329,8 @@ const props = defineProps<{
 const page = usePage<PageProps>();
 const isActivatingTemplateId = ref<number | null>(null);
 const isBindingPartVersionId = ref<number | null>(null);
+const isSwitchingPreviewBatch = ref(false);
+const isSwitchingPreviewCustomer = ref(false);
 
 const activateTemplate = (templateId: number): void => {
     isActivatingTemplateId.value = templateId;
@@ -400,6 +366,71 @@ const bindPartVersionToCanvas = (payload: { partType: string; versionId: number 
             preserveState: true,
             onFinish: () => {
                 isBindingPartVersionId.value = null;
+            },
+        },
+    );
+};
+
+const handlePreviewBatchChange = (batchId: number | null): void => {
+    isSwitchingPreviewBatch.value = true;
+
+    router.get(
+        route('templates.index'),
+        batchId ? { preview_batch: batchId } : {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: [
+                'previewBatchOptions',
+                'selectedPreviewBatchId',
+                'previewCustomerOptions',
+                'selectedPreviewRecordId',
+                'subjectPreview',
+                'greetingPreview',
+                'tongHopTablePreview',
+                'khoanNppTablePreview',
+                'camCaTablePreview',
+                'keyAccountTablePreview',
+                'tongHopBindingOptions',
+                'camCaBindingOptions',
+                'keyAccountBindingOptions',
+            ],
+            onFinish: () => {
+                isSwitchingPreviewBatch.value = false;
+            },
+        },
+    );
+};
+
+const handlePreviewCustomerChange = (recordId: number | null): void => {
+    isSwitchingPreviewCustomer.value = true;
+
+    router.get(
+        route('templates.index'),
+        {
+            ...(props.selectedPreviewBatchId ? { preview_batch: props.selectedPreviewBatchId } : {}),
+            ...(recordId ? { preview_record: recordId } : {}),
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: [
+                'previewCustomerOptions',
+                'selectedPreviewRecordId',
+                'subjectPreview',
+                'greetingPreview',
+                'tongHopTablePreview',
+                'khoanNppTablePreview',
+                'camCaTablePreview',
+                'keyAccountTablePreview',
+                'tongHopBindingOptions',
+                'camCaBindingOptions',
+                'keyAccountBindingOptions',
+            ],
+            onFinish: () => {
+                isSwitchingPreviewCustomer.value = false;
             },
         },
     );
@@ -564,6 +595,52 @@ const keyAccountDraftSection = computed(() =>
             </section>
 
             <section class="sakai-panel rounded-[2rem] border-0 p-4 sm:p-5">
+                <Card class="sakai-panel mb-4 rounded-[2rem] border-0">
+                    <template #content>
+                        <div class="grid gap-3 xl:grid-cols-[minmax(0,22rem)_minmax(0,22rem)_1fr] xl:items-end">
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    Dữ liệu preview theo batch import
+                                </label>
+                                <Select
+                                    :model-value="selectedPreviewBatchId"
+                                    :options="previewBatchOptions"
+                                    option-label="label"
+                                    option-value="batchId"
+                                    filter
+                                    show-clear
+                                    fluid
+                                    :loading="isSwitchingPreviewBatch"
+                                    placeholder="Chọn batch dữ liệu đã aggregate"
+                                    @update:model-value="handlePreviewBatchChange"
+                                />
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    Khách hàng preview
+                                </label>
+                                <Select
+                                    :model-value="selectedPreviewRecordId"
+                                    :options="previewCustomerOptions"
+                                    option-label="label"
+                                    option-value="recordId"
+                                    filter
+                                    show-clear
+                                    fluid
+                                    :loading="isSwitchingPreviewCustomer"
+                                    placeholder="Chọn khách trong batch đã aggregate"
+                                    @update:model-value="handlePreviewCustomerChange"
+                                />
+                            </div>
+
+                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                Mọi preview, binding options và các tab hiện đều dùng cùng một record aggregate của khách này trong batch đã chọn.
+                            </p>
+                        </div>
+                    </template>
+                </Card>
+
                 <Tabs value="0" lazy scrollable>
                     <TabList
                         class="sticky top-0 z-10 rounded-[1.2rem] border px-2 py-2"
@@ -843,8 +920,6 @@ const keyAccountDraftSection = computed(() =>
 
                                 <TemplateSubjectPreviewCard
                                     :preview="subjectPreview"
-                                    :preview-customers="subjectPreviewCustomers"
-                                    :selected-record-id="selectedSubjectPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>
@@ -877,8 +952,6 @@ const keyAccountDraftSection = computed(() =>
 
                                 <TemplateGreetingPreviewCard
                                     :preview="greetingPreview"
-                                    :preview-customers="greetingPreviewCustomers"
-                                    :selected-record-id="selectedGreetingPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>
@@ -909,8 +982,6 @@ const keyAccountDraftSection = computed(() =>
                                     :preview="tongHopTablePreview"
                                     :draft-section="tongHopDraftSection"
                                     :binding-options="tongHopBindingOptions"
-                                    :preview-customers="tongHopPreviewCustomers"
-                                    :selected-record-id="selectedTongHopPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>
@@ -940,8 +1011,6 @@ const keyAccountDraftSection = computed(() =>
                                 <TemplateKhoanNppTablePreviewCard
                                     :preview="khoanNppTablePreview"
                                     :draft-section="khoanNppDraftSection"
-                                    :preview-customers="khoanNppPreviewCustomers"
-                                    :selected-record-id="selectedKhoanNppPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>
@@ -972,8 +1041,6 @@ const keyAccountDraftSection = computed(() =>
                                     :preview="camCaTablePreview"
                                     :draft-section="camCaDraftSection"
                                     :binding-options="camCaBindingOptions"
-                                    :preview-customers="camCaPreviewCustomers"
-                                    :selected-record-id="selectedCamCaPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>
@@ -1004,8 +1071,6 @@ const keyAccountDraftSection = computed(() =>
                                     :preview="keyAccountTablePreview"
                                     :draft-section="keyAccountDraftSection"
                                     :binding-options="keyAccountBindingOptions"
-                                    :preview-customers="keyAccountPreviewCustomers"
-                                    :selected-record-id="selectedKeyAccountPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>

@@ -29,26 +29,30 @@ class TemplatePageService
      */
     public function getIndexPageData(
         bool $canManageTemplates,
-        ?int $selectedSubjectPreviewRecordId = null,
-        ?int $selectedGreetingPreviewRecordId = null,
-        ?int $selectedTongHopPreviewRecordId = null,
-        ?int $selectedKhoanNppPreviewRecordId = null,
-        ?int $selectedCamCaPreviewRecordId = null,
-        ?int $selectedKeyAccountPreviewRecordId = null,
+        ?int $selectedPreviewBatchId = null,
+        ?int $selectedPreviewRecordId = null,
     ): array
     {
         $this->syncLegacyMailTemplateToCompositionService->syncAll();
 
+        $resolvedPreviewBatchId = $this->buildTemplatePreviewSampleService->resolveSelectedBatchId($selectedPreviewBatchId);
         $builderTemplate = $this->buildBuilderTemplate();
         $selectedTemplate = $builderTemplate === null
             ? null
             : MailTemplate::query()->find($builderTemplate['id']);
-        $subjectPreview = $this->buildTemplateSubjectPreviewService->build($selectedTemplate, $selectedSubjectPreviewRecordId);
-        $greetingPreview = $this->buildTemplateGreetingPreviewService->build($selectedTemplate, $selectedGreetingPreviewRecordId);
-        $tongHopPreview = $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate, $selectedTongHopPreviewRecordId);
-        $khoanNppPreview = $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate, $selectedKhoanNppPreviewRecordId);
-        $camCaPreview = $this->buildTemplateCamCaTablePreviewService->build($selectedTemplate, $selectedCamCaPreviewRecordId);
-        $keyAccountPreview = $this->buildTemplateKeyAccountTablePreviewService->build($selectedTemplate, $selectedKeyAccountPreviewRecordId);
+        $subjectPreview = $this->buildTemplateSubjectPreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
+        $greetingPreview = $this->buildTemplateGreetingPreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
+        $tongHopPreview = $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
+        $khoanNppPreview = $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
+        $camCaPreview = $this->buildTemplateCamCaTablePreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
+        $keyAccountPreview = $this->buildTemplateKeyAccountTablePreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
+        $resolvedPreviewRecordId = $subjectPreview['sample']['recordId']
+            ?? $greetingPreview['sample']['recordId']
+            ?? $tongHopPreview['sample']['recordId']
+            ?? $khoanNppPreview['sample']['recordId']
+            ?? $camCaPreview['sample']['recordId']
+            ?? $keyAccountPreview['sample']['recordId']
+            ?? null;
 
         return [
             'title' => 'Thiết kế mẫu email',
@@ -83,27 +87,19 @@ class TemplatePageService
             'builderTemplate' => $builderTemplate,
             'canvasComposition' => $this->buildMailTemplateCanvasCompositionService->build($selectedTemplate),
             'partVersionGroups' => $this->buildTemplatePartVersionOverviewService->build($selectedTemplate),
+            'previewBatchOptions' => $this->buildTemplatePreviewSampleService->buildBatchOptions(),
+            'selectedPreviewBatchId' => $resolvedPreviewBatchId,
+            'previewCustomerOptions' => $this->buildTemplatePreviewSampleService->buildCustomerOptions(null, $resolvedPreviewBatchId),
+            'selectedPreviewRecordId' => $resolvedPreviewRecordId,
             'subjectPreview' => $subjectPreview,
-            'subjectPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions(),
-            'selectedSubjectPreviewRecordId' => $subjectPreview['sample']['recordId'] ?? null,
             'greetingPreview' => $greetingPreview,
-            'greetingPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions(),
-            'selectedGreetingPreviewRecordId' => $greetingPreview['sample']['recordId'] ?? null,
             'tongHopTablePreview' => $tongHopPreview,
-            'tongHopPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('tongHop'),
-            'selectedTongHopPreviewRecordId' => $tongHopPreview['sample']['recordId'] ?? null,
             'khoanNppTablePreview' => $khoanNppPreview,
-            'khoanNppPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('khoanNpp'),
-            'selectedKhoanNppPreviewRecordId' => $khoanNppPreview['sample']['recordId'] ?? null,
             'camCaTablePreview' => $camCaPreview,
-            'camCaPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('camCa'),
-            'selectedCamCaPreviewRecordId' => $camCaPreview['sample']['recordId'] ?? null,
             'keyAccountTablePreview' => $keyAccountPreview,
-            'keyAccountPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('keyAccount'),
-            'selectedKeyAccountPreviewRecordId' => $keyAccountPreview['sample']['recordId'] ?? null,
-            'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions($selectedTongHopPreviewRecordId),
-            'camCaBindingOptions' => $this->buildTemplateCamCaTablePreviewService->buildBindingOptions($selectedCamCaPreviewRecordId),
-            'keyAccountBindingOptions' => $this->buildTemplateKeyAccountTablePreviewService->buildBindingOptions($selectedKeyAccountPreviewRecordId),
+            'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions($resolvedPreviewBatchId, $resolvedPreviewRecordId),
+            'camCaBindingOptions' => $this->buildTemplateCamCaTablePreviewService->buildBindingOptions($resolvedPreviewBatchId, $resolvedPreviewRecordId),
+            'keyAccountBindingOptions' => $this->buildTemplateKeyAccountTablePreviewService->buildBindingOptions($resolvedPreviewBatchId, $resolvedPreviewRecordId),
             'nextSlice' => [
                 'code' => '2.4-C',
                 'label' => 'Smoke test end-to-end cho Giai đoạn 2',

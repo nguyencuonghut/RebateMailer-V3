@@ -17,7 +17,7 @@ class BuildTemplateCamCaTablePreviewService
     /**
      * @return array<string, mixed>|null
      */
-    public function build(?MailTemplate $mailTemplate, ?int $aggregatedRecordId = null): ?array
+    public function build(?MailTemplate $mailTemplate, ?int $previewBatchId = null, ?int $aggregatedRecordId = null): ?array
     {
         if (! $mailTemplate) {
             return null;
@@ -29,7 +29,7 @@ class BuildTemplateCamCaTablePreviewService
             return null;
         }
 
-        $sample = $this->buildTemplatePreviewSampleService->build('camCa', $aggregatedRecordId);
+        $sample = $this->buildTemplatePreviewSampleService->build('camCa', $previewBatchId, $aggregatedRecordId);
 
         if (! $sample) {
             return null;
@@ -75,9 +75,9 @@ class BuildTemplateCamCaTablePreviewService
     /**
      * @return array<int, array{key: string, label: string, valuePreview: string}>
      */
-    public function buildBindingOptions(?int $aggregatedRecordId = null): array
+    public function buildBindingOptions(?int $previewBatchId = null, ?int $aggregatedRecordId = null): array
     {
-        $sample = $this->buildTemplatePreviewSampleService->build('camCa', $aggregatedRecordId);
+        $sample = $this->buildTemplatePreviewSampleService->build('camCa', $previewBatchId, $aggregatedRecordId);
 
         if (! $sample) {
             return [];

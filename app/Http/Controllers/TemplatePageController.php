@@ -21,12 +21,8 @@ class TemplatePageController extends Controller
             'Templates/Index',
             $this->templatePageService->getIndexPageData(
                 $request->user()?->can(PermissionName::TemplatesManage->value) ?? false,
-                $request->integer('subject_preview_record') ?: null,
-                $request->integer('greeting_preview_record') ?: null,
-                $request->integer('tong_hop_preview_record') ?: null,
-                $request->integer('khoan_npp_preview_record') ?: null,
-                $request->integer('cam_ca_preview_record') ?: null,
-                $request->integer('key_account_preview_record') ?: null,
+                $request->integer('preview_batch') ?: null,
+                $request->integer('preview_record') ?: null,
             ),
         );
     }
