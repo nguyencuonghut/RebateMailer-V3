@@ -178,6 +178,7 @@ const props = defineProps<{
         }>;
         errors: string[];
         sample: {
+            recordId: number;
             batchId: number;
             batchCode: string;
             customerCode: string;
@@ -196,6 +197,15 @@ const props = defineProps<{
             totalInWords: string;
         };
     } | null;
+    khoanNppPreviewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedKhoanNppPreviewRecordId: number | null;
     tongHopBindingOptions: Array<{
         key: string;
         label: string;
@@ -657,6 +667,8 @@ const khoanNppDraftSection = computed(() =>
                                 <TemplateKhoanNppTablePreviewCard
                                     :preview="khoanNppTablePreview"
                                     :draft-section="khoanNppDraftSection"
+                                    :preview-customers="khoanNppPreviewCustomers"
+                                    :selected-record-id="selectedKhoanNppPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>

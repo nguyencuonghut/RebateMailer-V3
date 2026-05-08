@@ -16,7 +16,7 @@ class BuildTemplateKhoanNppTablePreviewService
     /**
      * @return array<string, mixed>|null
      */
-    public function build(?MailTemplate $mailTemplate): ?array
+    public function build(?MailTemplate $mailTemplate, ?int $aggregatedRecordId = null): ?array
     {
         if (! $mailTemplate) {
             return null;
@@ -28,7 +28,7 @@ class BuildTemplateKhoanNppTablePreviewService
             return null;
         }
 
-        $sample = $this->buildTemplatePreviewSampleService->build('khoanNpp');
+        $sample = $this->buildTemplatePreviewSampleService->build('khoanNpp', $aggregatedRecordId);
 
         if (! $sample) {
             return null;
@@ -48,6 +48,7 @@ class BuildTemplateKhoanNppTablePreviewService
             'rows' => $rendered['rows'],
             'errors' => $rendered['errors'],
             'sample' => [
+                'recordId' => $sample['recordId'],
                 'batchId' => $sample['batchId'],
                 'batchCode' => $sample['batchCode'],
                 'customerCode' => $sample['customerCode'],

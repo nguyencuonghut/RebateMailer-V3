@@ -14,6 +14,7 @@ class TemplatePageService
         private readonly BuildTemplateGreetingPreviewService $buildTemplateGreetingPreviewService,
         private readonly BuildTemplateTongHopTablePreviewService $buildTemplateTongHopTablePreviewService,
         private readonly BuildTemplateKhoanNppTablePreviewService $buildTemplateKhoanNppTablePreviewService,
+        private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
         private readonly BuildMailTemplateCanvasCompositionService $buildMailTemplateCanvasCompositionService,
         private readonly BuildTemplatePartVersionOverviewService $buildTemplatePartVersionOverviewService,
         private readonly BuildTemplateStructureFromCanvasService $buildTemplateStructureFromCanvasService,
@@ -24,7 +25,7 @@ class TemplatePageService
     /**
      * @return array<string, mixed>
      */
-    public function getIndexPageData(bool $canManageTemplates): array
+    public function getIndexPageData(bool $canManageTemplates, ?int $selectedKhoanNppPreviewRecordId = null): array
     {
         $this->syncLegacyMailTemplateToCompositionService->syncAll();
 
@@ -32,6 +33,7 @@ class TemplatePageService
         $selectedTemplate = $builderTemplate === null
             ? null
             : MailTemplate::query()->find($builderTemplate['id']);
+        $khoanNppPreview = $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate, $selectedKhoanNppPreviewRecordId);
 
         return [
             'title' => 'Thiết kế mẫu email',
@@ -69,7 +71,9 @@ class TemplatePageService
             'subjectPreview' => $this->buildTemplateSubjectPreviewService->build($selectedTemplate),
             'greetingPreview' => $this->buildTemplateGreetingPreviewService->build($selectedTemplate),
             'tongHopTablePreview' => $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate),
-            'khoanNppTablePreview' => $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate),
+            'khoanNppTablePreview' => $khoanNppPreview,
+            'khoanNppPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('khoanNpp'),
+            'selectedKhoanNppPreviewRecordId' => $khoanNppPreview['sample']['recordId'] ?? null,
             'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions(),
             'nextSlice' => [
                 'code' => '2.3-F',
