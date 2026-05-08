@@ -102,6 +102,7 @@ class ImportPageService
             ->map(fn (ImportBatch $importBatch): array => [
                 'id' => $importBatch->getKey(),
                 'batchCode' => $importBatch->batch_code,
+                'batchName' => $importBatch->name,
                 'originalFileName' => $importBatch->original_file_name,
                 'status' => $importBatch->status,
                 'uploadedBy' => $importBatch->uploader?->name ?? 'Không xác định',
@@ -132,6 +133,7 @@ class ImportPageService
             'importBatch' => [
                 'id' => $importBatch->getKey(),
                 'batchCode' => $importBatch->batch_code,
+                'name' => $importBatch->name,
                 'status' => $importBatch->status,
             ],
             'nextStep' => 'Bạn đang xem lại một đợt nhập dữ liệu đã được lưu trong hệ thống.',
@@ -154,6 +156,7 @@ class ImportPageService
             'importBatch' => [
                 'id' => $importBatch->getKey(),
                 'batchCode' => $importBatch->batch_code,
+                'name' => $importBatch->name,
                 'status' => $importBatch->status,
             ],
             'contract' => $workbookSummary['contract'],

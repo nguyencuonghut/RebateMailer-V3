@@ -23,6 +23,7 @@ const {
     clearGlobalFilter,
 } = useDataTableGlobalFilter([
     'batchCode',
+    'batchName',
     'originalFileName',
     'statusLabel',
     'uploadedBy',
@@ -65,6 +66,7 @@ const {
             class="p-datatable-sm"
         >
             <Column field="batchCode" header="Mã batch" />
+            <Column field="batchName" header="Tên batch" />
             <Column field="originalFileName" header="File nguồn" />
             <Column header="Trạng thái">
                 <template #body="{ data }">

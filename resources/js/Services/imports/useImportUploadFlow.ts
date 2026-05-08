@@ -12,6 +12,7 @@ export type ImportUploadReceipt = {
     importBatch: {
         id: number;
         batchCode: string;
+        name: string;
         status: string;
     };
     nextStep: string;
@@ -29,9 +30,17 @@ export const useImportUploadFlow = (initialReceipt: ImportUploadReceipt | null =
     const isUploading = ref(false);
     const uploadReceipt = ref<ImportUploadReceipt | null>(initialReceipt);
 
-    const uploadSelectedFile = async (file: LocalImportFile | null, uploadUrl: string): Promise<string | null> => {
+    const uploadSelectedFile = async (
+        file: LocalImportFile | null,
+        batchName: string,
+        uploadUrl: string,
+    ): Promise<string | null> => {
         if (!file) {
             return 'Vui lòng chọn file Excel trước khi tiếp tục.';
+        }
+
+        if (batchName.trim() === '') {
+            return 'Vui lòng nhập tên batch trước khi tiếp tục.';
         }
 
         isUploading.value = true;
@@ -39,6 +48,7 @@ export const useImportUploadFlow = (initialReceipt: ImportUploadReceipt | null =
         try {
             const formData = new FormData();
             formData.append('file', file.file);
+            formData.append('batch_name', batchName.trim());
 
             const response = await axios.post<UploadResponse>(uploadUrl, formData, {
                 headers: {
@@ -59,7 +69,8 @@ export const useImportUploadFlow = (initialReceipt: ImportUploadReceipt | null =
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 const backendMessage =
-                    error.response?.data?.errors?.file?.[0]
+                    error.response?.data?.errors?.batch_name?.[0]
+                    ?? error.response?.data?.errors?.file?.[0]
                     ?? error.response?.data?.message;
 
                 if (backendMessage) {

@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('import_batches', function (Blueprint $table) {
             $table->id();
             $table->string('batch_code')->unique();
+            $table->string('name')->default('');
             $table->string('original_file_name');
             $table->string('stored_path');
             $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();

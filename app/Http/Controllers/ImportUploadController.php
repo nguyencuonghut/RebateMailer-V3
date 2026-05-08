@@ -18,7 +18,9 @@ class ImportUploadController extends Controller
     public function store(StoreImportUploadRequest $request): JsonResponse
     {
         $receipt = $this->storeTemporaryImportFileService->store($request->file('file'));
+        $batchName = trim($request->string('batch_name')->toString());
         $importBatch = $this->createImportBatchService->create(
+            $batchName !== '' ? $batchName : pathinfo($receipt['originalFileName'], PATHINFO_FILENAME),
             $receipt['originalFileName'],
             $receipt['storedPath'],
             $request->user()?->getKey(),
@@ -27,6 +29,7 @@ class ImportUploadController extends Controller
         $receipt['importBatch'] = [
             'id' => $importBatch->id,
             'batchCode' => $importBatch->batch_code,
+            'name' => $importBatch->name,
             'status' => $importBatch->status,
         ];
 

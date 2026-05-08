@@ -120,6 +120,7 @@ const props = defineProps<{
     previewBatchOptions: Array<{
         batchId: number;
         batchCode: string;
+        batchName: string;
         month: string;
         recordCount: number;
         label: string;

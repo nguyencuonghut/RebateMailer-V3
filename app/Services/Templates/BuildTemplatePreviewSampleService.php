@@ -84,11 +84,13 @@ class BuildTemplatePreviewSampleService
                 return [
                     'batchId' => $batch->getKey(),
                     'batchCode' => (string) $batch->batch_code,
+                    'batchName' => (string) $batch->name,
                     'month' => $month,
                     'recordCount' => $batch->aggregatedRecords->count(),
-                    'label' => $month !== ''
-                        ? sprintf('%s | Tháng %s', $batch->batch_code, $month)
-                        : (string) $batch->batch_code,
+                    'label' => collect([
+                        trim((string) $batch->batch_code),
+                        trim((string) $batch->name),
+                    ])->filter(fn (string $item): bool => $item !== '')->implode(' | '),
                 ];
             })
             ->values()

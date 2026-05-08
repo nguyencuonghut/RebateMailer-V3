@@ -10,6 +10,7 @@ export type LocalImportFile = {
 export const useImportUploadCard = (acceptedExtension: string) => {
     const selectedFile = ref<LocalImportFile | null>(null);
     const inlineError = ref<string>('');
+    const batchName = ref<string>('');
     const inputId = 'imports-local-file-input';
 
     const hasSelectedFile = computed(() => selectedFile.value !== null);
@@ -83,6 +84,7 @@ export const useImportUploadCard = (acceptedExtension: string) => {
         inputId,
         selectedFile,
         inlineError,
+        batchName,
         hasSelectedFile,
         formattedFileSize,
         openFileDialog,

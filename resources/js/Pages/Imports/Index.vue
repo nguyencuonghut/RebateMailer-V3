@@ -33,7 +33,7 @@ const canOpenTemplates = computed(() => {
     return permissions.includes('templates.view') || permissions.includes('templates.manage');
 });
 const { acceptedSheetTags, disabledActionMessage } = useImportsIndexPage(props);
-const { inputId, selectedFile, inlineError, formattedFileSize, openFileDialog, clearSelection, onFileChange } = useImportUploadCard(
+const { inputId, selectedFile, inlineError, batchName, formattedFileSize, openFileDialog, clearSelection, onFileChange } = useImportUploadCard(
     props.uploadPolicy.acceptedExtension,
 );
 const { isUploading, uploadReceipt, uploadSelectedFile } = useImportUploadFlow(props.initialUploadReceipt);
@@ -92,7 +92,7 @@ const submitUpload = async (): Promise<void> => {
     resetWorkbookBoundary();
     resetProcessBatch();
 
-    const errorMessage = await uploadSelectedFile(selectedFile.value, route('imports.upload'));
+    const errorMessage = await uploadSelectedFile(selectedFile.value, batchName.value, route('imports.upload'));
 
     if (errorMessage) {
         inlineError.value = errorMessage;
@@ -248,9 +248,11 @@ const loadAggregateTab = async (): Promise<void> => {
                         :inline-error="inlineError"
                         :disabled-action-message="disabledActionMessage"
                         :is-uploading="isUploading || isProcessing"
+                        :batch-name="batchName"
                         @open="openFileDialog"
                         @clear="clearSelection"
                         @select="onFileChange"
+                        @update:batch-name="batchName = $event"
                         @upload="submitUpload"
                     />
                 </template>

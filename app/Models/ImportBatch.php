@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'batch_code',
+    'name',
     'original_file_name',
     'stored_path',
     'uploaded_by',

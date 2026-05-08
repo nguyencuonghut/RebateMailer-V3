@@ -57,6 +57,7 @@ export type ImportPageProps = {
 export type ImportHistoryItem = {
     id: number;
     batchCode: string;
+    batchName: string;
     originalFileName: string;
     status: string;
     uploadedBy: string;

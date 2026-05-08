@@ -34,6 +34,7 @@ class ImportsUploadTest extends TestCase
         $response = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.upload'), [
+                'batch_name' => 'Batch dữ liệu tháng 03-2026',
                 'file' => $file,
             ]);
 
@@ -44,6 +45,7 @@ class ImportsUploadTest extends TestCase
             ->assertJsonPath('toast.summary', 'Tải file thành công')
             ->assertJsonPath('data.originalFileName', 'Data import chuẩn_Final.xlsx')
             ->assertJsonPath('data.size', $file->getSize())
+            ->assertJsonPath('data.importBatch.name', 'Batch dữ liệu tháng 03-2026')
             ->assertJsonPath('data.importBatch.status', 'uploaded');
 
         $storedPath = $response->json('data.storedPath');
@@ -56,6 +58,7 @@ class ImportsUploadTest extends TestCase
         $batch = ImportBatch::query()->findOrFail($batchId);
 
         $this->assertSame('Data import chuẩn_Final.xlsx', $batch->original_file_name);
+        $this->assertSame('Batch dữ liệu tháng 03-2026', $batch->name);
         $this->assertSame($storedPath, $batch->stored_path);
         $this->assertSame($user->id, $batch->uploaded_by);
         $this->assertSame('uploaded', $batch->status);

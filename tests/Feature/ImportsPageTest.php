@@ -71,6 +71,7 @@ class ImportsPageTest extends TestCase
         $uploadResponse = $this->actingAs($user)
             ->withHeader('Accept', 'application/json')
             ->post(route('imports.upload'), [
+                'batch_name' => 'Batch dữ liệu tháng 03-2026',
                 'file' => $uploadedWorkbook,
             ]);
 
@@ -100,6 +101,7 @@ class ImportsPageTest extends TestCase
                 ->where('activeBatchId', $importBatchId)
                 ->where('initialUploadReceipt.importBatch.id', $importBatchId)
                 ->where('initialUploadReceipt.importBatch.batchCode', $batchCode)
+                ->where('initialUploadReceipt.importBatch.name', 'Batch dữ liệu tháng 03-2026')
                 ->where('initialUploadReceipt.originalFileName', $originalFileName)
                 ->where('initialWorkbookBoundary.contract.version', '1.2-H')
                 ->where('initialTongHopPreview.sheetName', 'Tổng hợp')
@@ -110,6 +112,7 @@ class ImportsPageTest extends TestCase
                 ->has('importHistory', 1)
                 ->where('importHistory.0.id', $importBatchId)
                 ->where('importHistory.0.batchCode', $batchCode)
+                ->where('importHistory.0.batchName', 'Batch dữ liệu tháng 03-2026')
                 ->where('importHistory.0.parsedRecordCount', $batch->sheet_records_count)
                 ->where('importHistory.0.aggregatedRecordCount', $batch->aggregated_records_count)
             );

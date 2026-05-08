@@ -64,6 +64,12 @@ const importBatchStatusPresentation = computed(() =>
                 </dd>
             </div>
             <div>
+                <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Tên batch</dt>
+                <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                    {{ receipt.importBatch.name }}
+                </dd>
+            </div>
+            <div>
                 <dt class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Trạng thái đợt nhập</dt>
                 <dd class="mt-1 text-base font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
                     {{ importBatchStatusPresentation?.label }}

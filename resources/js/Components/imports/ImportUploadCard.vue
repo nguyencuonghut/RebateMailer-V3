@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LocalImportFile } from '@/Services/imports/useImportUploadCard';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Tag from 'primevue/tag';
 
@@ -14,6 +15,7 @@ defineProps<{
     inlineError: string;
     disabledActionMessage: string;
     isUploading: boolean;
+    batchName: string;
 }>();
 
 const emit = defineEmits<{
@@ -21,6 +23,7 @@ const emit = defineEmits<{
     clear: [];
     select: [event: Event];
     upload: [];
+    'update:batchName': [value: string];
 }>();
 </script>
 
@@ -31,6 +34,18 @@ const emit = defineEmits<{
         </p>
 
         <template v-if="canManageImports">
+            <div class="space-y-2">
+                <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                    Tên batch
+                </label>
+                <InputText
+                    :model-value="batchName"
+                    fluid
+                    placeholder="Ví dụ: Dữ liệu chiết khấu tháng 03-2026"
+                    @update:model-value="emit('update:batchName', String($event ?? ''))"
+                />
+            </div>
+
             <input
                 :id="inputId"
                 class="hidden"
