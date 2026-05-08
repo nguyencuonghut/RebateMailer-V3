@@ -2,7 +2,7 @@
 
 **Giai đoạn lớn:** 2 (Slice 2 - Visual Template Builder)  
 **Mục tiêu:** chia nhỏ `Giai đoạn 2` thành các lát cắt rất mỏng, có thể làm tuần tự và test được ngay trên UI  
-**Ngày cập nhật:** 06/05/2026
+**Ngày cập nhật:** 08/05/2026
 
 ## 1. Nguồn gốc kế hoạch
 
@@ -609,27 +609,31 @@
   - preview phản ánh đúng hierarchy và numbering của builder
   - preview không lấy nhầm dữ liệu từ `Khách thường`
 
-### Slice 2.3-H - Chốt rule hiển thị dòng giá trị `0`
+### Slice 2.3-H - Audit rule hiển thị dòng giá trị `0/rỗng`
 
-- **Loại:** `AFK`
+- **Loại:** `DONE / DOC-CLEANUP`
 - **Blocked by:** `Slice 2.3-G`
-- **Mục tiêu:** chốt rõ template preview có giữ hay ẩn các dòng có giá trị `0`.
-- **Kết quả demo:** cùng một template có thể được kiểm chứng với dữ liệu thật, và rule hiển thị `0` được ghi rõ bằng test thay vì suy đoán.
-- **Acceptance criteria:**
-  - rule `giữ 0` hoặc `ẩn 0` được chốt bằng evidence từ requirement bổ sung hoặc quyết định nghiệp vụ rõ ràng
-  - preview không tự ý lọc dòng `0` nếu chưa có rule chốt
-  - có test bảo vệ cho case `Key Account` hiện đang có nhiều dòng `0` trong sheet mẫu
+- **Mục tiêu ban đầu:** chốt rõ template preview có giữ hay ẩn các dòng có giá trị `0`.
+- **Trạng thái thực tế:** rule này đã được absorb vào các lát cắt trước, không còn là một slice implementation riêng.
+- **Evidence đã có trong code:**
+  - `Tổng hợp`: có `Ẩn khi = 0 hoặc rỗng` và dùng shared render service
+  - `Khoán NPP`: ẩn dòng CT khi cả cụm `Nội dung | SL | đ/kg | Thành tiền` đều `0/rỗng`
+  - `Cám cá`: có `Ẩn khi = 0 hoặc rỗng` cho các dòng bind dữ liệu
+  - `Key Account`: có `Ẩn khi = 0 hoặc rỗng` cho các dòng bind dữ liệu
+- **Kết luận:** không cần mở thêm slice BE/FE riêng cho `2.3-H`; chỉ cần giữ test và tài liệu đồng bộ với behavior hiện tại.
 
-### Slice 2.4-A - Lưu template structure JSON vào DB
+### Slice 2.4-A - Persistence cho builder/composition model
 
-- **Loại:** `AFK`
-- **Blocked by:** `Slice 2.3-H`
-- **Mục tiêu:** chỉnh sửa builder xong thì lưu được JSON structure chuẩn.
-- **Kết quả demo:** reload page vẫn thấy template đã lưu đúng bố cục.
-- **Acceptance criteria:**
-  - save/update template dùng service BE thật
-  - JSON lưu đủ subject, body blocks, hierarchy, formatting, row type
-  - reload lại editor không mất state
+- **Loại:** `DONE`
+- **Blocked by:** `Slice 2.3-H` trong kế hoạch cũ, nhưng hiện không còn phụ thuộc thực tế
+- **Mục tiêu ban đầu:** chỉnh sửa builder xong thì lưu được JSON structure chuẩn.
+- **Trạng thái thực tế:** scope này đã hoàn tất và vượt qua version kế hoạch ban đầu.
+- **Evidence đã có trong code:**
+  - save/update đi qua service BE thật
+  - dữ liệu không còn chỉ là một blob JSON duy nhất; đã được refactor sang `part versions + canvas composition`
+  - reload editor không mất state
+  - read/write path đã đi qua DB thật và có test bảo vệ
+- **Kết luận:** `2.4-A` được coi là hoàn tất; không nên giữ như backlog mở nữa
 
 ### Slice 2.4-B - Chuyển active template an toàn
 
@@ -675,10 +679,8 @@ Thực hiện đúng thứ tự sau:
 16. `Slice 2.3-E`
 17. `Slice 2.3-F`
 18. `Slice 2.3-G`
-19. `Slice 2.3-H`
-20. `Slice 2.4-A`
-21. `Slice 2.4-B`
-22. `Slice 2.4-C`
+19. `Slice 2.4-B`
+20. `Slice 2.4-C`
 
 Lý do:
 
@@ -686,8 +688,8 @@ Lý do:
 - chỉ cài drag-drop khi đã có editor thật để gắn vào;
 - `Subject` và `Lời chào` phải tách riêng trước 4 bảng dữ liệu;
 - 4 table phải được tách thành 4 flow riêng vì mỗi bảng gắn với một sheet nguồn khác nhau;
-- rule hiển thị dòng `0` phải được chốt trước khi coi JSON structure là ổn định;
-- active state nên làm sau khi save/load JSON đã vững;
+- rule hiển thị dòng `0/rỗng` hiện đã được chốt dần trong từng table slice, không còn là một lát cắt mở độc lập;
+- active state nên làm sau khi persistence/composition model đã vững;
 - smoke test chỉ chốt ở cuối khi full flow đã có đủ evidence.
 
 ## 6. Mapping ra file/code dự kiến
@@ -712,10 +714,21 @@ Lý do:
   - interpolation services
   - preview builder components
   - bridge tới aggregated record data
-- `Slice 2.4-A` đến `2.4-C`
-  - persistence services
+- `Slice 2.4-B` đến `2.4-C`
   - active template service
   - feature tests / e2e smoke
+
+## 6.1. Ghi chú cập nhật trạng thái
+
+- `Slice 2.3-H` không còn là backlog implementation riêng; coi như đã được absorb vào các lát cắt preview/render của từng bảng.
+- `Slice 2.4-A` đã hoàn tất bởi refactor persistence hiện tại:
+  - `template_parts`
+  - `template_part_versions`
+  - `mail_template_canvases`
+  - `mail_template_canvas_parts`
+- Backlog thực còn lại của `Giai đoạn 2` nên tập trung vào:
+  - `2.4-B`
+  - `2.4-C`
 
 ## 7. Definition of Done cho Giai đoạn 2
 
