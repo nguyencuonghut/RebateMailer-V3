@@ -15,6 +15,7 @@ class TemplatePageService
         private readonly BuildTemplateTongHopTablePreviewService $buildTemplateTongHopTablePreviewService,
         private readonly BuildTemplateKhoanNppTablePreviewService $buildTemplateKhoanNppTablePreviewService,
         private readonly BuildTemplateCamCaTablePreviewService $buildTemplateCamCaTablePreviewService,
+        private readonly BuildTemplateKeyAccountTablePreviewService $buildTemplateKeyAccountTablePreviewService,
         private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
         private readonly BuildMailTemplateCanvasCompositionService $buildMailTemplateCanvasCompositionService,
         private readonly BuildTemplatePartVersionOverviewService $buildTemplatePartVersionOverviewService,
@@ -33,6 +34,7 @@ class TemplatePageService
         ?int $selectedTongHopPreviewRecordId = null,
         ?int $selectedKhoanNppPreviewRecordId = null,
         ?int $selectedCamCaPreviewRecordId = null,
+        ?int $selectedKeyAccountPreviewRecordId = null,
     ): array
     {
         $this->syncLegacyMailTemplateToCompositionService->syncAll();
@@ -46,13 +48,14 @@ class TemplatePageService
         $tongHopPreview = $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate, $selectedTongHopPreviewRecordId);
         $khoanNppPreview = $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate, $selectedKhoanNppPreviewRecordId);
         $camCaPreview = $this->buildTemplateCamCaTablePreviewService->build($selectedTemplate, $selectedCamCaPreviewRecordId);
+        $keyAccountPreview = $this->buildTemplateKeyAccountTablePreviewService->build($selectedTemplate, $selectedKeyAccountPreviewRecordId);
 
         return [
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
             'currentSlice' => [
-                'code' => '2.3-F',
-                'label' => 'Preview Table Chiết khấu cám cá từ sheet Cám cá',
+                'code' => '2.3-G',
+                'label' => 'Preview Table Chiết khấu Key Account từ sheet Key Account',
             ],
             'canManageTemplates' => $canManageTemplates,
             'writeCapabilities' => [
@@ -95,11 +98,15 @@ class TemplatePageService
             'camCaTablePreview' => $camCaPreview,
             'camCaPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('camCa'),
             'selectedCamCaPreviewRecordId' => $camCaPreview['sample']['recordId'] ?? null,
+            'keyAccountTablePreview' => $keyAccountPreview,
+            'keyAccountPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('keyAccount'),
+            'selectedKeyAccountPreviewRecordId' => $keyAccountPreview['sample']['recordId'] ?? null,
             'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions($selectedTongHopPreviewRecordId),
             'camCaBindingOptions' => $this->buildTemplateCamCaTablePreviewService->buildBindingOptions($selectedCamCaPreviewRecordId),
+            'keyAccountBindingOptions' => $this->buildTemplateKeyAccountTablePreviewService->buildBindingOptions($selectedKeyAccountPreviewRecordId),
             'nextSlice' => [
-                'code' => '2.3-G',
-                'label' => 'Preview Table Chiết khấu Key Account từ sheet Key Account',
+                'code' => '2.3-H',
+                'label' => 'Chốt rule hiển thị dòng giá trị 0',
             ],
         ];
     }

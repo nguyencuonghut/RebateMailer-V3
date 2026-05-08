@@ -21,6 +21,7 @@ const props = defineProps<{
     sectionCatalog: TemplateSectionDefinition[];
     tongHopBindingOptions: TongHopBindingOption[];
     camCaBindingOptions: TongHopBindingOption[];
+    keyAccountBindingOptions: TongHopBindingOption[];
     visibleSectionTypes?: string[];
 }>();
 
@@ -37,6 +38,7 @@ const emit = defineEmits<{
             indentLevel?: number;
             rowType?: TemplateTableRowType;
             columnKey?: string | null;
+            valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
             hideWhenValueZero?: boolean;
             isBold?: boolean;
             numbering: string;
@@ -58,15 +60,21 @@ const {
     addTongHopRow,
     addKhoanNppRow,
     addCamCaRow,
+    addKeyAccountRow,
     addTongHopChildRow,
     addCamCaChildRow,
+    addKeyAccountChildRow,
     toggleTongHopRowBold,
     toggleKhoanNppRowBold,
     toggleCamCaRowBold,
+    toggleKeyAccountRowBold,
     toggleTongHopHideWhenZero,
     toggleCamCaHideWhenZero,
+    toggleKeyAccountHideWhenZero,
     updateTongHopColumnKey,
     updateCamCaColumnKey,
+    updateKeyAccountColumnKey,
+    updateKeyAccountValueColumn,
     saveCanvasComposition,
     savePart,
     saveValidationErrors,
@@ -76,11 +84,19 @@ const {
     tongHopSectionType,
     khoanNppSectionType,
     camCaSectionType,
+    keyAccountSectionType,
 } = useTemplateBuilderCanvas(
     () => props.template,
     () => props.canManageTemplates,
     () => props.sectionCatalog,
+    () => props.keyAccountBindingOptions,
 );
+
+const keyAccountValueColumnOptions = [
+    { label: 'Sản lượng', value: 'quantity' },
+    { label: 'Mức hỗ trợ', value: 'supportRate' },
+    { label: 'Tổng', value: 'amount' },
+];
 
 const activeVisibleSectionTypes = computed(() => props.visibleSectionTypes ?? []);
 
@@ -410,6 +426,9 @@ watch(
                                                     <template v-else-if="element.type === camCaSectionType">
                                                         Bảng Cám cá là hybrid: vừa có dòng bind vào giá trị đơn của sheet `Cám cá`, vừa có dòng lặp các CT thật từ `programItems[]`.
                                                     </template>
+                                                    <template v-else-if="element.type === keyAccountSectionType">
+                                                        Bảng Key Account là hybrid: vừa có dòng bind vào cột thật của sheet `Key Account`, vừa có dòng lặp các CT thật từ `Nội dung CT i | SL | đ/kg | Thành tiền`.
+                                                    </template>
                                                     <template v-else>
                                                         Thêm, xóa và kéo thả thứ tự dòng trong chính table section này.
                                                     </template>
@@ -438,6 +457,15 @@ watch(
                                                     <Button label="Trống" size="small" variant="outlined" @click="addCamCaRow(element.type, 'blank')" />
                                                     <Button label="Tổng cộng" size="small" severity="success" variant="outlined" @click="addCamCaRow(element.type, 'total')" />
                                                     <Button label="Dòng chữ" size="small" severity="warn" variant="outlined" @click="addCamCaRow(element.type, 'in-words')" />
+                                                </template>
+                                                <template v-else-if="element.type === keyAccountSectionType">
+                                                    <Button label="Dữ liệu" size="small" variant="outlined" @click="addKeyAccountRow(element.type, 'value-row')" />
+                                                    <Button label="Mục cha" size="small" variant="outlined" @click="addKeyAccountRow(element.type, 'parent')" />
+                                                    <Button label="Mục con" size="small" variant="outlined" @click="addKeyAccountRow(element.type, 'child-value')" />
+                                                    <Button label="Dòng CT" size="small" variant="outlined" @click="addKeyAccountRow(element.type, 'child-program-loop')" />
+                                                    <Button label="Trống" size="small" variant="outlined" @click="addKeyAccountRow(element.type, 'blank')" />
+                                                    <Button label="Tổng cộng" size="small" severity="success" variant="outlined" @click="addKeyAccountRow(element.type, 'total')" />
+                                                    <Button label="Dòng chữ" size="small" severity="warn" variant="outlined" @click="addKeyAccountRow(element.type, 'in-words')" />
                                                 </template>
                                                 <Button
                                                     v-else
@@ -830,6 +858,226 @@ watch(
                                                                     size="small"
                                                                     variant="outlined"
                                                                     @click="addCamCaChildRow(element.type, row.renderKey, 'child-program-loop')"
+                                                                />
+                                                                <Button
+                                                                    label="Xóa dòng"
+                                                                    severity="danger"
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    @click="removeRow(element.type, row.renderKey)"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div v-if="getRowValidationMessages(rowIndex).length > 0" class="rounded-[0.9rem] border px-4 py-3" :style="{ borderColor: 'rgba(239, 68, 68, 0.36)', background: 'rgba(239, 68, 68, 0.08)' }">
+                                                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+                                                                Lỗi dòng {{ rowIndex + 1 }}
+                                                            </p>
+                                                            <ul class="mt-2 space-y-1 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                <li
+                                                                    v-for="message in getRowValidationMessages(rowIndex)"
+                                                                    :key="`${row.renderKey}-${message}`"
+                                                                >
+                                                                    {{ message }}
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+
+                                                    <div v-else-if="element.type === keyAccountSectionType" class="space-y-3">
+                                                        <div class="space-y-3">
+                                                            <div class="flex flex-col gap-3 xl:flex-row xl:items-start">
+                                                                <div class="flex items-center gap-2 xl:w-[16rem]">
+                                                                    <button
+                                                                        type="button"
+                                                                        class="template-row-handle inline-flex h-9 w-9 items-center justify-center rounded-full border text-sm"
+                                                                        :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                    >
+                                                                        ↕
+                                                                    </button>
+
+                                                                    <Tag
+                                                                        :value="row.rowType === 'value-row' ? 'Dữ liệu' : row.rowType === 'parent' ? 'Mục cha' : row.rowType === 'child-value' ? 'Mục con' : row.rowType === 'child-program-loop' ? 'Dòng CT' : row.rowType === 'total' ? 'Tổng cộng' : row.rowType === 'in-words' ? 'Dòng chữ' : 'Trống'"
+                                                                        :severity="row.rowType === 'parent' ? 'info' : row.rowType === 'child-value' || row.rowType === 'child-program-loop' ? 'secondary' : row.rowType === 'value-row' ? 'contrast' : row.rowType === 'total' ? 'success' : row.rowType === 'in-words' ? 'warn' : 'secondary'"
+                                                                        rounded
+                                                                    />
+
+                                                                    <div class="min-w-0">
+                                                                        <p class="text-sm" :class="row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal'" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                                            {{ row.numbering || '—' }} · Dòng {{ rowIndex + 1 }}
+                                                                        </p>
+                                                                        <p class="text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                                            {{ row.rowType === 'parent' ? 'Hiển thị số La Mã' : row.rowType === 'child-value' || row.rowType === 'child-program-loop' ? 'Hiển thị số nguyên' : 'Không đánh số' }}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div
+                                                                    v-if="row.rowType === 'parent'"
+                                                                    class="min-w-0 flex-1 flex-col gap-3 xl:flex xl:flex-row xl:items-start"
+                                                                >
+                                                                    <div class="min-w-0 flex-1">
+                                                                        <InputText
+                                                                            v-model="row.content"
+                                                                            fluid
+                                                                            :disabled="!isFilteredView || !canManageTemplates"
+                                                                            :pt="{ root: { class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal' } }"
+                                                                            placeholder="Nhập tên dòng sẽ hiển thị trong bảng email"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div class="min-w-0 xl:w-[22rem]">
+                                                                        <Select
+                                                                            :model-value="row.columnKey ?? null"
+                                                                            :options="keyAccountBindingOptions"
+                                                                            option-label="label"
+                                                                            option-value="key"
+                                                                            filter
+                                                                            show-clear
+                                                                            fluid
+                                                                            :disabled="!isFilteredView || !canManageTemplates"
+                                                                            placeholder="Chọn key dữ liệu Key Account"
+                                                                            @update:model-value="updateKeyAccountColumnKey(element.type, row.renderKey, $event)"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div class="min-w-0 xl:w-[14rem]">
+                                                                        <Select
+                                                                            :model-value="row.valueColumn ?? null"
+                                                                            :options="keyAccountValueColumnOptions"
+                                                                            option-label="label"
+                                                                            option-value="value"
+                                                                            fluid
+                                                                            :disabled="!isFilteredView || !canManageTemplates"
+                                                                            placeholder="Chọn cột hiển thị"
+                                                                            @update:model-value="updateKeyAccountValueColumn(element.type, row.renderKey, $event)"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div
+                                                                    v-else
+                                                                    class="min-w-0 flex-1 flex-col gap-3 xl:flex xl:flex-row xl:items-start"
+                                                                >
+                                                                    <div class="min-w-0 flex-1">
+                                                                        <template v-if="row.rowType === 'child-program-loop'">
+                                                                            <div
+                                                                                class="rounded-[0.85rem] border px-4 py-2.5 text-sm leading-6"
+                                                                                :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                            >
+                                                                                Lặp qua các CT có dữ liệu thật từ <code>programItems[]</code>. Preview sẽ render đủ `Nội dung | SL | đ/kg | Thành tiền` khi cụm CT có dữ liệu.
+                                                                            </div>
+                                                                        </template>
+                                                                        <template v-else-if="row.rowType === 'blank'">
+                                                                            <div
+                                                                                class="rounded-[0.85rem] border px-4 py-2.5 text-sm leading-6"
+                                                                                :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
+                                                                            >
+                                                                                Dòng trống để tạo khoảng cách giữa các block của bảng Key Account.
+                                                                            </div>
+                                                                        </template>
+                                                                        <template v-else>
+                                                                            <InputText
+                                                                                v-model="row.content"
+                                                                                fluid
+                                                                                :disabled="!isFilteredView || !canManageTemplates"
+                                                                                :pt="{ root: { class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal' } }"
+                                                                                :placeholder="row.rowType === 'total' ? 'Nhập label tổng, ví dụ: Cộng' : row.rowType === 'in-words' ? 'Nhập label dòng chữ, ví dụ: Bằng chữ:' : 'Nhập tên dòng sẽ hiển thị trong bảng email'"
+                                                                            />
+                                                                        </template>
+                                                                    </div>
+
+                                                                    <div
+                                                                        v-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
+                                                                        class="min-w-0 xl:w-[22rem]"
+                                                                    >
+                                                                        <Select
+                                                                            :model-value="row.columnKey ?? null"
+                                                                            :options="keyAccountBindingOptions"
+                                                                            option-label="label"
+                                                                            option-value="key"
+                                                                            filter
+                                                                            show-clear
+                                                                            fluid
+                                                                            :disabled="!isFilteredView || !canManageTemplates"
+                                                                            placeholder="Chọn key dữ liệu Key Account"
+                                                                            @update:model-value="updateKeyAccountColumnKey(element.type, row.renderKey, $event)"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div
+                                                                        v-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
+                                                                        class="min-w-0 xl:w-[14rem]"
+                                                                    >
+                                                                        <Select
+                                                                            :model-value="row.valueColumn ?? null"
+                                                                            :options="keyAccountValueColumnOptions"
+                                                                            option-label="label"
+                                                                            option-value="value"
+                                                                            fluid
+                                                                            :disabled="!isFilteredView || !canManageTemplates"
+                                                                            placeholder="Chọn cột hiển thị"
+                                                                            @update:model-value="updateKeyAccountValueColumn(element.type, row.renderKey, $event)"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap items-center gap-2 xl:justify-end">
+                                                                        <Button
+                                                                            v-if="row.rowType !== 'child-program-loop' && row.rowType !== 'blank'"
+                                                                            :label="row.isBold ? 'B đậm' : 'B thường'"
+                                                                            size="small"
+                                                                            :severity="row.isBold ? 'info' : 'secondary'"
+                                                                            variant="outlined"
+                                                                            @click="toggleKeyAccountRowBold(element.type, row.renderKey)"
+                                                                        />
+                                                                        <Button
+                                                                            v-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
+                                                                            :label="row.hideWhenValueZero ? 'Ẩn khi = 0 hoặc rỗng' : 'Hiện cả = 0 hoặc rỗng'"
+                                                                            size="small"
+                                                                            :severity="row.hideWhenValueZero ? 'warn' : 'secondary'"
+                                                                            variant="outlined"
+                                                                            @click="toggleKeyAccountHideWhenZero(element.type, row.renderKey)"
+                                                                        />
+                                                                        <Button
+                                                                            label="Xóa dòng"
+                                                                            severity="danger"
+                                                                            variant="outlined"
+                                                                            size="small"
+                                                                            @click="removeRow(element.type, row.renderKey)"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div
+                                                                v-if="row.rowType === 'parent' && canManageTemplates && isFilteredView"
+                                                                class="flex flex-wrap items-center gap-2 xl:justify-end"
+                                                            >
+                                                                <Button
+                                                                    :label="row.isBold ? 'B đậm' : 'B thường'"
+                                                                    size="small"
+                                                                    :severity="row.isBold ? 'info' : 'secondary'"
+                                                                    variant="outlined"
+                                                                    @click="toggleKeyAccountRowBold(element.type, row.renderKey)"
+                                                                />
+                                                                <Button
+                                                                    :label="row.hideWhenValueZero ? 'Ẩn khi = 0 hoặc rỗng' : 'Hiện cả = 0 hoặc rỗng'"
+                                                                    size="small"
+                                                                    :severity="row.hideWhenValueZero ? 'warn' : 'secondary'"
+                                                                    variant="outlined"
+                                                                    @click="toggleKeyAccountHideWhenZero(element.type, row.renderKey)"
+                                                                />
+                                                                <Button
+                                                                    label="+ Mục con"
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    @click="addKeyAccountChildRow(element.type, row.renderKey, 'child-value')"
+                                                                />
+                                                                <Button
+                                                                    label="+ Dòng CT"
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    @click="addKeyAccountChildRow(element.type, row.renderKey, 'child-program-loop')"
                                                                 />
                                                                 <Button
                                                                     label="Xóa dòng"

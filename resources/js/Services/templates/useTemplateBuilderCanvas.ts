@@ -12,12 +12,17 @@ export type TemplateSectionDefinition = {
 export type TongHopRowType = 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
 export type KhoanNppRowType = 'program-loop' | 'blank' | 'total' | 'in-words';
 export type CamCaRowType = 'value-row' | 'parent' | 'child-value' | 'child-program-loop' | 'blank' | 'total' | 'in-words';
-export type TemplateTableRowType = TongHopRowType | KhoanNppRowType | CamCaRowType;
+export type KeyAccountRowType = 'value-row' | 'parent' | 'child-value' | 'child-program-loop' | 'blank' | 'total' | 'in-words';
+export type TemplateTableRowType = TongHopRowType | KhoanNppRowType | CamCaRowType | KeyAccountRowType;
 
 export type TongHopBindingOption = {
     key: string;
     label: string;
     valuePreview: string;
+    quantityPreview?: string;
+    supportRatePreview?: string;
+    amountPreview?: string;
+    defaultValueColumn?: 'quantity' | 'supportRate' | 'amount';
 };
 
 export type BuilderRow = {
@@ -25,6 +30,7 @@ export type BuilderRow = {
     indentLevel?: number;
     rowType?: TemplateTableRowType;
     columnKey?: string | null;
+    valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
     hideWhenValueZero?: boolean;
     isBold?: boolean;
 };
@@ -64,6 +70,7 @@ type RenderableBuilderSection = Omit<BuilderSection, 'rows'> & {
 const TONG_HOP_SECTION_TYPE = 'tong-hop-table';
 const KHOAN_NPP_SECTION_TYPE = 'khoan-npp-table';
 const CAM_CA_SECTION_TYPE = 'cam-ca-table';
+const KEY_ACCOUNT_SECTION_TYPE = 'key-account-table';
 
 function toRoman(number: number): string {
     const map: Array<[number, string]> = [
@@ -225,6 +232,46 @@ function buildCamCaRows(sectionType: string, rows: BuilderRow[]): RenderableBuil
     });
 }
 
+function buildKeyAccountRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
+    let parentCounter = 0;
+    let childCounter = 0;
+
+    return rows.map((row, rowIndex) => {
+        const rowType: KeyAccountRowType = (row.rowType as KeyAccountRowType | undefined) ?? 'blank';
+        const defaultBold = rowType === 'parent' || rowType === 'total';
+        const isBold = row.isBold ?? defaultBold;
+        const usesColumnKey = ['value-row', 'parent', 'child-value'].includes(rowType);
+
+        let numbering = '';
+        let styleRole: 'parent' | 'child' | 'neutral' = 'neutral';
+
+        if (rowType === 'parent') {
+            parentCounter += 1;
+            childCounter = 0;
+            numbering = toRoman(parentCounter);
+            styleRole = 'parent';
+        } else if (rowType === 'child-value' || rowType === 'child-program-loop') {
+            childCounter += 1;
+            numbering = String(childCounter);
+            styleRole = 'child';
+        }
+
+        return {
+            ...row,
+            indentLevel: rowType === 'child-value' || rowType === 'child-program-loop' ? 1 : 0,
+            rowType,
+            columnKey: usesColumnKey ? (row.columnKey ?? null) : null,
+            valueColumn: usesColumnKey ? (row.valueColumn ?? null) : null,
+            hideWhenValueZero: row.hideWhenValueZero ?? false,
+            isBold,
+            numbering,
+            styleRole,
+            fontWeight: isBold ? 'bold' : 'regular',
+            renderKey: `${sectionType}-row-${rowIndex}`,
+        };
+    });
+}
+
 function buildNumberedRows(sectionType: string, rows: BuilderRow[]): RenderableBuilderRow[] {
     if (sectionType === TONG_HOP_SECTION_TYPE) {
         return buildTongHopRows(sectionType, rows);
@@ -236,6 +283,10 @@ function buildNumberedRows(sectionType: string, rows: BuilderRow[]): RenderableB
 
     if (sectionType === CAM_CA_SECTION_TYPE) {
         return buildCamCaRows(sectionType, rows);
+    }
+
+    if (sectionType === KEY_ACCOUNT_SECTION_TYPE) {
+        return buildKeyAccountRows(sectionType, rows);
     }
 
     return buildLegacyRows(sectionType, rows);
@@ -252,11 +303,12 @@ function buildRenderableSection(section: BuilderSection, index: number): Rendera
 function serializeRows(sectionType: string, rows: RenderableBuilderRow[]): BuilderRow[] {
     return rows.map((row) => ({
         content: row.content,
-        indentLevel: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE ? undefined : (row.indentLevel ?? 0),
-        rowType: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE ? (row.rowType ?? 'blank') : undefined,
-        columnKey: sectionType === TONG_HOP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE ? (row.columnKey ?? null) : undefined,
-        hideWhenValueZero: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE ? (row.hideWhenValueZero ?? false) : undefined,
-        isBold: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE ? row.isBold ?? false : undefined,
+        indentLevel: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE || sectionType === KEY_ACCOUNT_SECTION_TYPE ? undefined : (row.indentLevel ?? 0),
+        rowType: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE || sectionType === KEY_ACCOUNT_SECTION_TYPE ? (row.rowType ?? 'blank') : undefined,
+        columnKey: sectionType === TONG_HOP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE || sectionType === KEY_ACCOUNT_SECTION_TYPE ? (row.columnKey ?? null) : undefined,
+        valueColumn: sectionType === KEY_ACCOUNT_SECTION_TYPE ? (row.valueColumn ?? null) : undefined,
+        hideWhenValueZero: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE || sectionType === KEY_ACCOUNT_SECTION_TYPE ? (row.hideWhenValueZero ?? false) : undefined,
+        isBold: sectionType === TONG_HOP_SECTION_TYPE || sectionType === KHOAN_NPP_SECTION_TYPE || sectionType === CAM_CA_SECTION_TYPE || sectionType === KEY_ACCOUNT_SECTION_TYPE ? row.isBold ?? false : undefined,
     }));
 }
 
@@ -289,10 +341,22 @@ function buildCamCaDraftRow(rowType: CamCaRowType): BuilderRow {
     };
 }
 
+function buildKeyAccountDraftRow(rowType: KeyAccountRowType): BuilderRow {
+    return {
+        content: rowType === 'total' ? 'Cộng' : rowType === 'in-words' ? 'Bằng chữ:' : '',
+        rowType,
+        columnKey: ['value-row', 'parent', 'child-value'].includes(rowType) ? null : undefined,
+        valueColumn: ['value-row', 'parent', 'child-value'].includes(rowType) ? null : undefined,
+        hideWhenValueZero: ['value-row', 'parent', 'child-value'].includes(rowType),
+        isBold: rowType === 'parent' || rowType === 'total',
+    };
+}
+
 export function useTemplateBuilderCanvas(
     template: () => BuilderTemplate | null,
     canManageTemplates: () => boolean,
     sectionCatalog: () => TemplateSectionDefinition[],
+    keyAccountBindingOptions: () => TongHopBindingOption[],
 ) {
     const sectionDraft = ref<RenderableBuilderSection[]>([]);
     const saveValidationErrors = ref<Record<string, string>>({});
@@ -527,6 +591,25 @@ export function useTemplateBuilderCanvas(
         ]);
     };
 
+    const addKeyAccountRow = (sectionType: string, rowType: KeyAccountRowType): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KEY_ACCOUNT_SECTION_TYPE) {
+            return;
+        }
+
+        const rows = serializeRows(section.type, section.rows ?? []);
+
+        if (rowType === 'child-program-loop' && rows.some((row) => row.rowType === 'child-program-loop')) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(section.type, [
+            ...rows,
+            buildKeyAccountDraftRow(rowType),
+        ]);
+    };
+
     const addTongHopChildRow = (sectionType: string, parentRowKey: string): void => {
         const section = findSection(sectionType);
 
@@ -576,6 +659,34 @@ export function useTemplateBuilderCanvas(
         }
 
         rows.splice(insertIndex, 0, buildCamCaDraftRow(rowType));
+        section.rows = buildNumberedRows(section.type, rows);
+    };
+
+    const addKeyAccountChildRow = (sectionType: string, parentRowKey: string, rowType: 'child-value' | 'child-program-loop'): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KEY_ACCOUNT_SECTION_TYPE) {
+            return;
+        }
+
+        const rows = serializeRows(section.type, section.rows ?? []);
+        const parentIndex = section.rows.findIndex((row) => row.renderKey === parentRowKey);
+
+        if (parentIndex === -1) {
+            return;
+        }
+
+        if (rowType === 'child-program-loop' && rows.some((row) => row.rowType === 'child-program-loop')) {
+            return;
+        }
+
+        let insertIndex = parentIndex + 1;
+
+        while (insertIndex < rows.length && ['child-value', 'child-program-loop'].includes((rows[insertIndex]?.rowType as string) ?? '')) {
+            insertIndex += 1;
+        }
+
+        rows.splice(insertIndex, 0, buildKeyAccountDraftRow(rowType));
         section.rows = buildNumberedRows(section.type, rows);
     };
 
@@ -633,6 +744,24 @@ export function useTemplateBuilderCanvas(
         );
     };
 
+    const toggleKeyAccountRowBold = (sectionType: string, rowKey: string): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KEY_ACCOUNT_SECTION_TYPE) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(
+            section.type,
+            serializeRows(section.type, section.rows).map((row, index) => ({
+                ...row,
+                isBold: section.rows[index]?.renderKey === rowKey
+                    ? !(row.isBold ?? false)
+                    : (row.isBold ?? false),
+            })),
+        );
+    };
+
     const toggleTongHopHideWhenZero = (sectionType: string, rowKey: string): void => {
         const section = findSection(sectionType);
 
@@ -655,6 +784,24 @@ export function useTemplateBuilderCanvas(
         const section = findSection(sectionType);
 
         if (!section || section.type !== CAM_CA_SECTION_TYPE) {
+            return;
+        }
+
+        section.rows = buildNumberedRows(
+            section.type,
+            serializeRows(section.type, section.rows).map((row, index) => ({
+                ...row,
+                hideWhenValueZero: section.rows[index]?.renderKey === rowKey
+                    ? !(row.hideWhenValueZero ?? false)
+                    : (row.hideWhenValueZero ?? false),
+            })),
+        );
+    };
+
+    const toggleKeyAccountHideWhenZero = (sectionType: string, rowKey: string): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KEY_ACCOUNT_SECTION_TYPE) {
             return;
         }
 
@@ -699,6 +846,46 @@ export function useTemplateBuilderCanvas(
         }
 
         row.columnKey = columnKey;
+    };
+
+    const updateKeyAccountColumnKey = (sectionType: string, rowKey: string, columnKey: string | null): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KEY_ACCOUNT_SECTION_TYPE) {
+            return;
+        }
+
+        const row = section.rows.find((item) => item.renderKey === rowKey);
+
+        if (!row) {
+            return;
+        }
+
+        row.columnKey = columnKey;
+
+        const selectedOption = keyAccountBindingOptions().find((option) => option.key === columnKey);
+
+        row.valueColumn = selectedOption?.defaultValueColumn ?? null;
+    };
+
+    const updateKeyAccountValueColumn = (
+        sectionType: string,
+        rowKey: string,
+        valueColumn: 'quantity' | 'supportRate' | 'amount' | null,
+    ): void => {
+        const section = findSection(sectionType);
+
+        if (!section || section.type !== KEY_ACCOUNT_SECTION_TYPE) {
+            return;
+        }
+
+        const row = section.rows.find((item) => item.renderKey === rowKey);
+
+        if (!row) {
+            return;
+        }
+
+        row.valueColumn = valueColumn;
     };
 
     const saveCanvasComposition = (): void => {
@@ -830,15 +1017,21 @@ export function useTemplateBuilderCanvas(
         addTongHopRow,
         addKhoanNppRow,
         addCamCaRow,
+        addKeyAccountRow,
         addTongHopChildRow,
         addCamCaChildRow,
+        addKeyAccountChildRow,
         toggleTongHopRowBold,
         toggleKhoanNppRowBold,
         toggleCamCaRowBold,
+        toggleKeyAccountRowBold,
         toggleTongHopHideWhenZero,
         toggleCamCaHideWhenZero,
+        toggleKeyAccountHideWhenZero,
         updateTongHopColumnKey,
         updateCamCaColumnKey,
+        updateKeyAccountColumnKey,
+        updateKeyAccountValueColumn,
         saveStructure,
         saveCanvasComposition,
         savePart,
@@ -851,5 +1044,6 @@ export function useTemplateBuilderCanvas(
         tongHopSectionType: TONG_HOP_SECTION_TYPE,
         khoanNppSectionType: KHOAN_NPP_SECTION_TYPE,
         camCaSectionType: CAM_CA_SECTION_TYPE,
+        keyAccountSectionType: KEY_ACCOUNT_SECTION_TYPE,
     };
 }

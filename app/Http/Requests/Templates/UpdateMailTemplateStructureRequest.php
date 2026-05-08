@@ -48,6 +48,7 @@ class UpdateMailTemplateStructureRequest extends FormRequest
             'sections.*.rows.*.indentLevel' => ['nullable', 'integer'],
             'sections.*.rows.*.rowType' => ['nullable', 'string', Rule::in(['blank', 'parent', 'child', 'data', 'total', 'text', 'program-loop', 'in-words', 'value-row', 'child-value', 'child-program-loop'])],
             'sections.*.rows.*.columnKey' => ['nullable', 'string', 'max:5000'],
+            'sections.*.rows.*.valueColumn' => ['nullable', 'string', Rule::in(['quantity', 'supportRate', 'amount'])],
             'sections.*.rows.*.hideWhenValueZero' => ['nullable', 'boolean'],
             'sections.*.rows.*.isBold' => ['nullable', 'boolean'],
         ];

@@ -35,6 +35,7 @@ class UpdateMailTemplateStructureService
                                     'indentLevel' => max(0, min(4, (int) ($row['indentLevel'] ?? 0))),
                                     'rowType' => $row['rowType'] ?? null,
                                     'columnKey' => $row['columnKey'] ?? null,
+                                    'valueColumn' => $row['valueColumn'] ?? null,
                                     'hideWhenValueZero' => (bool) ($row['hideWhenValueZero'] ?? false),
                                     'isBold' => array_key_exists('isBold', $row)
                                         ? (bool) $row['isBold']

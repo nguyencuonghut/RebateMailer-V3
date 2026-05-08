@@ -26,6 +26,7 @@ class TemplatePageController extends Controller
                 $request->integer('tong_hop_preview_record') ?: null,
                 $request->integer('khoan_npp_preview_record') ?: null,
                 $request->integer('cam_ca_preview_record') ?: null,
+                $request->integer('key_account_preview_record') ?: null,
             ),
         );
     }

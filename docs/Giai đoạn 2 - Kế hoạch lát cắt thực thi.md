@@ -601,6 +601,11 @@
 - **Kết quả demo:** khách `Key Account` render đúng bảng `STT | Nội dung | Sản lượng | Mức hỗ trợ | Tổng`.
 - **Acceptance criteria:**
   - section này chỉ dùng dữ liệu từ `Key Account`
+  - `Table rows` hỗ trợ cả:
+    - dòng bind vào tên cột thật của sheet `Key Account`
+    - dòng lặp từ các cụm `Nội dung CT i | SL | đ/kg | Thành tiền`
+  - preview cho phép chọn khách từ danh sách aggregated records đã xử lý
+  - dropdown chọn khách search được theo `Mã & tên khách hàng`
   - preview phản ánh đúng hierarchy và numbering của builder
   - preview không lấy nhầm dữ liệu từ `Khách thường`
 

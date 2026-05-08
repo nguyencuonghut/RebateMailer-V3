@@ -35,7 +35,7 @@ class TemplatesPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
                 ->where('title', 'Thiết kế mẫu email')
-                ->where('currentSlice.code', '2.3-F')
+                ->where('currentSlice.code', '2.3-G')
                 ->where('canManageTemplates', true)
                 ->has('writeCapabilities', 4)
                 ->where('writeCapabilities.0', 'Tạo template mới')
@@ -69,7 +69,7 @@ class TemplatesPageTest extends TestCase
                 ->where('templateParts.5.type', 'key-account-table')
                 ->where('templateList', [])
                 ->where('activeTemplateId', null)
-                ->where('nextSlice.code', '2.3-G')
+                ->where('nextSlice.code', '2.3-H')
             );
     }
 
@@ -753,6 +753,228 @@ class TemplatesPageTest extends TestCase
                 ->where('camCaBindingOptions.0.key', 'Tổng sản lượng')
                 ->where('camCaBindingOptions.0.valuePreview', '555')
                 ->has('camCaPreviewCustomers', 2)
+            );
+    }
+
+    public function test_templates_page_can_render_key_account_table_preview_from_real_aggregate_payload(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template preview Key Account',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-G',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'key-account-table',
+                        'label' => 'Table Chiết khấu Key Account',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Key Account',
+                        'rows' => [
+                            ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'valueColumn' => 'quantity', 'isBold' => false],
+                            ['content' => 'Chiết khấu theo hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Chiết khấu theo hóa đơn', 'valueColumn' => 'amount', 'isBold' => true],
+                            ['content' => '', 'rowType' => 'child-program-loop', 'isBold' => false],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'isBold' => true],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-KEY-ACCOUNT-PREVIEW',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Key Account' => [
+                        'fixedHeaders' => [
+                            'STT', 'Tháng', 'Mã số', 'Mã & tên khách hàng', 'Email', 'Địa chỉ', 'Thức ăn chăn nuôi',
+                            'Tổng sản lượng', 'Doanh thu', 'Chiết khấu theo hóa đơn', 'Tổng cộng', 'Bằng chữ',
+                        ],
+                        'discreteHeaders' => [
+                            'Thưởng doanh thu tháng 02.2026',
+                            'Hỗ trợ vận chuyển cám SILO',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $firstRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '11008',
+            'customer_type' => 'Key Account',
+            'source_sheets' => ['Key Account'],
+            'aggregated_payload' => [
+                'customerCode' => '11008',
+                'customerFullName' => '11008 - Siêu thị Key Account A',
+                'customerType' => 'Key Account',
+                'sourceSheets' => ['Key Account'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => [
+                    'month' => '02.2026',
+                    'customerCode' => '11008',
+                    'customerFullName' => '11008 - Siêu thị Key Account A',
+                    'address' => 'Địa chỉ A',
+                    'feedCategory' => 'Feed A',
+                    'totalQuantity' => '29135',
+                    'revenue' => '392236675',
+                    'invoiceDiscount' => '42925867',
+                    'grandTotal' => '147061500',
+                    'totalInWords' => 'Một trăm bốn mươi bảy triệu không trăm sáu mươi mốt nghìn năm trăm đồng chẵn.',
+                    'programItems' => [
+                        ['programIndex' => 1, 'content' => 'Chiết khấu tháng sản phẩm cám heo: 380đ/kg', 'quantity' => '28975', 'supportRate' => '380', 'amount' => '11010500'],
+                        ['programIndex' => 2, 'content' => 'Hỗ trợ đặc biệt sản phẩm T1120', 'quantity' => '', 'supportRate' => '1270', 'amount' => ''],
+                    ],
+                    'discreteItems' => [
+                        ['label' => 'Thưởng doanh thu tháng 02.2026', 'value' => '3922367'],
+                        ['label' => 'Hỗ trợ vận chuyển cám SILO', 'value' => '12645000'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('builderTemplate.id', $template->id)
+                ->where('selectedKeyAccountPreviewRecordId', $firstRecord->id)
+                ->where('keyAccountTablePreview.sample.recordId', $firstRecord->id)
+                ->where('keyAccountTablePreview.sample.customerCode', '11008')
+                ->where('keyAccountTablePreview.title', 'Chiết khấu Key Account tháng 02.2026')
+                ->where('keyAccountTablePreview.rows.0.quantity', '29135')
+                ->where('keyAccountTablePreview.rows.1.numbering', 'I')
+                ->where('keyAccountTablePreview.rows.1.amount', '42925867')
+                ->where('keyAccountTablePreview.rows.2.numbering', '1')
+                ->where('keyAccountTablePreview.rows.2.supportRate', '380')
+                ->where('keyAccountTablePreview.rows.3.numbering', '2')
+                ->where('keyAccountTablePreview.rows.3.supportRate', '1270')
+                ->where('keyAccountTablePreview.rows.4.amount', '147061500')
+                ->where('keyAccountBindingOptions.0.key', 'Tổng sản lượng')
+                ->where('keyAccountBindingOptions.0.defaultValueColumn', 'quantity')
+                ->has('keyAccountPreviewCustomers', 1)
+            );
+    }
+
+    public function test_templates_page_can_switch_key_account_preview_to_selected_customer_record(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template switch Key Account',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-G',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'key-account-table',
+                        'label' => 'Table Chiết khấu Key Account',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Key Account',
+                        'rows' => [
+                            ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'valueColumn' => 'quantity', 'isBold' => false],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'isBold' => true],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-KEY-ACCOUNT-SWITCH',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Key Account' => [
+                        'fixedHeaders' => ['Tổng sản lượng', 'Doanh thu', 'Chiết khấu theo hóa đơn', 'Tổng cộng', 'Bằng chữ'],
+                        'discreteHeaders' => ['Thưởng doanh thu tháng 02.2026'],
+                    ],
+                ],
+            ],
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '11008',
+            'customer_type' => 'Key Account',
+            'source_sheets' => ['Key Account'],
+            'aggregated_payload' => [
+                'customerCode' => '11008',
+                'customerFullName' => 'Khách A',
+                'customerType' => 'Key Account',
+                'sourceSheets' => ['Key Account'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => [
+                    'month' => '02.2026',
+                    'totalQuantity' => '111',
+                    'grandTotal' => '222',
+                    'totalInWords' => 'Hai trăm hai mươi hai đồng.',
+                    'programItems' => [],
+                    'discreteItems' => [],
+                ],
+            ],
+        ]);
+
+        $selectedRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '14799',
+            'customer_type' => 'Key Account',
+            'source_sheets' => ['Key Account'],
+            'aggregated_payload' => [
+                'customerCode' => '14799',
+                'customerFullName' => 'Khách B',
+                'customerType' => 'Key Account',
+                'sourceSheets' => ['Key Account'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => [
+                    'month' => '03.2026',
+                    'totalQuantity' => '555',
+                    'grandTotal' => '777',
+                    'totalInWords' => 'Bảy trăm bảy mươi bảy đồng.',
+                    'programItems' => [],
+                    'discreteItems' => [],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index', ['key_account_preview_record' => $selectedRecord->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedKeyAccountPreviewRecordId', $selectedRecord->id)
+                ->where('keyAccountTablePreview.sample.recordId', $selectedRecord->id)
+                ->where('keyAccountTablePreview.sample.customerCode', '14799')
+                ->where('keyAccountTablePreview.sample.customerFullName', 'Khách B')
+                ->where('keyAccountTablePreview.title', 'Chiết khấu Key Account tháng 03.2026')
+                ->where('keyAccountTablePreview.rows.0.quantity', '555')
+                ->where('keyAccountTablePreview.rows.1.amount', '777')
+                ->where('keyAccountBindingOptions.0.key', 'Tổng sản lượng')
+                ->where('keyAccountBindingOptions.0.quantityPreview', '555')
+                ->has('keyAccountPreviewCustomers', 2)
             );
     }
 

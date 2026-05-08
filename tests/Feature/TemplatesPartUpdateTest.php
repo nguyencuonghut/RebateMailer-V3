@@ -255,4 +255,59 @@ class TemplatesPartUpdateTest extends TestCase
         $this->assertSame('child-value', $mailTemplate->structure_json['sections'][2]['rows'][2]['rowType']);
         $this->assertSame('child-program-loop', $mailTemplate->structure_json['sections'][2]['rows'][3]['rowType']);
     }
+
+    public function test_user_with_manage_permission_can_persist_key_account_semantic_rows_through_part_route(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template Key Account',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.3-G',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                    ['type' => 'key-account-table', 'label' => 'Table Chiết khấu Key Account', 'kind' => 'table', 'sourceSheet' => 'Key Account', 'rows' => []],
+                ],
+            ],
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncMailTemplate($mailTemplate);
+
+        $this->actingAs($user)
+            ->put(route('templates.parts.update', $mailTemplate), [
+                'partType' => 'key-account-table',
+                'section' => [
+                    'type' => 'key-account-table',
+                    'label' => 'Table Chiết khấu Key Account',
+                    'description' => 'Lấy dữ liệu từ sheet Key Account.',
+                    'kind' => 'table',
+                    'sourceSheet' => 'Key Account',
+                    'rows' => [
+                        ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'valueColumn' => 'quantity', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ['content' => 'Chiết khấu theo hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Chiết khấu theo hóa đơn', 'valueColumn' => 'amount', 'hideWhenValueZero' => true, 'isBold' => true],
+                        ['content' => 'Thưởng doanh thu tháng', 'rowType' => 'child-value', 'columnKey' => 'Thưởng doanh thu tháng 02.2026', 'valueColumn' => 'amount', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ['content' => '', 'rowType' => 'child-program-loop', 'hideWhenValueZero' => false, 'isBold' => false],
+                        ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => false, 'isBold' => true],
+                        ['content' => 'Bằng chữ:', 'rowType' => 'in-words', 'hideWhenValueZero' => false, 'isBold' => false],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('templates.index'));
+
+        $mailTemplate->refresh();
+
+        $this->assertSame('key-account-table', $mailTemplate->structure_json['sections'][2]['type']);
+        $this->assertCount(6, $mailTemplate->structure_json['sections'][2]['rows']);
+        $this->assertSame('value-row', $mailTemplate->structure_json['sections'][2]['rows'][0]['rowType']);
+        $this->assertSame('quantity', $mailTemplate->structure_json['sections'][2]['rows'][0]['valueColumn']);
+        $this->assertTrue($mailTemplate->structure_json['sections'][2]['rows'][0]['hideWhenValueZero']);
+        $this->assertSame('parent', $mailTemplate->structure_json['sections'][2]['rows'][1]['rowType']);
+        $this->assertSame('amount', $mailTemplate->structure_json['sections'][2]['rows'][1]['valueColumn']);
+        $this->assertTrue($mailTemplate->structure_json['sections'][2]['rows'][1]['hideWhenValueZero']);
+        $this->assertSame('child-program-loop', $mailTemplate->structure_json['sections'][2]['rows'][3]['rowType']);
+    }
 }

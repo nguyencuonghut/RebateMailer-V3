@@ -11,6 +11,7 @@ import TemplateGreetingPreviewCard from '@/Components/templates/TemplateGreeting
 import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTongHopTablePreviewCard.vue';
 import TemplateKhoanNppTablePreviewCard from '@/Components/templates/TemplateKhoanNppTablePreviewCard.vue';
 import TemplateCamCaTablePreviewCard from '@/Components/templates/TemplateCamCaTablePreviewCard.vue';
+import TemplateKeyAccountTablePreviewCard from '@/Components/templates/TemplateKeyAccountTablePreviewCard.vue';
 import type { TemplateTableRowType } from '@/Services/templates/useTemplateBuilderCanvas';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
@@ -60,6 +61,7 @@ const props = defineProps<{
                     indentLevel?: number;
                     rowType?: TemplateTableRowType;
                     columnKey?: string | null;
+                    valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
                     hideWhenValueZero?: boolean;
                     isBold?: boolean;
                 }>;
@@ -276,6 +278,50 @@ const props = defineProps<{
         month: string;
     }>;
     selectedCamCaPreviewRecordId: number | null;
+    keyAccountTablePreview: {
+        title: string;
+        sourceSheet: string;
+        rows: Array<{
+            rowType: string;
+            numbering: string;
+            content: string;
+            quantity: string;
+            supportRate: string;
+            amount: string;
+            fontWeight: string;
+            styleRole: string;
+        }>;
+        errors: string[];
+        sample: {
+            recordId: number;
+            batchId: number;
+            batchCode: string;
+            customerCode: string;
+            customerFullName: string;
+            month: string;
+        };
+        sampleData: {
+            totalQuantity: string;
+            programItems: Array<{
+                programIndex?: number;
+                content?: string;
+                quantity?: string;
+                supportRate?: string;
+                amount?: string;
+            }>;
+            grandTotal: string;
+            totalInWords: string;
+        };
+    } | null;
+    keyAccountPreviewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedKeyAccountPreviewRecordId: number | null;
     tongHopBindingOptions: Array<{
         key: string;
         label: string;
@@ -285,6 +331,15 @@ const props = defineProps<{
         key: string;
         label: string;
         valuePreview: string;
+    }>;
+    keyAccountBindingOptions: Array<{
+        key: string;
+        label: string;
+        valuePreview: string;
+        quantityPreview?: string;
+        supportRatePreview?: string;
+        amountPreview?: string;
+        defaultValueColumn?: 'quantity' | 'supportRate' | 'amount';
     }>;
     templateParts: Array<{
         code: string;
@@ -320,6 +375,7 @@ const tongHopDraftSections = ref<Array<{
         indentLevel?: number;
         rowType?: TemplateTableRowType;
         columnKey?: string | null;
+        valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
         hideWhenValueZero?: boolean;
         isBold?: boolean;
         numbering: string;
@@ -339,6 +395,7 @@ const khoanNppDraftSections = ref<Array<{
         indentLevel?: number;
         rowType?: TemplateTableRowType;
         columnKey?: string | null;
+        valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
         hideWhenValueZero?: boolean;
         isBold?: boolean;
         numbering: string;
@@ -358,6 +415,27 @@ const camCaDraftSections = ref<Array<{
         indentLevel?: number;
         rowType?: TemplateTableRowType;
         columnKey?: string | null;
+        valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
+        hideWhenValueZero?: boolean;
+        isBold?: boolean;
+        numbering: string;
+        styleRole: 'parent' | 'child' | 'neutral';
+        fontWeight: 'bold' | 'regular';
+    }>;
+}>>([]);
+const keyAccountDraftSections = ref<Array<{
+    type: string;
+    label?: string;
+    description?: string;
+    kind?: 'text' | 'table';
+    sourceSheet?: string | null;
+    content?: string;
+    rows?: Array<{
+        content: string;
+        indentLevel?: number;
+        rowType?: TemplateTableRowType;
+        columnKey?: string | null;
+        valueColumn?: 'quantity' | 'supportRate' | 'amount' | null;
         hideWhenValueZero?: boolean;
         isBold?: boolean;
         numbering: string;
@@ -380,6 +458,9 @@ const khoanNppDraftSection = computed(() =>
 );
 const camCaDraftSection = computed(() =>
     camCaDraftSections.value.find((section) => section.type === 'cam-ca-table') ?? null,
+);
+const keyAccountDraftSection = computed(() =>
+    keyAccountDraftSections.value.find((section) => section.type === 'key-account-table') ?? null,
 );
 </script>
 
@@ -683,6 +764,7 @@ const camCaDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
+                                    :key-account-binding-options="keyAccountBindingOptions"
                                     :visible-section-types="['subject']"
                                 />
 
@@ -713,6 +795,7 @@ const camCaDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
+                                    :key-account-binding-options="keyAccountBindingOptions"
                                     :visible-section-types="['greeting']"
                                 />
 
@@ -743,6 +826,7 @@ const camCaDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
+                                    :key-account-binding-options="keyAccountBindingOptions"
                                     :visible-section-types="['tong-hop-table']"
                                     @draft-change="tongHopDraftSections = $event"
                                 />
@@ -771,6 +855,7 @@ const camCaDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
+                                    :key-account-binding-options="keyAccountBindingOptions"
                                     :visible-section-types="['khoan-npp-table']"
                                     @draft-change="khoanNppDraftSections = $event"
                                 />
@@ -798,6 +883,7 @@ const camCaDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
+                                    :key-account-binding-options="keyAccountBindingOptions"
                                     :visible-section-types="['cam-ca-table']"
                                     @draft-change="camCaDraftSections = $event"
                                 />
@@ -826,24 +912,18 @@ const camCaDraftSection = computed(() =>
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
+                                    :key-account-binding-options="keyAccountBindingOptions"
                                     :visible-section-types="['key-account-table']"
+                                    @draft-change="keyAccountDraftSections = $event"
                                 />
 
-                                <Card class="sakai-panel rounded-[2rem] border-0">
-                                    <template #content>
-                                        <div class="space-y-3">
-                                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                                Bảng chiết khấu Key Account
-                                            </p>
-                                            <h2 class="text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                Tab này sẽ nhận preview riêng cho dữ liệu `Key Account`
-                                            </h2>
-                                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                Tab này giờ đã có builder canvas riêng cho section Key Account. Phần preview dữ liệu thật sẽ được nối tiếp ở lát kế tiếp.
-                                            </p>
-                                        </div>
-                                    </template>
-                                </Card>
+                                <TemplateKeyAccountTablePreviewCard
+                                    :preview="keyAccountTablePreview"
+                                    :draft-section="keyAccountDraftSection"
+                                    :binding-options="keyAccountBindingOptions"
+                                    :preview-customers="keyAccountPreviewCustomers"
+                                    :selected-record-id="selectedKeyAccountPreviewRecordId"
+                                />
                             </div>
                         </TabPanel>
                     </TabPanels>
