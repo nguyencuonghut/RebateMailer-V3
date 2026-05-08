@@ -27,6 +27,8 @@ class TemplatePageService
      */
     public function getIndexPageData(
         bool $canManageTemplates,
+        ?int $selectedSubjectPreviewRecordId = null,
+        ?int $selectedGreetingPreviewRecordId = null,
         ?int $selectedTongHopPreviewRecordId = null,
         ?int $selectedKhoanNppPreviewRecordId = null,
     ): array
@@ -37,6 +39,8 @@ class TemplatePageService
         $selectedTemplate = $builderTemplate === null
             ? null
             : MailTemplate::query()->find($builderTemplate['id']);
+        $subjectPreview = $this->buildTemplateSubjectPreviewService->build($selectedTemplate, $selectedSubjectPreviewRecordId);
+        $greetingPreview = $this->buildTemplateGreetingPreviewService->build($selectedTemplate, $selectedGreetingPreviewRecordId);
         $tongHopPreview = $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate, $selectedTongHopPreviewRecordId);
         $khoanNppPreview = $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate, $selectedKhoanNppPreviewRecordId);
 
@@ -73,8 +77,12 @@ class TemplatePageService
             'builderTemplate' => $builderTemplate,
             'canvasComposition' => $this->buildMailTemplateCanvasCompositionService->build($selectedTemplate),
             'partVersionGroups' => $this->buildTemplatePartVersionOverviewService->build($selectedTemplate),
-            'subjectPreview' => $this->buildTemplateSubjectPreviewService->build($selectedTemplate),
-            'greetingPreview' => $this->buildTemplateGreetingPreviewService->build($selectedTemplate),
+            'subjectPreview' => $subjectPreview,
+            'subjectPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions(),
+            'selectedSubjectPreviewRecordId' => $subjectPreview['sample']['recordId'] ?? null,
+            'greetingPreview' => $greetingPreview,
+            'greetingPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions(),
+            'selectedGreetingPreviewRecordId' => $greetingPreview['sample']['recordId'] ?? null,
             'tongHopTablePreview' => $tongHopPreview,
             'tongHopPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('tongHop'),
             'selectedTongHopPreviewRecordId' => $tongHopPreview['sample']['recordId'] ?? null,

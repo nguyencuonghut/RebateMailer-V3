@@ -16,13 +16,13 @@ class BuildTemplateGreetingPreviewService
     /**
      * @return array<string, mixed>|null
      */
-    public function build(?MailTemplate $mailTemplate): ?array
+    public function build(?MailTemplate $mailTemplate, ?int $aggregatedRecordId = null): ?array
     {
         if (! $mailTemplate) {
             return null;
         }
 
-        $sample = $this->buildTemplatePreviewSampleService->build();
+        $sample = $this->buildTemplatePreviewSampleService->build(null, $aggregatedRecordId);
 
         if (! $sample) {
             return null;
@@ -36,6 +36,7 @@ class BuildTemplateGreetingPreviewService
             'renderedText' => $rendered['renderedText'],
             'errors' => $rendered['errors'],
             'sample' => [
+                'recordId' => $sample['recordId'],
                 'batchId' => $sample['batchId'],
                 'batchCode' => $sample['batchCode'],
                 'customerCode' => $sample['customerCode'],

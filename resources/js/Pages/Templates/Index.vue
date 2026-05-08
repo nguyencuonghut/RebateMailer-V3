@@ -118,6 +118,7 @@ const props = defineProps<{
         renderedText: string;
         errors: string[];
         sample: {
+            recordId: number;
             batchId: number;
             batchCode: string;
             customerCode: string;
@@ -125,11 +126,21 @@ const props = defineProps<{
             month: string;
         };
     } | null;
+    subjectPreviewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedSubjectPreviewRecordId: number | null;
     greetingPreview: {
         templateText: string;
         renderedText: string;
         errors: string[];
         sample: {
+            recordId: number;
             batchId: number;
             batchCode: string;
             customerCode: string;
@@ -139,6 +150,15 @@ const props = defineProps<{
             feedCategory: string;
         };
     } | null;
+    greetingPreviewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedGreetingPreviewRecordId: number | null;
     tongHopTablePreview: {
         title: string;
         sourceSheet: string;
@@ -603,7 +623,11 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                 />
 
-                                <TemplateSubjectPreviewCard :preview="subjectPreview" />
+                                <TemplateSubjectPreviewCard
+                                    :preview="subjectPreview"
+                                    :preview-customers="subjectPreviewCustomers"
+                                    :selected-record-id="selectedSubjectPreviewRecordId"
+                                />
                             </div>
                         </TabPanel>
 
@@ -628,7 +652,11 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                 />
 
-                                <TemplateGreetingPreviewCard :preview="greetingPreview" />
+                                <TemplateGreetingPreviewCard
+                                    :preview="greetingPreview"
+                                    :preview-customers="greetingPreviewCustomers"
+                                    :selected-record-id="selectedGreetingPreviewRecordId"
+                                />
                             </div>
                         </TabPanel>
 

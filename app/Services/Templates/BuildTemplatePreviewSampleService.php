@@ -41,7 +41,7 @@ class BuildTemplatePreviewSampleService
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function buildCustomerOptions(string $requiredSource): array
+    public function buildCustomerOptions(?string $requiredSource = null): array
     {
         return $this->eligibleRecords($requiredSource)
             ->map(function (ImportBatchAggregatedRecord $record): array {

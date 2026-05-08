@@ -269,16 +269,24 @@ class TemplatesPageTest extends TestCase
                 ->where('builderTemplate.structure.sections.0.type', 'subject')
                 ->where('builderTemplate.structure.sections.2.sourceSheet', 'Key Account')
                 ->where('builderTemplate.structure.sections.2.rows.0.indentLevel', 1)
+                ->where('selectedSubjectPreviewRecordId', $firstRecord->id)
                 ->where('subjectPreview.sample.batchCode', 'IMP-SUBJECT-PREVIEW')
+                ->where('subjectPreview.sample.recordId', $firstRecord->id)
                 ->where('subjectPreview.sample.customerCode', '11008')
                 ->where('subjectPreview.sample.month', '02.2026')
                 ->where('subjectPreview.renderedText', 'Chế độ tháng 02.2026 - Key Account 11008 - Siêu thị Key Account A')
                 ->where('subjectPreview.errors', [])
+                ->has('subjectPreviewCustomers', 1)
+                ->where('subjectPreviewCustomers.0.recordId', $firstRecord->id)
+                ->where('selectedGreetingPreviewRecordId', $firstRecord->id)
                 ->where('greetingPreview.sample.batchCode', 'IMP-SUBJECT-PREVIEW')
+                ->where('greetingPreview.sample.recordId', $firstRecord->id)
                 ->where('greetingPreview.sample.address', 'Địa chỉ mẫu')
                 ->where('greetingPreview.sample.feedCategory', 'Thức ăn mẫu')
                 ->where('greetingPreview.renderedText', "Kính gửi 11008 - Siêu thị Key Account A,\nĐịa chỉ: Địa chỉ mẫu\nNhóm thức ăn: Thức ăn mẫu")
                 ->where('greetingPreview.errors', [])
+                ->has('greetingPreviewCustomers', 1)
+                ->where('greetingPreviewCustomers.0.recordId', $firstRecord->id)
                 ->has('templateList', 2)
                 ->where('templateList.0.id', $activeTemplate->id)
                 ->where('templateList.0.name', 'Template đang hoạt động')
@@ -506,6 +514,95 @@ class TemplatesPageTest extends TestCase
                 ->where('tongHopBindingOptions.2.key', 'Mã số')
                 ->where('tongHopBindingOptions.2.valuePreview', '19220')
                 ->has('tongHopPreviewCustomers', 2)
+            );
+    }
+
+    public function test_templates_page_can_switch_subject_and_greeting_preview_to_selected_customer_record(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template preview text parts',
+            'subject_template' => 'Chế độ tháng {{tháng}} - {{mã & tên khách hàng}}',
+            'structure_json' => [
+                'version' => '2.3-C',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}} - {{mã & tên khách hàng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => "Kính gửi {{mã & tên khách hàng}},\nĐịa chỉ: {{địa chỉ}}"],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-TEXT-PREVIEW-SWITCH',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '11008',
+            'customer_type' => 'Key Account',
+            'source_sheets' => ['Key Account'],
+            'aggregated_payload' => [
+                'customerCode' => '11008',
+                'customerFullName' => '11008 - Siêu thị Key Account A',
+                'customerType' => 'Key Account',
+                'sourceSheets' => ['Key Account'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => [
+                    'month' => '02.2026',
+                    'address' => 'Địa chỉ A',
+                    'feedCategory' => 'Feed A',
+                ],
+            ],
+        ]);
+
+        $selectedRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '90302',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90302',
+                'customerFullName' => '90302 - Công ty C',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Tổng hợp'],
+                'tongHop' => [
+                    'month' => '03.2026',
+                    'address' => 'Địa chỉ C',
+                    'feedCategory' => 'Feed C',
+                ],
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index', [
+                'subject_preview_record' => $selectedRecord->id,
+                'greeting_preview_record' => $selectedRecord->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedSubjectPreviewRecordId', $selectedRecord->id)
+                ->where('subjectPreview.sample.recordId', $selectedRecord->id)
+                ->where('subjectPreview.sample.customerCode', '90302')
+                ->where('subjectPreview.renderedText', 'Chế độ tháng 03.2026 - 90302 - Công ty C')
+                ->where('selectedGreetingPreviewRecordId', $selectedRecord->id)
+                ->where('greetingPreview.sample.recordId', $selectedRecord->id)
+                ->where('greetingPreview.sample.address', 'Địa chỉ C')
+                ->where('greetingPreview.renderedText', "Kính gửi 90302 - Công ty C,\nĐịa chỉ: Địa chỉ C")
+                ->has('subjectPreviewCustomers', 2)
+                ->has('greetingPreviewCustomers', 2)
             );
     }
 
