@@ -827,6 +827,7 @@ watch(
                                                                         />
                                                                     </div>
                                                                 </div>
+
                                                             </div>
 
                                                             <div
@@ -956,6 +957,75 @@ watch(
                                                                 </div>
 
                                                                 <div
+                                                                    v-else-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
+                                                                    class="min-w-0 flex-1 space-y-3"
+                                                                >
+                                                                    <div class="min-w-0 grid gap-3 xl:grid-cols-[minmax(0,1fr)_22rem_14rem] xl:items-start">
+                                                                        <div class="min-w-0">
+                                                                            <InputText
+                                                                                v-model="row.content"
+                                                                                fluid
+                                                                                :disabled="!isFilteredView || !canManageTemplates"
+                                                                                :pt="{ root: { class: row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal' } }"
+                                                                                placeholder="Nhập tên dòng sẽ hiển thị trong bảng email"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div class="min-w-0">
+                                                                            <Select
+                                                                                :model-value="row.columnKey ?? null"
+                                                                                :options="keyAccountBindingOptions"
+                                                                                option-label="label"
+                                                                                option-value="key"
+                                                                                filter
+                                                                                show-clear
+                                                                                fluid
+                                                                                :disabled="!isFilteredView || !canManageTemplates"
+                                                                                placeholder="Chọn key dữ liệu Key Account"
+                                                                                @update:model-value="updateKeyAccountColumnKey(element.type, row.renderKey, $event)"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div class="min-w-0">
+                                                                            <Select
+                                                                                :model-value="row.valueColumn ?? null"
+                                                                                :options="keyAccountValueColumnOptions"
+                                                                                option-label="label"
+                                                                                option-value="value"
+                                                                                fluid
+                                                                                :disabled="!isFilteredView || !canManageTemplates"
+                                                                                placeholder="Chọn cột hiển thị"
+                                                                                @update:model-value="updateKeyAccountValueColumn(element.type, row.renderKey, $event)"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap items-center gap-2 xl:justify-end">
+                                                                        <Button
+                                                                            :label="row.isBold ? 'B đậm' : 'B thường'"
+                                                                            size="small"
+                                                                            :severity="row.isBold ? 'info' : 'secondary'"
+                                                                            variant="outlined"
+                                                                            @click="toggleKeyAccountRowBold(element.type, row.renderKey)"
+                                                                        />
+                                                                        <Button
+                                                                            :label="row.hideWhenValueZero ? 'Ẩn khi = 0 hoặc rỗng' : 'Hiện cả = 0 hoặc rỗng'"
+                                                                            size="small"
+                                                                            :severity="row.hideWhenValueZero ? 'warn' : 'secondary'"
+                                                                            variant="outlined"
+                                                                            @click="toggleKeyAccountHideWhenZero(element.type, row.renderKey)"
+                                                                        />
+                                                                        <Button
+                                                                            label="Xóa dòng"
+                                                                            severity="danger"
+                                                                            variant="outlined"
+                                                                            size="small"
+                                                                            @click="removeRow(element.type, row.renderKey)"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div
                                                                     v-else
                                                                     class="min-w-0 flex-1 flex-col gap-3 xl:flex xl:flex-row xl:items-start"
                                                                 >
@@ -987,40 +1057,6 @@ watch(
                                                                         </template>
                                                                     </div>
 
-                                                                    <div
-                                                                        v-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
-                                                                        class="min-w-0 xl:w-[22rem]"
-                                                                    >
-                                                                        <Select
-                                                                            :model-value="row.columnKey ?? null"
-                                                                            :options="keyAccountBindingOptions"
-                                                                            option-label="label"
-                                                                            option-value="key"
-                                                                            filter
-                                                                            show-clear
-                                                                            fluid
-                                                                            :disabled="!isFilteredView || !canManageTemplates"
-                                                                            placeholder="Chọn key dữ liệu Key Account"
-                                                                            @update:model-value="updateKeyAccountColumnKey(element.type, row.renderKey, $event)"
-                                                                        />
-                                                                    </div>
-
-                                                                    <div
-                                                                        v-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
-                                                                        class="min-w-0 xl:w-[14rem]"
-                                                                    >
-                                                                        <Select
-                                                                            :model-value="row.valueColumn ?? null"
-                                                                            :options="keyAccountValueColumnOptions"
-                                                                            option-label="label"
-                                                                            option-value="value"
-                                                                            fluid
-                                                                            :disabled="!isFilteredView || !canManageTemplates"
-                                                                            placeholder="Chọn cột hiển thị"
-                                                                            @update:model-value="updateKeyAccountValueColumn(element.type, row.renderKey, $event)"
-                                                                        />
-                                                                    </div>
-
                                                                     <div v-if="canManageTemplates && isFilteredView" class="flex flex-wrap items-center gap-2 xl:justify-end">
                                                                         <Button
                                                                             v-if="row.rowType !== 'child-program-loop' && row.rowType !== 'blank'"
@@ -1029,14 +1065,6 @@ watch(
                                                                             :severity="row.isBold ? 'info' : 'secondary'"
                                                                             variant="outlined"
                                                                             @click="toggleKeyAccountRowBold(element.type, row.renderKey)"
-                                                                        />
-                                                                        <Button
-                                                                            v-if="['value-row', 'child-value'].includes(row.rowType ?? '')"
-                                                                            :label="row.hideWhenValueZero ? 'Ẩn khi = 0 hoặc rỗng' : 'Hiện cả = 0 hoặc rỗng'"
-                                                                            size="small"
-                                                                            :severity="row.hideWhenValueZero ? 'warn' : 'secondary'"
-                                                                            variant="outlined"
-                                                                            @click="toggleKeyAccountHideWhenZero(element.type, row.renderKey)"
                                                                         />
                                                                         <Button
                                                                             label="Xóa dòng"

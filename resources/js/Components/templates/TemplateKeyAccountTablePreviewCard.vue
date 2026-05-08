@@ -347,28 +347,46 @@ const formatCell = (value: string, rowType: string): string => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr
-                                v-for="row in effectivePreviewRows"
-                                :key="`${row.rowType}-${row.numbering}-${row.content}-${row.quantity}-${row.supportRate}-${row.amount}`"
-                                class="border-t"
-                                :style="{ borderColor: 'var(--dashboard-panel-border)' }"
-                            >
-                                <td class="px-4 py-3 text-sm align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                    {{ row.numbering }}
-                                </td>
-                                <td class="px-4 py-3 text-sm align-top" :class="row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal'" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    {{ row.content }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    {{ formatCell(row.quantity, row.rowType) }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    {{ formatCell(row.supportRate, row.rowType) }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    {{ formatCell(row.amount, row.rowType) }}
-                                </td>
-                            </tr>
+                                    <tr
+                                        v-for="row in effectivePreviewRows"
+                                        :key="`${row.rowType}-${row.numbering}-${row.content}-${row.quantity}-${row.supportRate}-${row.amount}`"
+                                        class="border-t"
+                                        :style="{ borderColor: 'var(--dashboard-panel-border)' }"
+                                    >
+                                        <template v-if="row.rowType === 'total'">
+                                            <td class="px-4 py-3 text-sm align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td
+                                                colspan="3"
+                                                class="px-4 py-3 text-sm align-top"
+                                                :class="row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal'"
+                                                :style="{ color: 'var(--dashboard-strong-text)' }"
+                                            >
+                                                {{ row.content }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ formatCell(row.amount, row.rowType) }}
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td class="px-4 py-3 text-sm align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td class="px-4 py-3 text-sm align-top" :class="row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal'" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ row.content }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ formatCell(row.quantity, row.rowType) }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ formatCell(row.supportRate, row.rowType) }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-sm align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ formatCell(row.amount, row.rowType) }}
+                                            </td>
+                                        </template>
+                                    </tr>
                         </tbody>
                     </table>
                 </div>
