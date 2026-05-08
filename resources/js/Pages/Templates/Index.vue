@@ -10,6 +10,7 @@ import TemplateSubjectPreviewCard from '@/Components/templates/TemplateSubjectPr
 import TemplateGreetingPreviewCard from '@/Components/templates/TemplateGreetingPreviewCard.vue';
 import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTongHopTablePreviewCard.vue';
 import TemplateKhoanNppTablePreviewCard from '@/Components/templates/TemplateKhoanNppTablePreviewCard.vue';
+import TemplateCamCaTablePreviewCard from '@/Components/templates/TemplateCamCaTablePreviewCard.vue';
 import type { TemplateTableRowType } from '@/Services/templates/useTemplateBuilderCanvas';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
@@ -57,7 +58,7 @@ const props = defineProps<{
                 rows?: Array<{
                     content: string;
                     indentLevel?: number;
-                    rowType?: 'blank' | 'parent' | 'child' | 'data' | 'total' | 'text';
+                    rowType?: TemplateTableRowType;
                     columnKey?: string | null;
                     hideWhenValueZero?: boolean;
                     isBold?: boolean;
@@ -236,7 +237,51 @@ const props = defineProps<{
         month: string;
     }>;
     selectedKhoanNppPreviewRecordId: number | null;
+    camCaTablePreview: {
+        title: string;
+        sourceSheet: string;
+        rows: Array<{
+            rowType: string;
+            numbering: string;
+            content: string;
+            value: string;
+            fontWeight: string;
+            styleRole: string;
+        }>;
+        errors: string[];
+        sample: {
+            recordId: number;
+            batchId: number;
+            batchCode: string;
+            customerCode: string;
+            customerFullName: string;
+            month: string;
+        };
+        sampleData: {
+            programItems: Array<{
+                programIndex?: number;
+                content?: string;
+                amount?: string;
+            }>;
+            grandTotal: string;
+            totalInWords: string;
+        };
+    } | null;
+    camCaPreviewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedCamCaPreviewRecordId: number | null;
     tongHopBindingOptions: Array<{
+        key: string;
+        label: string;
+        valuePreview: string;
+    }>;
+    camCaBindingOptions: Array<{
         key: string;
         label: string;
         valuePreview: string;
@@ -301,6 +346,25 @@ const khoanNppDraftSections = ref<Array<{
         fontWeight: 'bold' | 'regular';
     }>;
 }>>([]);
+const camCaDraftSections = ref<Array<{
+    type: string;
+    label?: string;
+    description?: string;
+    kind?: 'text' | 'table';
+    sourceSheet?: string | null;
+    content?: string;
+    rows?: Array<{
+        content: string;
+        indentLevel?: number;
+        rowType?: TemplateTableRowType;
+        columnKey?: string | null;
+        hideWhenValueZero?: boolean;
+        isBold?: boolean;
+        numbering: string;
+        styleRole: 'parent' | 'child' | 'neutral';
+        fontWeight: 'bold' | 'regular';
+    }>;
+}>>([]);
 
 const partVersionGroupByType = computed(() =>
     Object.fromEntries(
@@ -313,6 +377,9 @@ const tongHopDraftSection = computed(() =>
 );
 const khoanNppDraftSection = computed(() =>
     khoanNppDraftSections.value.find((section) => section.type === 'khoan-npp-table') ?? null,
+);
+const camCaDraftSection = computed(() =>
+    camCaDraftSections.value.find((section) => section.type === 'cam-ca-table') ?? null,
 );
 </script>
 
@@ -615,6 +682,7 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
+                                    :cam-ca-binding-options="camCaBindingOptions"
                                     :visible-section-types="['subject']"
                                 />
 
@@ -644,6 +712,7 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
+                                    :cam-ca-binding-options="camCaBindingOptions"
                                     :visible-section-types="['greeting']"
                                 />
 
@@ -673,6 +742,7 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
+                                    :cam-ca-binding-options="camCaBindingOptions"
                                     :visible-section-types="['tong-hop-table']"
                                     @draft-change="tongHopDraftSections = $event"
                                 />
@@ -700,6 +770,7 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
+                                    :cam-ca-binding-options="camCaBindingOptions"
                                     :visible-section-types="['khoan-npp-table']"
                                     @draft-change="khoanNppDraftSections = $event"
                                 />
@@ -726,24 +797,18 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
+                                    :cam-ca-binding-options="camCaBindingOptions"
                                     :visible-section-types="['cam-ca-table']"
+                                    @draft-change="camCaDraftSections = $event"
                                 />
 
-                                <Card class="sakai-panel rounded-[2rem] border-0">
-                                    <template #content>
-                                        <div class="space-y-3">
-                                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                                Bảng chiết khấu cám cá
-                                            </p>
-                                            <h2 class="text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                Tab này sẽ nhận preview riêng cho dữ liệu `Cám cá`
-                                            </h2>
-                                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                Tab này giờ đã có builder canvas riêng cho section Cám cá. Phần preview dữ liệu thật sẽ được nối tiếp ở lát kế tiếp.
-                                            </p>
-                                        </div>
-                                    </template>
-                                </Card>
+                                <TemplateCamCaTablePreviewCard
+                                    :preview="camCaTablePreview"
+                                    :draft-section="camCaDraftSection"
+                                    :binding-options="camCaBindingOptions"
+                                    :preview-customers="camCaPreviewCustomers"
+                                    :selected-record-id="selectedCamCaPreviewRecordId"
+                                />
                             </div>
                         </TabPanel>
 
@@ -760,6 +825,7 @@ const khoanNppDraftSection = computed(() =>
                                     :can-manage-templates="canManageTemplates"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
+                                    :cam-ca-binding-options="camCaBindingOptions"
                                     :visible-section-types="['key-account-table']"
                                 />
 

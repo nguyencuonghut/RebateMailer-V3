@@ -94,11 +94,11 @@ class GenerateTemplateRowNumberingService
                 $childCounter = 0;
                 $numbering = $this->toRoman($parentCounter);
                 $styleRole = 'parent';
-            } elseif ($rowType === 'child') {
+            } elseif (in_array($rowType, ['child', 'child-value', 'child-program-loop'], true)) {
                 $childCounter++;
                 $numbering = (string) $childCounter;
                 $styleRole = 'child';
-            } elseif (in_array($rowType, ['total', 'text', 'blank', 'data', 'program-loop', 'in-words'], true)) {
+            } elseif (in_array($rowType, ['total', 'text', 'blank', 'data', 'program-loop', 'in-words', 'value-row'], true)) {
                 $styleRole = 'neutral';
             }
 

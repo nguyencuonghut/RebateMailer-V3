@@ -35,7 +35,7 @@ class TemplatesPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
                 ->where('title', 'Thiết kế mẫu email')
-                ->where('currentSlice.code', '2.3-E')
+                ->where('currentSlice.code', '2.3-F')
                 ->where('canManageTemplates', true)
                 ->has('writeCapabilities', 4)
                 ->where('writeCapabilities.0', 'Tạo template mới')
@@ -69,7 +69,7 @@ class TemplatesPageTest extends TestCase
                 ->where('templateParts.5.type', 'key-account-table')
                 ->where('templateList', [])
                 ->where('activeTemplateId', null)
-                ->where('nextSlice.code', '2.3-F')
+                ->where('nextSlice.code', '2.3-G')
             );
     }
 
@@ -514,6 +514,245 @@ class TemplatesPageTest extends TestCase
                 ->where('tongHopBindingOptions.2.key', 'Mã số')
                 ->where('tongHopBindingOptions.2.valuePreview', '19220')
                 ->has('tongHopPreviewCustomers', 2)
+            );
+    }
+
+    public function test_templates_page_can_render_cam_ca_table_preview_from_real_aggregate_payload(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template preview Cám cá',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-F',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'cam-ca-table',
+                        'label' => 'Table Chiết khấu cám cá',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Cám cá',
+                        'rows' => [
+                            ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'hideWhenValueZero' => false, 'isBold' => false],
+                            ['content' => 'Tiền chiết khấu theo hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Tiền chiết khấu theo Hóa đơn', 'hideWhenValueZero' => false, 'isBold' => true],
+                            ['content' => 'Thưởng sản lượng tháng 03.2026', 'rowType' => 'child-value', 'columnKey' => 'Thưởng sản lượng tháng 03.2026', 'hideWhenValueZero' => false, 'isBold' => false],
+                            ['content' => '', 'rowType' => 'child-program-loop', 'hideWhenValueZero' => true, 'isBold' => false],
+                            ['content' => 'Chiết khấu khác ( không thể hiện trên hóa đơn)', 'rowType' => 'parent', 'columnKey' => 'Chiết khấu khác ( Không thể hiện trên hóa đơn)', 'hideWhenValueZero' => false, 'isBold' => true],
+                            ['content' => 'Chiết khấu thanh toán', 'rowType' => 'child-value', 'columnKey' => 'Chiết khấu thanh toán', 'hideWhenValueZero' => true, 'isBold' => false],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => true, 'isBold' => true],
+                            ['content' => 'Bằng chữ:', 'rowType' => 'in-words', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-CAM-CA-PREVIEW',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Cám cá' => [
+                        'fixedHeaders' => [
+                            'STT', 'Tháng', 'Mã số', 'Mã & tên khách hàng', 'Email', 'Địa chỉ', 'Thức ăn chăn nuôi',
+                            'Tổng sản lượng', 'Doanh thu', 'Tiền chiết khấu theo Hóa đơn', 'Chiết khấu khác ( Không thể hiện trên hóa đơn)', 'Tổng cộng', 'Bằng chữ',
+                        ],
+                        'discreteHeaders' => [
+                            'Thưởng sản lượng tháng 03.2026',
+                            'Thưởng đặc biệt tháng 03.2026',
+                            'Thưởng ngân quỹ 9113',
+                            'Hỗ trợ vận chuyển',
+                            'Chương trình KM từ 25-31.03.26',
+                            'Chiết khấu thanh toán',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $firstRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '16068',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Cám cá'],
+            'aggregated_payload' => [
+                'customerCode' => '16068',
+                'customerFullName' => '16068 - Công ty TNHH TM DV Thắng Giang',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Cám cá'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => [
+                    'month' => '3-2026',
+                    'customerCode' => '16068',
+                    'customerFullName' => '16068 - Công ty TNHH TM DV Thắng Giang',
+                    'address' => 'Địa chỉ A',
+                    'feedCategory' => 'Thủy sản',
+                    'totalQuantity' => '128500',
+                    'revenue' => '2479904400',
+                    'invoiceDiscount' => '199615000',
+                    'otherDiscount' => '12850000',
+                    'grandTotal' => '212465000',
+                    'totalInWords' => 'Hai trăm mười hai triệu, bốn trăm sáu mươi lăm nghìn đồng chẵn.',
+                    'programItems' => [
+                        ['programIndex' => 1, 'content' => 'Chiết khấu quý 1.2026 sản phẩm 9113 mức 250đ/kg', 'amount' => '51200000'],
+                        ['programIndex' => 2, 'content' => 'Hỗ trợ đặc biệt sản phẩm cá biển', 'amount' => '6150000'],
+                    ],
+                    'discreteItems' => [
+                        ['label' => 'Thưởng sản lượng tháng 03.2026', 'value' => '89950000'],
+                        ['label' => 'Thưởng đặc biệt tháng 03.2026', 'value' => '20780000'],
+                        ['label' => 'Thưởng ngân quỹ 9113', 'value' => '9600000'],
+                        ['label' => 'Hỗ trợ vận chuyển', 'value' => '19275000'],
+                        ['label' => 'Chương trình KM từ 25-31.03.26', 'value' => '2660000'],
+                        ['label' => 'Chiết khấu thanh toán', 'value' => '12850000'],
+                    ],
+                ],
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('builderTemplate.id', $template->id)
+                ->where('selectedCamCaPreviewRecordId', $firstRecord->id)
+                ->where('camCaTablePreview.sample.recordId', $firstRecord->id)
+                ->where('camCaTablePreview.sample.customerCode', '16068')
+                ->has('camCaPreviewCustomers', 1)
+                ->where('camCaPreviewCustomers.0.recordId', $firstRecord->id)
+                ->where('camCaTablePreview.title', 'Chiết khấu cám cá tháng 3-2026')
+                ->where('camCaTablePreview.rows.0.content', 'Tổng sản lượng')
+                ->where('camCaTablePreview.rows.0.value', '128500')
+                ->where('camCaTablePreview.rows.1.numbering', 'I')
+                ->where('camCaTablePreview.rows.2.numbering', '1')
+                ->where('camCaTablePreview.rows.2.value', '89950000')
+                ->where('camCaTablePreview.rows.3.numbering', '2')
+                ->where('camCaTablePreview.rows.3.content', 'Chiết khấu quý 1.2026 sản phẩm 9113 mức 250đ/kg')
+                ->where('camCaTablePreview.rows.4.numbering', '3')
+                ->where('camCaTablePreview.rows.5.numbering', 'II')
+                ->where('camCaTablePreview.rows.6.content', 'Chiết khấu thanh toán')
+                ->where('camCaTablePreview.rows.7.content', 'Cộng')
+                ->where('camCaTablePreview.rows.7.value', '212465000')
+                ->where('camCaTablePreview.errors', [])
+            );
+    }
+
+    public function test_templates_page_can_switch_cam_ca_preview_to_selected_customer_record(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template switch Cám cá',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-F',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'cam-ca-table',
+                        'label' => 'Table Chiết khấu cám cá',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Cám cá',
+                        'rows' => [
+                            ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'hideWhenValueZero' => false, 'isBold' => false],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => true, 'isBold' => true],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-CAM-CA-SWITCH',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Cám cá' => [
+                        'fixedHeaders' => ['Tổng sản lượng', 'Doanh thu', 'Tiền chiết khấu theo Hóa đơn', 'Chiết khấu khác ( Không thể hiện trên hóa đơn)', 'Tổng cộng', 'Bằng chữ'],
+                        'discreteHeaders' => ['Chiết khấu thanh toán'],
+                    ],
+                ],
+            ],
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '16068',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Cám cá'],
+            'aggregated_payload' => [
+                'customerCode' => '16068',
+                'customerFullName' => 'Khách A',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Cám cá'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => [
+                    'month' => '3-2026',
+                    'totalQuantity' => '111',
+                    'grandTotal' => '222',
+                    'totalInWords' => 'Hai trăm hai mươi hai đồng.',
+                    'programItems' => [],
+                    'discreteItems' => [],
+                ],
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $selectedRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '90182TS',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Cám cá'],
+            'aggregated_payload' => [
+                'customerCode' => '90182TS',
+                'customerFullName' => 'Khách B',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Cám cá'],
+                'tongHop' => null,
+                'khoanNpp' => null,
+                'camCa' => [
+                    'month' => '4-2026',
+                    'totalQuantity' => '555',
+                    'grandTotal' => '777',
+                    'totalInWords' => 'Bảy trăm bảy mươi bảy đồng.',
+                    'programItems' => [],
+                    'discreteItems' => [],
+                ],
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index', ['cam_ca_preview_record' => $selectedRecord->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedCamCaPreviewRecordId', $selectedRecord->id)
+                ->where('camCaTablePreview.sample.recordId', $selectedRecord->id)
+                ->where('camCaTablePreview.sample.customerCode', '90182TS')
+                ->where('camCaTablePreview.sample.customerFullName', 'Khách B')
+                ->where('camCaTablePreview.title', 'Chiết khấu cám cá tháng 4-2026')
+                ->where('camCaTablePreview.rows.0.value', '555')
+                ->where('camCaTablePreview.rows.1.value', '777')
+                ->where('camCaBindingOptions.0.key', 'Tổng sản lượng')
+                ->where('camCaBindingOptions.0.valuePreview', '555')
+                ->has('camCaPreviewCustomers', 2)
             );
     }
 

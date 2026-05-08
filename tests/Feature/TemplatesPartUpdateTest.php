@@ -203,4 +203,56 @@ class TemplatesPartUpdateTest extends TestCase
                 'section.rows.0.rowType',
             ]);
     }
+
+    public function test_user_with_manage_permission_can_persist_cam_ca_semantic_rows_through_part_route(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template Cám cá',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.3-F',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                    ['type' => 'cam-ca-table', 'label' => 'Table Chiết khấu cám cá', 'kind' => 'table', 'sourceSheet' => 'Cám cá', 'rows' => []],
+                ],
+            ],
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncMailTemplate($mailTemplate);
+
+        $this->actingAs($user)
+            ->put(route('templates.parts.update', $mailTemplate), [
+                'partType' => 'cam-ca-table',
+                'section' => [
+                    'type' => 'cam-ca-table',
+                    'label' => 'Table Chiết khấu cám cá',
+                    'description' => 'Lấy dữ liệu từ sheet Cám cá.',
+                    'kind' => 'table',
+                    'sourceSheet' => 'Cám cá',
+                    'rows' => [
+                        ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ['content' => 'Tiền chiết khấu theo hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Tiền chiết khấu theo Hóa đơn', 'hideWhenValueZero' => true, 'isBold' => true],
+                        ['content' => 'Thưởng sản lượng tháng 03.2026', 'rowType' => 'child-value', 'columnKey' => 'Thưởng sản lượng tháng 03.2026', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ['content' => '', 'rowType' => 'child-program-loop', 'hideWhenValueZero' => true, 'isBold' => false],
+                        ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => true, 'isBold' => true],
+                        ['content' => 'Bằng chữ:', 'rowType' => 'in-words', 'hideWhenValueZero' => true, 'isBold' => false],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('templates.index'));
+
+        $mailTemplate->refresh();
+
+        $this->assertSame('cam-ca-table', $mailTemplate->structure_json['sections'][2]['type']);
+        $this->assertCount(6, $mailTemplate->structure_json['sections'][2]['rows']);
+        $this->assertSame('value-row', $mailTemplate->structure_json['sections'][2]['rows'][0]['rowType']);
+        $this->assertSame('parent', $mailTemplate->structure_json['sections'][2]['rows'][1]['rowType']);
+        $this->assertSame('child-value', $mailTemplate->structure_json['sections'][2]['rows'][2]['rowType']);
+        $this->assertSame('child-program-loop', $mailTemplate->structure_json['sections'][2]['rows'][3]['rowType']);
+    }
 }

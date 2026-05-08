@@ -111,4 +111,23 @@ class GenerateTemplateRowNumberingTest extends TestCase
         $this->assertSame('bold', $result[2]['fontWeight']);
         $this->assertSame('', $result[3]['numbering']);
     }
+
+    public function test_it_supports_cam_ca_semantic_rows_for_builder_numbering(): void
+    {
+        $service = new GenerateTemplateRowNumberingService;
+
+        $result = $service->generate([
+            ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng'],
+            ['content' => 'Tiền chiết khấu theo hóa đơn', 'rowType' => 'parent', 'columnKey' => 'Tiền chiết khấu theo Hóa đơn'],
+            ['content' => 'Thưởng sản lượng tháng 03.2026', 'rowType' => 'child-value', 'columnKey' => 'Thưởng sản lượng tháng 03.2026'],
+            ['content' => '', 'rowType' => 'child-program-loop'],
+            ['content' => 'Cộng', 'rowType' => 'total'],
+        ]);
+
+        $this->assertSame('', $result[0]['numbering']);
+        $this->assertSame('I', $result[1]['numbering']);
+        $this->assertSame('1', $result[2]['numbering']);
+        $this->assertSame('2', $result[3]['numbering']);
+        $this->assertSame('', $result[4]['numbering']);
+    }
 }

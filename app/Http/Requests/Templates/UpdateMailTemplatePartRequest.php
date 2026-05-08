@@ -42,7 +42,7 @@ class UpdateMailTemplatePartRequest extends FormRequest
             'section.rows' => ['nullable', 'array'],
             'section.rows.*.content' => ['nullable', 'string', 'max:5000'],
             'section.rows.*.indentLevel' => ['nullable', 'integer'],
-            'section.rows.*.rowType' => ['nullable', 'string', Rule::in(['blank', 'parent', 'child', 'data', 'total', 'text', 'program-loop', 'in-words'])],
+            'section.rows.*.rowType' => ['nullable', 'string', Rule::in(['blank', 'parent', 'child', 'data', 'total', 'text', 'program-loop', 'in-words', 'value-row', 'child-value', 'child-program-loop'])],
             'section.rows.*.columnKey' => ['nullable', 'string', 'max:5000'],
             'section.rows.*.hideWhenValueZero' => ['nullable', 'boolean'],
             'section.rows.*.isBold' => ['nullable', 'boolean'],

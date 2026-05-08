@@ -126,13 +126,13 @@ class TemplatesStructureUpdateTest extends TestCase
                         'kind' => 'table',
                         'sourceSheet' => 'Tổng hợp',
                         'rows' => [
-                            ['content' => '', 'indentLevel' => 1],
+                            ['content' => 'Dòng lỗi', 'rowType' => 'sai-row-type'],
                         ],
                     ],
                 ],
             ])
             ->assertRedirect(route('templates.index'))
-            ->assertSessionHasErrors(['sections.0.rows.0.content']);
+            ->assertSessionHasErrors(['sections.0.rows.0.rowType']);
     }
 
     public function test_update_structure_clamps_indent_level_between_zero_and_four(): void
