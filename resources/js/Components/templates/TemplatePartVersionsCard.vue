@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
+import Button from 'primevue/button';
 
-defineProps<{
+const props = defineProps<{
     title: string;
     description: string;
+    canManageTemplates?: boolean;
+    isBindingVersionId?: number | null;
     group: {
         partType: string;
         code: string;
@@ -26,6 +29,10 @@ defineProps<{
             updatedAt: string | null;
         }>;
     } | null;
+}>();
+
+const emit = defineEmits<{
+    (event: 'select-version', payload: { partType: string; versionId: number }): void;
 }>();
 </script>
 
@@ -66,6 +73,17 @@ defineProps<{
                         <Tag :value="group.code" severity="contrast" rounded />
                         <Tag v-if="group.sourceSheet" :value="`Sheet: ${group.sourceSheet}`" severity="info" rounded />
                         <Tag :value="`${group.versionCount} version`" severity="success" rounded />
+                    </div>
+
+                    <div
+                        v-if="group.selectedVersionId === null"
+                        class="rounded-[1.2rem] border px-4 py-3 text-sm leading-6"
+                        :style="{ borderColor: 'rgba(20, 184, 166, 0.28)', background: 'var(--dashboard-card-bg)', color: 'var(--dashboard-muted-text)' }"
+                    >
+                        Canvas hiện tại chưa ghép version nào cho part này.
+                        <span v-if="canManageTemplates">
+                            Hãy dùng lại một version có sẵn bằng nút <strong>`Dùng cho canvas này`</strong> hoặc thêm part mới vào canvas ở builder phía dưới.
+                        </span>
                     </div>
 
                     <div
@@ -118,6 +136,24 @@ defineProps<{
                                         :value="`Legacy template #${version.legacyMailTemplateId}`"
                                         severity="secondary"
                                         rounded
+                                    />
+                                </div>
+
+                                <div v-if="props.canManageTemplates" class="flex flex-wrap justify-end gap-2">
+                                    <Tag
+                                        v-if="version.id === group.selectedVersionId"
+                                        value="Canvas đang dùng version này"
+                                        severity="success"
+                                        rounded
+                                    />
+                                    <Button
+                                        v-else
+                                        :label="props.isBindingVersionId === version.id ? 'Đang ghép...' : 'Dùng cho canvas này'"
+                                        size="small"
+                                        severity="info"
+                                        variant="outlined"
+                                        :loading="props.isBindingVersionId === version.id"
+                                        @click="emit('select-version', { partType: group.partType, versionId: version.id })"
                                     />
                                 </div>
                             </div>

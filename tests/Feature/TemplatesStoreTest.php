@@ -42,13 +42,7 @@ class TemplatesStoreTest extends TestCase
         $mailTemplate = MailTemplate::query()->firstOrFail();
 
         $this->assertSame('2.0-R5', $mailTemplate->structure_json['version']);
-        $this->assertCount(2, $mailTemplate->structure_json['sections']);
-        $this->assertSame('subject', $mailTemplate->structure_json['sections'][0]['type']);
-        $this->assertSame('Subject', $mailTemplate->structure_json['sections'][0]['label']);
-        $this->assertSame('', $mailTemplate->structure_json['sections'][0]['content']);
-        $this->assertSame('greeting', $mailTemplate->structure_json['sections'][1]['type']);
-        $this->assertSame('Lời chào', $mailTemplate->structure_json['sections'][1]['label']);
-        $this->assertSame('', $mailTemplate->structure_json['sections'][1]['content']);
+        $this->assertSame([], $mailTemplate->structure_json['sections']);
 
         $this->assertDatabaseHas('mail_template_canvases', [
             'legacy_mail_template_id' => $mailTemplate->id,
@@ -57,8 +51,8 @@ class TemplatesStoreTest extends TestCase
 
         $canvas = MailTemplateCanvas::query()->where('legacy_mail_template_id', $mailTemplate->id)->firstOrFail();
 
-        $this->assertSame(2, $canvas->partBindings()->count());
-        $this->assertSame(2, TemplatePartVersion::query()->where('legacy_mail_template_id', $mailTemplate->id)->count());
+        $this->assertSame(0, $canvas->partBindings()->count());
+        $this->assertSame(0, TemplatePartVersion::query()->where('legacy_mail_template_id', $mailTemplate->id)->count());
     }
 
     public function test_store_template_requires_manage_permission(): void

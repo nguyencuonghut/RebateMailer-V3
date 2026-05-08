@@ -432,13 +432,10 @@ export function useTemplateBuilderCanvas(
             return;
         }
 
-        router.put(
-            route('templates.canvas.update', activeTemplate.id),
+        router.post(
+            route('templates.sections.store', activeTemplate.id),
             {
-                partTypes: Array.from(new Set([
-                    ...sectionDraft.value.map((section) => section.type),
-                    type,
-                ])),
+                type,
             },
             {
                 preserveScroll: true,
@@ -447,10 +444,10 @@ export function useTemplateBuilderCanvas(
                 },
                 onError: (errors) => {
                     setSaveValidationState(
-                        'canvas',
-                        null,
+                        'part',
+                        type,
                         errors,
-                        'Không thể lưu canvas. Một hoặc nhiều cấu hình phần đang không hợp lệ.',
+                        'Không thể thêm part này vào canvas. Cấu hình đang gửi chưa hợp lệ.',
                     );
                 },
             },

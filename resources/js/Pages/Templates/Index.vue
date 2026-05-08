@@ -364,6 +364,7 @@ const props = defineProps<{
 
 const page = usePage<PageProps>();
 const isActivatingTemplateId = ref<number | null>(null);
+const isBindingPartVersionId = ref<number | null>(null);
 
 const activateTemplate = (templateId: number): void => {
     isActivatingTemplateId.value = templateId;
@@ -376,6 +377,29 @@ const activateTemplate = (templateId: number): void => {
             preserveState: true,
             onFinish: () => {
                 isActivatingTemplateId.value = null;
+            },
+        },
+    );
+};
+
+const bindPartVersionToCanvas = (payload: { partType: string; versionId: number }): void => {
+    if (!props.builderTemplate) {
+        return;
+    }
+
+    isBindingPartVersionId.value = payload.versionId;
+
+    router.put(
+        route('templates.canvas-part-binding.update', props.builderTemplate.id),
+        {
+            partType: payload.partType,
+            templatePartVersionId: payload.versionId,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => {
+                isBindingPartVersionId.value = null;
             },
         },
     );
@@ -795,8 +819,11 @@ const keyAccountDraftSection = computed(() =>
                             <div class="space-y-6">
                                 <TemplatePartVersionsCard
                                     title="Version của Subject"
-                                    description="Chọn và theo dõi version hiện có của part `Subject`. Builder phía dưới chỉnh trực tiếp version đang được ghép vào canvas."
+                                    description="Canvas không còn tự tạo `Subject`. Ở tab này bạn có thể dùng lại version cũ cho canvas hiện tại hoặc thêm mới `Subject` vào canvas rồi chỉnh nội dung."
                                     :group="partVersionGroupByType['subject'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
@@ -826,8 +853,11 @@ const keyAccountDraftSection = computed(() =>
                             <div class="space-y-6">
                                 <TemplatePartVersionsCard
                                     title="Version của Lời chào"
-                                    description="Part `Lời chào` có lifecycle riêng với policy active khác `Subject`. Tab này chỉ tập trung vào version của lời chào."
+                                    description="Canvas không còn tự tạo `Lời chào`. Ở tab này bạn có thể dùng lại version cũ cho canvas hiện tại hoặc thêm mới `Lời chào` vào canvas rồi chỉnh nội dung."
                                     :group="partVersionGroupByType['greeting'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
@@ -859,6 +889,9 @@ const keyAccountDraftSection = computed(() =>
                                     title="Version của Bảng chế độ tháng"
                                     description="Quản lý version độc lập cho part `Tổng hợp`. Canvas chỉ ghép một version đang chọn của part này."
                                     :group="partVersionGroupByType['tong-hop-table'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
@@ -888,6 +921,9 @@ const keyAccountDraftSection = computed(() =>
                                     title="Version của Bảng chương trình khoán đặc biệt"
                                     description="Part `Khoán NPP` có version riêng, active riêng và được ghép linh động vào canvas."
                                     :group="partVersionGroupByType['khoan-npp-table'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
@@ -916,6 +952,9 @@ const keyAccountDraftSection = computed(() =>
                                     title="Version của Bảng chiết khấu cám cá"
                                     description="Part `Cám cá` được quản lý như một tập version độc lập với canvas."
                                     :group="partVersionGroupByType['cam-ca-table'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
@@ -945,6 +984,9 @@ const keyAccountDraftSection = computed(() =>
                                     title="Version của Bảng chiết khấu Key Account"
                                     description="Part `Key Account` có lifecycle version riêng và chỉ được ghép vào canvas qua composition binding."
                                     :group="partVersionGroupByType['key-account-table'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
