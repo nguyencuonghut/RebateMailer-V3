@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { PageProps } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import TemplateBuilderCanvas from '@/Components/templates/TemplateBuilderCanvas.vue';
 import TemplateCreateFormCard from '@/Components/templates/TemplateCreateFormCard.vue';
 import TemplateVariableContractCard from '@/Components/templates/TemplateVariableContractCard.vue';
@@ -363,6 +363,23 @@ const props = defineProps<{
 }>();
 
 const page = usePage<PageProps>();
+const isActivatingTemplateId = ref<number | null>(null);
+
+const activateTemplate = (templateId: number): void => {
+    isActivatingTemplateId.value = templateId;
+
+    router.put(
+        route('templates.activate', templateId),
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => {
+                isActivatingTemplateId.value = null;
+            },
+        },
+    );
+};
 const tongHopDraftSections = ref<Array<{
     type: string;
     label?: string;
@@ -695,6 +712,30 @@ const keyAccountDraftSection = computed(() =>
                                                             <Tag :value="`${templateItem.sectionCount} phần`" severity="info" rounded />
                                                             <Tag :value="`Tạo bởi: ${templateItem.createdBy}`" severity="secondary" rounded />
                                                         </div>
+
+                                                        <div v-if="canManageTemplates" class="flex flex-wrap justify-end gap-2">
+                                                            <Tag
+                                                                v-if="templateItem.isActive"
+                                                                value="Template đang hoạt động"
+                                                                severity="success"
+                                                                rounded
+                                                            />
+                                                            <button
+                                                                v-else
+                                                                type="button"
+                                                                class="inline-flex items-center rounded-2xl border px-4 py-2 text-sm font-medium transition"
+                                                                :disabled="isActivatingTemplateId === templateItem.id"
+                                                                :style="{
+                                                                    borderColor: 'rgba(20, 184, 166, 0.36)',
+                                                                    color: 'var(--dashboard-strong-text)',
+                                                                    background: 'rgba(20, 184, 166, 0.08)',
+                                                                    opacity: isActivatingTemplateId === templateItem.id ? 0.72 : 1,
+                                                                }"
+                                                                @click="activateTemplate(templateItem.id)"
+                                                            >
+                                                                {{ isActivatingTemplateId === templateItem.id ? 'Đang kích hoạt...' : 'Đặt làm template hoạt động' }}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </article>
                                             </div>
@@ -742,7 +783,7 @@ const keyAccountDraftSection = computed(() =>
                                                 {{ nextSlice.code }} - {{ nextSlice.label }}
                                             </h2>
                                             <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                Sau lát này, module template sẽ có form tạo template đầu tiên để bắt đầu lưu subject và cấu trúc body cơ bản.
+                                                Sau lát này, module template sẽ được khóa bằng smoke test cho flow tạo, chỉnh, kích hoạt và reload lại đúng state.
                                             </p>
                                         </div>
                                     </template>

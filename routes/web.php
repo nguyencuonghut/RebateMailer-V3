@@ -13,6 +13,7 @@ use App\Http\Controllers\ImportWorkbookAnalysisController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TemplatePageController;
 use App\Http\Controllers\TemplateCanvasCompositionUpdateController;
+use App\Http\Controllers\TemplateActivateController;
 use App\Http\Controllers\TemplatePartUpdateController;
 use App\Http\Controllers\TemplateSectionStoreController;
 use App\Http\Controllers\TemplateStructureUpdateController;
@@ -76,6 +77,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/templates/{mailTemplate}/canvas-composition', [TemplateCanvasCompositionUpdateController::class, 'update'])
         ->middleware('permission:'.PermissionName::TemplatesManage->value)
         ->name('templates.canvas.update');
+    Route::put('/templates/{mailTemplate}/activate', [TemplateActivateController::class, 'update'])
+        ->middleware('permission:'.PermissionName::TemplatesManage->value)
+        ->name('templates.activate');
     Route::put('/templates/{mailTemplate}/parts', [TemplatePartUpdateController::class, 'update'])
         ->middleware('permission:'.PermissionName::TemplatesManage->value)
         ->name('templates.parts.update');

@@ -54,8 +54,8 @@ class TemplatePageService
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
             'currentSlice' => [
-                'code' => '2.3-G',
-                'label' => 'Preview Table Chiết khấu Key Account từ sheet Key Account',
+                'code' => '2.4-B',
+                'label' => 'Chuyển active template an toàn',
             ],
             'canManageTemplates' => $canManageTemplates,
             'writeCapabilities' => [
@@ -105,8 +105,8 @@ class TemplatePageService
             'camCaBindingOptions' => $this->buildTemplateCamCaTablePreviewService->buildBindingOptions($selectedCamCaPreviewRecordId),
             'keyAccountBindingOptions' => $this->buildTemplateKeyAccountTablePreviewService->buildBindingOptions($selectedKeyAccountPreviewRecordId),
             'nextSlice' => [
-                'code' => '2.3-H',
-                'label' => 'Chốt rule hiển thị dòng giá trị 0',
+                'code' => '2.4-C',
+                'label' => 'Smoke test end-to-end cho Giai đoạn 2',
             ],
         ];
     }
