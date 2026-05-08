@@ -533,7 +533,6 @@ const {
     clearGlobalFilter: clearTemplateListGlobalFilter,
 } = useDataTableGlobalFilter<(typeof props.templateList)[number]>([
     'name',
-    'subjectTemplate',
     'statusLabel',
     'createdBy',
     (item) => String(item.sectionCount),
@@ -805,7 +804,7 @@ const keyAccountDraftSection = computed(() =>
                                             <div v-else class="space-y-3">
                                                 <DataTableGlobalFilterToolbar
                                                     v-model="templateListGlobalFilterValue"
-                                                    placeholder="Tìm theo tên template, subject, trạng thái, người tạo"
+                                                    placeholder="Tìm theo tên template, trạng thái, người tạo"
                                                     @clear="clearTemplateListGlobalFilter"
                                                 />
 
@@ -819,13 +818,6 @@ const keyAccountDraftSection = computed(() =>
                                                     class="p-datatable-sm"
                                                 >
                                                     <Column field="name" header="Tên template" />
-                                                    <Column field="subjectTemplate" header="Subject">
-                                                        <template #body="{ data }">
-                                                            <span :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                                {{ data.subjectTemplate || 'Chưa có subject' }}
-                                                            </span>
-                                                        </template>
-                                                    </Column>
                                                     <Column header="Trạng thái">
                                                         <template #body="{ data }">
                                                             <Tag :value="data.statusLabel" :severity="data.isActive ? 'success' : 'secondary'" rounded />
