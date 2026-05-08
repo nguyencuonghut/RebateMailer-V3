@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
+import Select from 'primevue/select';
+import { router } from '@inertiajs/vue3';
 import { formatImportNumber } from '@/Services/imports/useImportNumberFormatter';
 
 const props = defineProps<{
@@ -22,6 +24,7 @@ const props = defineProps<{
         }>;
         errors: string[];
         sample: {
+            recordId: number;
             batchId: number;
             batchCode: string;
             customerCode: string;
@@ -29,6 +32,15 @@ const props = defineProps<{
             month: string;
         };
     } | null;
+    previewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedRecordId: number | null;
     draftSection?: {
         type: string;
         rows?: Array<{
@@ -49,6 +61,44 @@ const props = defineProps<{
         valuePreview: string;
     }>;
 }>();
+
+const isSwitchingCustomer = ref(false);
+
+const handlePreviewCustomerChange = (recordId: number | null): void => {
+    isSwitchingCustomer.value = true;
+
+    router.get(
+        route('templates.index'),
+        recordId ? { tong_hop_preview_record: recordId } : {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['tongHopTablePreview', 'tongHopPreviewCustomers', 'selectedTongHopPreviewRecordId', 'tongHopBindingOptions'],
+            onFinish: () => {
+                isSwitchingCustomer.value = false;
+            },
+        },
+    );
+};
+
+const previewCustomerLabel = computed(() => {
+    const sample = props.preview?.sample;
+
+    if (!sample) {
+        return '';
+    }
+
+    if (sample.customerFullName.trim() === '') {
+        return sample.customerCode;
+    }
+
+    if (sample.customerCode && sample.customerFullName.startsWith(sample.customerCode)) {
+        return sample.customerFullName;
+    }
+
+    return `${sample.customerCode} - ${sample.customerFullName}`;
+});
 
 const formatPreviewValue = (content: string, value: string): string => {
     if (value.trim() === '') {
@@ -130,9 +180,33 @@ const effectivePreviewRows = computed(() => {
                 </div>
 
                 <template v-else>
+                    <div class="grid gap-3 xl:grid-cols-[minmax(0,22rem)_1fr] xl:items-end">
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                Chọn khách từ dữ liệu đã parse
+                            </label>
+                            <Select
+                                :model-value="selectedRecordId"
+                                :options="previewCustomers"
+                                option-label="label"
+                                option-value="recordId"
+                                filter
+                                show-clear
+                                fluid
+                                :loading="isSwitchingCustomer"
+                                placeholder="Tìm theo mã hoặc tên khách hàng"
+                                @update:model-value="handlePreviewCustomerChange"
+                            />
+                        </div>
+
+                        <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                            Preview đang bind vào record aggregate thật của khách đã chọn. Khi đổi khách, bảng và cả value preview của các binding key sẽ reload theo đúng dữ liệu `Tổng hợp` của khách đó.
+                        </p>
+                    </div>
+
                     <div class="flex flex-wrap gap-2.5">
                         <Tag :value="`Batch: ${preview.sample.batchCode}`" severity="info" rounded />
-                        <Tag :value="`Khách: ${preview.sample.customerCode}`" severity="contrast" rounded />
+                        <Tag :value="`Khách: ${previewCustomerLabel}`" severity="contrast" rounded />
                         <Tag :value="`Sheet: ${preview.sourceSheet}`" severity="secondary" rounded />
                         <Tag :value="`Tháng: ${preview.sample.month || 'Chưa có'}`" severity="secondary" rounded />
                     </div>

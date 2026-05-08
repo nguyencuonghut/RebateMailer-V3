@@ -113,7 +113,7 @@ class TemplatesPageTest extends TestCase
             ],
         ]);
 
-        ImportBatchAggregatedRecord::query()->create([
+        $firstRecord = ImportBatchAggregatedRecord::query()->create([
             'import_batch_id' => $importBatch->id,
             'customer_code' => '90300',
             'customer_type' => 'Khách thường',
@@ -226,7 +226,7 @@ class TemplatesPageTest extends TestCase
             'status' => 'aggregated',
         ]);
 
-        ImportBatchAggregatedRecord::query()->create([
+        $firstRecord = ImportBatchAggregatedRecord::query()->create([
             'import_batch_id' => $importBatch->id,
             'customer_code' => '11008',
             'customer_type' => 'Key Account',
@@ -334,7 +334,7 @@ class TemplatesPageTest extends TestCase
             'status' => 'aggregated',
         ]);
 
-        ImportBatchAggregatedRecord::query()->create([
+        $firstRecord = ImportBatchAggregatedRecord::query()->create([
             'import_batch_id' => $importBatch->id,
             'customer_code' => '90300',
             'customer_type' => 'Khách thường',
@@ -373,8 +373,13 @@ class TemplatesPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('builderTemplate.id', $template->id)
+                ->where('selectedTongHopPreviewRecordId', $firstRecord->id)
                 ->where('tongHopTablePreview.sample.batchCode', 'IMP-TONG-HOP-PREVIEW')
+                ->where('tongHopTablePreview.sample.recordId', $firstRecord->id)
                 ->where('tongHopTablePreview.sample.customerCode', '90300')
+                ->has('tongHopPreviewCustomers', 1)
+                ->where('tongHopPreviewCustomers.0.recordId', $firstRecord->id)
+                ->where('tongHopPreviewCustomers.0.customerCode', '90300')
                 ->where('tongHopTablePreview.title', 'Chế độ tháng 02.2026')
                 ->where('tongHopTablePreview.rows.0.numbering', '')
                 ->where('tongHopTablePreview.rows.0.content', 'Tổng sản lượng (gồm cám thủy sản)')
@@ -393,6 +398,114 @@ class TemplatesPageTest extends TestCase
                 ->where('tongHopTablePreview.rows.5.content', 'Bằng chữ:')
                 ->where('tongHopTablePreview.rows.5.value', 'Mười triệu chín trăm chín mươi nghìn hai trăm năm mươi đồng chẵn.')
                 ->where('tongHopTablePreview.errors', [])
+            );
+    }
+
+    public function test_templates_page_can_switch_tong_hop_preview_to_selected_customer_record(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $template = MailTemplate::query()->create([
+            'name' => 'Template preview khách Tổng hợp',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.3-D',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'content' => 'Kính gửi {{mã & tên khách hàng}}'],
+                    [
+                        'type' => 'tong-hop-table',
+                        'label' => 'Table Chế độ tháng',
+                        'kind' => 'table',
+                        'sourceSheet' => 'Tổng hợp',
+                        'rows' => [
+                            ['content' => 'Tổng sản lượng (gồm cám thủy sản)', 'rowType' => 'data', 'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)', 'hideWhenValueZero' => false, 'isBold' => true],
+                            ['content' => 'Cộng', 'rowType' => 'total', 'columnKey' => 'Tổng cộng', 'hideWhenValueZero' => false, 'isBold' => true],
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $importBatch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-TONG-HOP-SWITCH',
+            'original_file_name' => 'preview.xlsx',
+            'stored_path' => 'imports/tmp/preview.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '90300',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90300',
+                'customerFullName' => 'Công ty A',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Tổng hợp'],
+                'tongHop' => [
+                    'month' => '02.2026',
+                    'customerCode' => '90300',
+                    'customerFullName' => 'Công ty A',
+                    'address' => 'Địa chỉ A',
+                    'feedCategory' => 'Feed A',
+                    'totalQuantity' => '100',
+                    'grandTotal' => '200',
+                    'totalInWords' => 'Hai trăm đồng chẵn.',
+                    'dynamicItems' => [],
+                ],
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $selectedRecord = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $importBatch->id,
+            'customer_code' => '19220',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '19220',
+                'customerFullName' => 'Công ty B',
+                'customerType' => 'Khách thường',
+                'sourceSheets' => ['Tổng hợp'],
+                'tongHop' => [
+                    'month' => '03.2026',
+                    'customerCode' => '19220',
+                    'customerFullName' => 'Công ty B',
+                    'address' => 'Địa chỉ B',
+                    'feedCategory' => 'Feed B',
+                    'totalQuantity' => '555',
+                    'grandTotal' => '777',
+                    'totalInWords' => 'Bảy trăm bảy mươi bảy đồng chẵn.',
+                    'dynamicItems' => [],
+                ],
+                'khoanNpp' => null,
+                'camCa' => null,
+                'keyAccount' => null,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('templates.index', ['tong_hop_preview_record' => $selectedRecord->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedTongHopPreviewRecordId', $selectedRecord->id)
+                ->where('tongHopTablePreview.sample.recordId', $selectedRecord->id)
+                ->where('tongHopTablePreview.sample.customerCode', '19220')
+                ->where('tongHopTablePreview.sample.customerFullName', 'Công ty B')
+                ->where('tongHopTablePreview.title', 'Chế độ tháng 03.2026')
+                ->where('tongHopTablePreview.rows.0.value', '555')
+                ->where('tongHopTablePreview.rows.1.value', '777')
+                ->where('tongHopBindingOptions.2.key', 'Mã số')
+                ->where('tongHopBindingOptions.2.valuePreview', '19220')
+                ->has('tongHopPreviewCustomers', 2)
             );
     }
 

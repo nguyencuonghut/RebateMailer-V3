@@ -18,7 +18,7 @@ class BuildTemplateTongHopTablePreviewService
     /**
      * @return array<string, mixed>|null
      */
-    public function build(?MailTemplate $mailTemplate): ?array
+    public function build(?MailTemplate $mailTemplate, ?int $aggregatedRecordId = null): ?array
     {
         if (! $mailTemplate) {
             return null;
@@ -30,7 +30,7 @@ class BuildTemplateTongHopTablePreviewService
             return null;
         }
 
-        $sample = $this->buildTemplatePreviewSampleService->build('tongHop');
+        $sample = $this->buildTemplatePreviewSampleService->build('tongHop', $aggregatedRecordId);
 
         if (! $sample) {
             return null;
@@ -53,6 +53,7 @@ class BuildTemplateTongHopTablePreviewService
             'rows' => $rendered['rows'],
             'errors' => $rendered['errors'],
             'sample' => [
+                'recordId' => $sample['recordId'],
                 'batchId' => $sample['batchId'],
                 'batchCode' => $sample['batchCode'],
                 'customerCode' => $sample['customerCode'],
@@ -65,9 +66,9 @@ class BuildTemplateTongHopTablePreviewService
     /**
      * @return array<int, array{key: string, label: string, valuePreview: string}>
      */
-    public function buildBindingOptions(): array
+    public function buildBindingOptions(?int $aggregatedRecordId = null): array
     {
-        $sample = $this->buildTemplatePreviewSampleService->build('tongHop');
+        $sample = $this->buildTemplatePreviewSampleService->build('tongHop', $aggregatedRecordId);
 
         if (! $sample) {
             return [];

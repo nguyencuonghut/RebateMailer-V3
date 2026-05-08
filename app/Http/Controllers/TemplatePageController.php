@@ -21,6 +21,7 @@ class TemplatePageController extends Controller
             'Templates/Index',
             $this->templatePageService->getIndexPageData(
                 $request->user()?->can(PermissionName::TemplatesManage->value) ?? false,
+                $request->integer('tong_hop_preview_record') ?: null,
                 $request->integer('khoan_npp_preview_record') ?: null,
             ),
         );

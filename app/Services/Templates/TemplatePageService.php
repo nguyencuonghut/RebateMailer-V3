@@ -25,7 +25,11 @@ class TemplatePageService
     /**
      * @return array<string, mixed>
      */
-    public function getIndexPageData(bool $canManageTemplates, ?int $selectedKhoanNppPreviewRecordId = null): array
+    public function getIndexPageData(
+        bool $canManageTemplates,
+        ?int $selectedTongHopPreviewRecordId = null,
+        ?int $selectedKhoanNppPreviewRecordId = null,
+    ): array
     {
         $this->syncLegacyMailTemplateToCompositionService->syncAll();
 
@@ -33,6 +37,7 @@ class TemplatePageService
         $selectedTemplate = $builderTemplate === null
             ? null
             : MailTemplate::query()->find($builderTemplate['id']);
+        $tongHopPreview = $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate, $selectedTongHopPreviewRecordId);
         $khoanNppPreview = $this->buildTemplateKhoanNppTablePreviewService->build($selectedTemplate, $selectedKhoanNppPreviewRecordId);
 
         return [
@@ -70,11 +75,13 @@ class TemplatePageService
             'partVersionGroups' => $this->buildTemplatePartVersionOverviewService->build($selectedTemplate),
             'subjectPreview' => $this->buildTemplateSubjectPreviewService->build($selectedTemplate),
             'greetingPreview' => $this->buildTemplateGreetingPreviewService->build($selectedTemplate),
-            'tongHopTablePreview' => $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate),
+            'tongHopTablePreview' => $tongHopPreview,
+            'tongHopPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('tongHop'),
+            'selectedTongHopPreviewRecordId' => $tongHopPreview['sample']['recordId'] ?? null,
             'khoanNppTablePreview' => $khoanNppPreview,
             'khoanNppPreviewCustomers' => $this->buildTemplatePreviewSampleService->buildCustomerOptions('khoanNpp'),
             'selectedKhoanNppPreviewRecordId' => $khoanNppPreview['sample']['recordId'] ?? null,
-            'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions(),
+            'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions($selectedTongHopPreviewRecordId),
             'nextSlice' => [
                 'code' => '2.3-F',
                 'label' => 'Preview Table Chiết khấu cám cá từ sheet Cám cá',

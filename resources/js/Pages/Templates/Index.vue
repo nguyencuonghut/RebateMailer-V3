@@ -156,6 +156,7 @@ const props = defineProps<{
         }>;
         errors: string[];
         sample: {
+            recordId: number;
             batchId: number;
             batchCode: string;
             customerCode: string;
@@ -163,6 +164,15 @@ const props = defineProps<{
             month: string;
         };
     } | null;
+    tongHopPreviewCustomers: Array<{
+        recordId: number;
+        customerCode: string;
+        customerFullName: string;
+        label: string;
+        batchCode: string;
+        month: string;
+    }>;
+    selectedTongHopPreviewRecordId: number | null;
     khoanNppTablePreview: {
         title: string;
         sourceSheet: string;
@@ -643,6 +653,8 @@ const khoanNppDraftSection = computed(() =>
                                     :preview="tongHopTablePreview"
                                     :draft-section="tongHopDraftSection"
                                     :binding-options="tongHopBindingOptions"
+                                    :preview-customers="tongHopPreviewCustomers"
+                                    :selected-record-id="selectedTongHopPreviewRecordId"
                                 />
                             </div>
                         </TabPanel>
