@@ -637,7 +637,7 @@
 
 ### Slice 2.4-B - Chuyển active template an toàn
 
-- **Loại:** `AFK`
+- **Loại:** `DONE`
 - **Blocked by:** `Slice 2.4-A`
 - **Mục tiêu:** chỉ cho phép đúng 1 template active tại một thời điểm.
 - **Kết quả demo:** active template mới thì template cũ bị disable tự động.
@@ -648,7 +648,7 @@
 
 ### Slice 2.4-C - Smoke test end-to-end cho Giai đoạn 2
 
-- **Loại:** `AFK`
+- **Loại:** `DONE`
 - **Blocked by:** `Slice 2.4-B`
 - **Mục tiêu:** khóa toàn bộ flow template builder bằng test và verify UI.
 - **Kết quả demo:** tạo template, kéo thả, lưu, active, reload và preview lại được.
@@ -656,6 +656,7 @@
   - có feature test cho CRUD template và active-state
   - có test cho interpolation engine
   - có smoke path UI cho builder tối thiểu
+  - đã có smoke feature test đi qua full flow: create canvas -> add parts -> save content -> activate -> reload page với preview context thật
 
 ## 5. Thứ tự triển khai đề xuất
 

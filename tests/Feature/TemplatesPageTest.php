@@ -35,7 +35,7 @@ class TemplatesPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
                 ->where('title', 'Thiết kế mẫu email')
-                ->where('currentSlice.code', '2.4-B')
+                ->where('currentSlice.code', '2.4-C')
                 ->where('canManageTemplates', true)
                 ->has('writeCapabilities', 4)
                 ->where('writeCapabilities.0', 'Tạo template mới')
@@ -69,7 +69,7 @@ class TemplatesPageTest extends TestCase
                 ->where('templateParts.5.type', 'key-account-table')
                 ->where('templateList', [])
                 ->where('activeTemplateId', null)
-                ->where('nextSlice.code', '2.4-C')
+                ->where('nextSlice.code', 'DONE')
             );
     }
 
