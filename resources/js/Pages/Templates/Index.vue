@@ -12,8 +12,12 @@ import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTong
 import TemplateKhoanNppTablePreviewCard from '@/Components/templates/TemplateKhoanNppTablePreviewCard.vue';
 import TemplateCamCaTablePreviewCard from '@/Components/templates/TemplateCamCaTablePreviewCard.vue';
 import TemplateKeyAccountTablePreviewCard from '@/Components/templates/TemplateKeyAccountTablePreviewCard.vue';
+import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import type { TemplateTableRowType } from '@/Services/templates/useTemplateBuilderCanvas';
+import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
 import Card from 'primevue/card';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
 import Tag from 'primevue/tag';
 import Select from 'primevue/select';
 import Tabs from 'primevue/tabs';
@@ -522,6 +526,18 @@ const partVersionGroupByType = computed(() =>
         (props.partVersionGroups ?? []).map((group) => [group.partType, group]),
     ) as Record<string, (typeof props.partVersionGroups)[number]>,
 );
+const {
+    filters: templateListFilters,
+    globalFilterFields: templateListGlobalFilterFields,
+    globalFilterValue: templateListGlobalFilterValue,
+    clearGlobalFilter: clearTemplateListGlobalFilter,
+} = useDataTableGlobalFilter<(typeof props.templateList)[number]>([
+    'name',
+    'subjectTemplate',
+    'statusLabel',
+    'createdBy',
+    (item) => String(item.sectionCount),
+]);
 
 const tongHopDraftSection = computed(() =>
     tongHopDraftSections.value.find((section) => section.type === 'tong-hop-table') ?? null,
@@ -787,59 +803,68 @@ const keyAccountDraftSection = computed(() =>
                                             </div>
 
                                             <div v-else class="space-y-3">
-                                                <article
-                                                    v-for="templateItem in templateList"
-                                                    :key="templateItem.id"
-                                                    class="rounded-[1.4rem] border p-4"
-                                                    :style="{
-                                                        borderColor: templateItem.isActive ? 'rgba(20, 184, 166, 0.36)' : 'var(--dashboard-panel-border)',
-                                                        background: 'var(--dashboard-card-bg)',
-                                                    }"
+                                                <DataTableGlobalFilterToolbar
+                                                    v-model="templateListGlobalFilterValue"
+                                                    placeholder="Tìm theo tên template, subject, trạng thái, người tạo"
+                                                    @clear="clearTemplateListGlobalFilter"
+                                                />
+
+                                                <DataTable
+                                                    v-model:filters="templateListFilters"
+                                                    :value="templateList"
+                                                    :global-filter-fields="templateListGlobalFilterFields"
+                                                    paginator
+                                                    :rows="10"
+                                                    responsive-layout="scroll"
+                                                    class="p-datatable-sm"
                                                 >
-                                                    <div class="flex flex-col gap-3">
-                                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                                            <div>
-                                                                <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                                    {{ templateItem.name }}
-                                                                </p>
-                                                                <p class="mt-1 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                                    {{ templateItem.subjectTemplate }}
-                                                                </p>
+                                                    <Column field="name" header="Tên template" />
+                                                    <Column field="subjectTemplate" header="Subject">
+                                                        <template #body="{ data }">
+                                                            <span :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                                {{ data.subjectTemplate || 'Chưa có subject' }}
+                                                            </span>
+                                                        </template>
+                                                    </Column>
+                                                    <Column header="Trạng thái">
+                                                        <template #body="{ data }">
+                                                            <Tag :value="data.statusLabel" :severity="data.isActive ? 'success' : 'secondary'" rounded />
+                                                        </template>
+                                                    </Column>
+                                                    <Column header="Số phần">
+                                                        <template #body="{ data }">
+                                                            <Tag :value="`${data.sectionCount} phần`" severity="info" rounded />
+                                                        </template>
+                                                    </Column>
+                                                    <Column field="createdBy" header="Tạo bởi" />
+                                                    <Column header="Thao tác">
+                                                        <template #body="{ data }">
+                                                            <div class="flex flex-wrap justify-end gap-2">
+                                                                <Tag
+                                                                    v-if="data.isActive"
+                                                                    value="Template đang hoạt động"
+                                                                    severity="success"
+                                                                    rounded
+                                                                />
+                                                                <button
+                                                                    v-else-if="canManageTemplates"
+                                                                    type="button"
+                                                                    class="inline-flex items-center rounded-2xl border px-4 py-2 text-sm font-medium transition"
+                                                                    :disabled="isActivatingTemplateId === data.id"
+                                                                    :style="{
+                                                                        borderColor: 'rgba(20, 184, 166, 0.36)',
+                                                                        color: 'var(--dashboard-strong-text)',
+                                                                        background: 'rgba(20, 184, 166, 0.08)',
+                                                                        opacity: isActivatingTemplateId === data.id ? 0.72 : 1,
+                                                                    }"
+                                                                    @click="activateTemplate(data.id)"
+                                                                >
+                                                                    {{ isActivatingTemplateId === data.id ? 'Đang kích hoạt...' : 'Đặt làm template hoạt động' }}
+                                                                </button>
                                                             </div>
-
-                                                            <Tag :value="templateItem.statusLabel" :severity="templateItem.isActive ? 'success' : 'secondary'" rounded />
-                                                        </div>
-
-                                                        <div class="flex flex-wrap gap-2.5">
-                                                            <Tag :value="`${templateItem.sectionCount} phần`" severity="info" rounded />
-                                                            <Tag :value="`Tạo bởi: ${templateItem.createdBy}`" severity="secondary" rounded />
-                                                        </div>
-
-                                                        <div v-if="canManageTemplates" class="flex flex-wrap justify-end gap-2">
-                                                            <Tag
-                                                                v-if="templateItem.isActive"
-                                                                value="Template đang hoạt động"
-                                                                severity="success"
-                                                                rounded
-                                                            />
-                                                            <button
-                                                                v-else
-                                                                type="button"
-                                                                class="inline-flex items-center rounded-2xl border px-4 py-2 text-sm font-medium transition"
-                                                                :disabled="isActivatingTemplateId === templateItem.id"
-                                                                :style="{
-                                                                    borderColor: 'rgba(20, 184, 166, 0.36)',
-                                                                    color: 'var(--dashboard-strong-text)',
-                                                                    background: 'rgba(20, 184, 166, 0.08)',
-                                                                    opacity: isActivatingTemplateId === templateItem.id ? 0.72 : 1,
-                                                                }"
-                                                                @click="activateTemplate(templateItem.id)"
-                                                            >
-                                                                {{ isActivatingTemplateId === templateItem.id ? 'Đang kích hoạt...' : 'Đặt làm template hoạt động' }}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </article>
+                                                        </template>
+                                                    </Column>
+                                                </DataTable>
                                             </div>
                                         </div>
                                     </template>
