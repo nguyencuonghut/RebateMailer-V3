@@ -520,9 +520,77 @@
 - **Blocked by:** `Slice 2.3-E`
 - **Mục tiêu:** preview riêng bảng `Chiết khấu cám cá` từ dữ liệu `Cám cá`.
 - **Kết quả demo:** khách có dữ liệu cám cá sẽ render đúng bảng `STT | Nội dung | Tổng`.
+- **UX preview bắt buộc:**
+  - preview phải cho phép chọn khách từ danh sách `aggregated records` đã xử lý
+  - dropdown phải search được theo `Mã & tên khách hàng`
+  - khi đổi khách, preview phải apply đúng dữ liệu thật của khách vừa chọn
+  - selection này phải đi theo cùng pattern đã dùng cho preview `Subject`, `Lời chào`, `Tổng hợp`, `Khoán NPP`
+- **Dữ kiện đã xác nhận từ docs + parser + workbook mẫu:**
+  - sheet `Cám cá` có 2 nhóm dữ liệu khác bản chất:
+    - nhóm cột tĩnh / discrete:
+      - `Tổng sản lượng`
+      - `Doanh thu`
+      - `Tiền chiết khấu theo Hóa đơn`
+      - `Chiết khấu khác ( Không thể hiện trên hóa đơn)`
+      - các cột thưởng / hỗ trợ thay đổi theo tháng như `Thưởng sản lượng tháng 03.2026`, `Hỗ trợ vận chuyển`, ...
+    - nhóm cột CT:
+      - `CT1 | Thành tiền`
+      - `CT2 | Thành tiền`
+      - `CT3 | Thành tiền`
+      - ... có thể thay đổi theo tháng
+  - parser thật ở `ParseCamCaPreviewService` đang xuất ra:
+    - `discreteItems[] = [{ label, value }]`
+    - `programItems[] = [{ programIndex, content, amount }]`
+    - `grandTotal`
+    - `totalInWords`
+  - `Template Mail` xác nhận bảng `Chiết khấu cám cá` là hybrid:
+    - có các dòng lấy từ tên cột thật của sheet `Cám cá` như `Tổng sản lượng`, `Doanh thu`
+    - có nhóm cha/con:
+      - `I | Tiền chiết khấu theo hóa đơn`
+      - các dòng con `1..N` lấy từ cả discrete columns lẫn các `CT i`
+      - `II | Chiết khấu khác ( không thể hiện trên hóa đơn)`
+      - các dòng con tiếp theo lấy từ discrete columns của nhóm này
+- **Thiết kế `Table rows` đúng bản chất:**
+  - `value-row`
+    - bind vào 1 giá trị đơn từ `Cám cá`
+    - nguồn có thể là:
+      - top-level fixed values như `Tổng sản lượng`, `Doanh thu`
+      - hoặc 1 phần tử trong `discreteItems[]`
+  - `program-loop`
+    - lặp qua `programItems[]`
+    - `content <- programItem.content`
+    - `amount <- programItem.amount`
+    - STT auto increment theo số CT thực render
+  - `parent`
+    - row cha hiển thị La Mã như `I`, `II`
+    - dùng để nhóm các row con phía dưới
+  - `blank`
+  - `total`
+    - lấy từ `grandTotal`
+    - label mặc định: `Cộng`
+  - `in-words`
+    - lấy từ `totalInWords`
+    - label mặc định: `Bằng chữ:`
+- **Hệ quả cho builder UI:**
+  - khác `Tổng hợp`, không thể chỉ dùng `columnKey` tĩnh cho toàn bộ section
+  - khác `Khoán NPP`, không thể chỉ có mỗi `program-loop`
+  - builder phải cho phép trộn trong cùng 1 bảng:
+    - row bind vào `value-row`
+    - row bind vào `program-loop`
+    - row cha `parent`
+    - row `total`
+    - row `in-words`
+- **Rule render đúng theo dữ liệu đã xác nhận:**
+  - row `program-loop` chỉ render các CT có dữ liệu thật; CT rỗng hoàn toàn không render
+  - row `value-row` lấy theo đúng nguồn bind đã chọn; không suy đoán lại từ text hiển thị
+  - `total` và `in-words` là row tĩnh của section, không phát sinh từ `CT i`
 - **Acceptance criteria:**
   - section này chỉ dùng dữ liệu từ `Cám cá`
-  - preview render được các row type `Cộng` và `Bằng chữ`
+  - preview phải cho phép chọn khách từ danh sách aggregate đã xử lý
+  - preview phải render được cả 2 nguồn dữ liệu:
+    - row từ cột / discrete values
+    - row từ `CT i | Thành tiền`
+  - preview render được các row type `parent`, `program-loop`, `total`, `in-words`
   - section không hiện nếu khách không có dữ liệu `Cám cá`
 
 ### Slice 2.3-G - Thiết kế và preview `Table Chiết khấu Key Account` từ sheet `Key Account`
