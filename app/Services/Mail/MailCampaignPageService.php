@@ -43,7 +43,7 @@ class MailCampaignPageService
     private function resolveSelectedCampaign(?int $selectedCampaignId): ?MailCampaign
     {
         $query = MailCampaign::query()
-            ->with(['importBatch', 'templateCanvas', 'creator', 'recipients'])
+            ->with(['importBatch', 'templateCanvas', 'creator', 'recipients.attemptLogs'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -129,6 +129,7 @@ class MailCampaignPageService
         $recipientSummary = [
             'total' => $campaign->recipients->count(),
             'pending' => $campaign->recipients->where('delivery_status', 'pending')->count(),
+            'queued' => $campaign->recipients->where('delivery_status', 'queued')->count(),
             'sent' => $campaign->recipients->where('delivery_status', 'sent')->count(),
             'failed' => $campaign->recipients->where('delivery_status', 'failed')->count(),
         ];
@@ -139,6 +140,7 @@ class MailCampaignPageService
             'notes' => $campaign->notes,
             'status' => $campaign->status,
             'statusLabel' => $this->presentCampaignStatus($campaign->status),
+            'scheduledAt' => optional($campaign->scheduled_at)->toIso8601String(),
             'createdBy' => $campaign->creator?->name ?? 'Không xác định',
             'createdAt' => optional($campaign->created_at)->toIso8601String(),
             'batch' => [
@@ -152,6 +154,41 @@ class MailCampaignPageService
                 'isActive' => $campaign->templateCanvas?->is_active ?? false,
             ],
             'recipientSummary' => $recipientSummary,
+            'progress' => $this->buildProgressPayload($campaign, $recipientSummary),
+        ];
+    }
+
+    /**
+     * @param  array{total: int, pending: int, queued: int, sent: int, failed: int}  $recipientSummary
+     * @return array<string, mixed>
+     */
+    private function buildProgressPayload(MailCampaign $campaign, array $recipientSummary): array
+    {
+        $total = max(1, $recipientSummary['total']);
+        $processed = $recipientSummary['sent'] + $recipientSummary['failed'];
+        $inFlight = $recipientSummary['queued'];
+
+        return [
+            'batchId' => $campaign->import_batch_id,
+            'batchCode' => $campaign->importBatch?->batch_code,
+            'totalRecipients' => $recipientSummary['total'],
+            'processedRecipients' => $processed,
+            'queuedRecipients' => $inFlight,
+            'sentRecipients' => $recipientSummary['sent'],
+            'failedRecipients' => $recipientSummary['failed'],
+            'pendingRecipients' => $recipientSummary['pending'],
+            'completionPercent' => $recipientSummary['total'] === 0
+                ? 0
+                : (int) round(($processed / $total) * 100),
+            'sentPercent' => $recipientSummary['total'] === 0
+                ? 0
+                : (int) round(($recipientSummary['sent'] / $total) * 100),
+            'failedPercent' => $recipientSummary['total'] === 0
+                ? 0
+                : (int) round(($recipientSummary['failed'] / $total) * 100),
+            'queuedPercent' => $recipientSummary['total'] === 0
+                ? 0
+                : (int) round(($inFlight / $total) * 100),
         ];
     }
 
@@ -174,6 +211,17 @@ class MailCampaignPageService
                 'deliveryStatusLabel' => $this->presentRecipientStatus($recipient->delivery_status),
                 'latestErrorMessage' => $recipient->latest_error_message,
                 'attemptsCount' => $recipient->attempts_count,
+                'canRetry' => $recipient->delivery_status === 'failed',
+                'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
+                    'id' => $attempt->id,
+                    'eventType' => $attempt->event_type,
+                    'eventLabel' => $this->presentRecipientAttemptEvent($attempt->event_type),
+                    'status' => $attempt->status,
+                    'statusLabel' => $this->presentRecipientAttemptStatus($attempt->status),
+                    'message' => $attempt->message,
+                    'createdAt' => optional($attempt->created_at)->toIso8601String(),
+                    'context' => $attempt->context ?? [],
+                ])->values()->all(),
             ])
             ->values()
             ->all();
@@ -201,6 +249,31 @@ class MailCampaignPageService
             'sending' => 'Đang gửi',
             'sent' => 'Đã gửi',
             'failed' => 'Lỗi gửi',
+            default => $status,
+        };
+    }
+
+    private function presentRecipientAttemptEvent(string $eventType): string
+    {
+        return match ($eventType) {
+            'queued' => 'Đưa vào hàng đợi',
+            'queue_blocked' => 'Chặn ở bước vào hàng đợi',
+            'render_failed' => 'Render email thất bại',
+            'sent' => 'Gửi mail thành công',
+            'retry_queued' => 'Retry và đưa lại vào hàng đợi',
+            'retry_blocked' => 'Retry bị chặn',
+            'dispatch_attempt_failed' => 'Lần gửi mail này báo lỗi',
+            'dispatch_failed' => 'Worker gửi mail báo lỗi cuối cùng',
+            default => $eventType,
+        };
+    }
+
+    private function presentRecipientAttemptStatus(string $status): string
+    {
+        return match ($status) {
+            'queued' => 'Đã vào hàng đợi',
+            'failed' => 'Thất bại',
+            'success' => 'Thành công',
             default => $status,
         };
     }

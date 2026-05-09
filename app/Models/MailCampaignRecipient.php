@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'mail_campaign_id',
@@ -44,5 +45,12 @@ class MailCampaignRecipient extends Model
     public function aggregatedRecord(): BelongsTo
     {
         return $this->belongsTo(ImportBatchAggregatedRecord::class, 'import_batch_aggregated_record_id');
+    }
+
+    public function attemptLogs(): HasMany
+    {
+        return $this->hasMany(MailCampaignRecipientAttempt::class, 'mail_campaign_recipient_id')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
     }
 }

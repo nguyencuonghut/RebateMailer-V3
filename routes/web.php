@@ -5,6 +5,9 @@ use App\Http\Controllers\ImportBatchStatusController;
 use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
 use App\Http\Controllers\MailCampaignPageController;
+use App\Http\Controllers\MailCampaignDispatchController;
+use App\Http\Controllers\MailCampaignRecipientRetryController;
+use App\Http\Controllers\MailCampaignScheduleController;
 use App\Http\Controllers\MailCampaignStoreController;
 use App\Http\Controllers\ImportPageController;
 use App\Http\Controllers\ImportKhoanNppPreviewController;
@@ -99,6 +102,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/mail/campaigns', [MailCampaignStoreController::class, 'store'])
         ->middleware('permission:'.PermissionName::MailSend->value)
         ->name('mail.campaigns.store');
+    Route::post('/mail/campaigns/{mailCampaign}/schedule', MailCampaignScheduleController::class)
+        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->name('mail.campaigns.schedule');
+    Route::post('/mail/campaigns/{mailCampaign}/dispatch', MailCampaignDispatchController::class)
+        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->name('mail.campaigns.dispatch');
+    Route::post('/mail/campaigns/{mailCampaign}/recipients/{mailCampaignRecipient}/retry', MailCampaignRecipientRetryController::class)
+        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->name('mail.campaigns.recipients.retry');
 
     Route::get('/tracking', function () {
         return Inertia::render('ModulePage', [

@@ -10,10 +10,11 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import ProgressBar from 'primevue/progressbar';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AppLayout from '../../layout/AppLayout.vue';
 
 type BatchOption = {
@@ -48,6 +49,17 @@ type RecipientRow = {
     deliveryStatusLabel: string;
     latestErrorMessage: string | null;
     attemptsCount: number;
+    canRetry: boolean;
+    attemptLogs: Array<{
+        id: number;
+        eventType: string;
+        eventLabel: string;
+        status: string;
+        statusLabel: string;
+        message: string | null;
+        createdAt: string | null;
+        context: Record<string, unknown>;
+    }>;
 };
 
 const props = defineProps<{
@@ -66,6 +78,7 @@ const props = defineProps<{
         notes: string | null;
         status: string;
         statusLabel: string;
+        scheduledAt: string | null;
         createdBy: string;
         createdAt: string | null;
         batch: {
@@ -81,8 +94,23 @@ const props = defineProps<{
         recipientSummary: {
             total: number;
             pending: number;
+            queued: number;
             sent: number;
             failed: number;
+        };
+        progress: {
+            batchId: number;
+            batchCode: string | null;
+            totalRecipients: number;
+            processedRecipients: number;
+            queuedRecipients: number;
+            sentRecipients: number;
+            failedRecipients: number;
+            pendingRecipients: number;
+            completionPercent: number;
+            sentPercent: number;
+            failedPercent: number;
+            queuedPercent: number;
         };
     } | null;
     selectedRecipientPreview: {
@@ -126,6 +154,10 @@ const createForm = useForm({
     notes: '',
 });
 
+const scheduleForm = useForm({
+    scheduled_at: '',
+});
+
 const {
     filters: recipientFilters,
     globalFilterFields: recipientGlobalFilterFields,
@@ -144,9 +176,40 @@ const selectedCampaignOption = computed(() =>
     props.campaignOptions.find((campaign) => campaign.campaignId === props.selectedCampaignId)?.campaignId ?? null,
 );
 const isPreviewDialogVisible = computed(() => props.selectedRecipientPreview !== null);
+const canDispatchSelectedCampaign = computed(() =>
+    props.canManageCampaigns
+    && !!props.selectedCampaign
+    && ['draft', 'scheduled'].includes(props.selectedCampaign.status),
+);
+const shouldAutoRefreshCampaign = computed(() =>
+    !!props.selectedCampaign
+    && ['scheduled', 'dispatching'].includes(props.selectedCampaign.status),
+);
+const selectedRecipientErrorRow = ref<RecipientRow | null>(null);
+const isErrorDialogVisible = computed(() => selectedRecipientErrorRow.value !== null);
 
 const submitCreate = (): void => {
     createForm.post(route('mail.campaigns.store'), {
+        preserveScroll: true,
+    });
+};
+
+const startDispatchNow = (): void => {
+    if (!props.selectedCampaignId) {
+        return;
+    }
+
+    router.post(route('mail.campaigns.dispatch', props.selectedCampaignId), {}, {
+        preserveScroll: true,
+    });
+};
+
+const scheduleDispatch = (): void => {
+    if (!props.selectedCampaignId) {
+        return;
+    }
+
+    scheduleForm.post(route('mail.campaigns.schedule', props.selectedCampaignId), {
         preserveScroll: true,
     });
 };
@@ -199,6 +262,65 @@ const closeRecipientPreview = (): void => {
         },
     );
 };
+
+const openRecipientErrorDialog = (recipient: RecipientRow): void => {
+    selectedRecipientErrorRow.value = recipient;
+};
+
+const closeRecipientErrorDialog = (): void => {
+    selectedRecipientErrorRow.value = null;
+};
+
+const retryRecipient = (recipient: RecipientRow): void => {
+    if (!props.selectedCampaignId || !props.canManageCampaigns) {
+        return;
+    }
+
+    router.post(route('mail.campaigns.recipients.retry', {
+        mailCampaign: props.selectedCampaignId,
+        mailCampaignRecipient: recipient.id,
+    }), {}, {
+        preserveScroll: true,
+        preserveState: true,
+    });
+};
+
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+const refreshCampaignDashboard = (): void => {
+    if (!props.selectedCampaignId) {
+        return;
+    }
+
+    router.reload({
+        only: ['campaignOptions', 'selectedCampaign', 'recipientList', 'selectedRecipientPreview', 'selectedRecipientId'],
+        data: {
+            campaign: props.selectedCampaignId,
+            ...(props.selectedRecipientId ? { recipient: props.selectedRecipientId } : {}),
+        },
+    });
+};
+
+const syncAutoRefresh = (): void => {
+    if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+    }
+
+    if (!shouldAutoRefreshCampaign.value) {
+        return;
+    }
+
+    autoRefreshTimer = setInterval(refreshCampaignDashboard, 5000);
+};
+
+onMounted(syncAutoRefresh);
+watch(() => [props.selectedCampaignId, props.selectedCampaign?.status, props.selectedRecipientId], syncAutoRefresh);
+onBeforeUnmount(() => {
+    if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+    }
+});
 </script>
 
 <template>
@@ -337,7 +459,7 @@ const closeRecipientPreview = (): void => {
                             </div>
 
                             <template v-else>
-                                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                                     <div class="rounded-[1.25rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                                         <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Tổng người nhận</p>
                                         <p class="mt-2 text-2xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">{{ selectedCampaign.recipientSummary.total }}</p>
@@ -347,12 +469,83 @@ const closeRecipientPreview = (): void => {
                                         <p class="mt-2 text-2xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">{{ selectedCampaign.recipientSummary.pending }}</p>
                                     </div>
                                     <div class="rounded-[1.25rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                                        <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Đã vào hàng đợi</p>
+                                        <p class="mt-2 text-2xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">{{ selectedCampaign.recipientSummary.queued }}</p>
+                                    </div>
+                                    <div class="rounded-[1.25rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                                         <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Đã gửi</p>
                                         <p class="mt-2 text-2xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">{{ selectedCampaign.recipientSummary.sent }}</p>
                                     </div>
                                     <div class="rounded-[1.25rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                                         <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Lỗi gửi</p>
                                         <p class="mt-2 text-2xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">{{ selectedCampaign.recipientSummary.failed }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-[1.4rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <h3 class="text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                Tiến độ gửi theo batch
+                                            </h3>
+                                            <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                Batch ID: {{ selectedCampaign.progress.batchId }}<span v-if="selectedCampaign.progress.batchCode"> - {{ selectedCampaign.progress.batchCode }}</span>
+                                            </p>
+                                        </div>
+
+                                        <Tag
+                                            :value="shouldAutoRefreshCampaign ? 'Tự động làm mới mỗi 5 giây' : 'Dữ liệu đã ổn định'"
+                                            :severity="shouldAutoRefreshCampaign ? 'info' : 'secondary'"
+                                            rounded
+                                        />
+                                    </div>
+
+                                    <div class="mt-4 space-y-4">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between gap-3 text-sm">
+                                                <span :style="{ color: 'var(--dashboard-muted-text)' }">Hoàn thành tổng</span>
+                                                <span class="font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                    {{ selectedCampaign.progress.processedRecipients }}/{{ selectedCampaign.progress.totalRecipients }} ({{ selectedCampaign.progress.completionPercent }}%)
+                                                </span>
+                                            </div>
+                                            <ProgressBar :value="selectedCampaign.progress.completionPercent" />
+                                        </div>
+
+                                        <div class="grid gap-4 xl:grid-cols-3">
+                                            <div class="space-y-2">
+                                                <div class="flex items-center justify-between gap-3 text-sm">
+                                                    <span :style="{ color: 'var(--dashboard-muted-text)' }">Đã vào hàng đợi</span>
+                                                    <span class="font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                        {{ selectedCampaign.progress.queuedRecipients }} ({{ selectedCampaign.progress.queuedPercent }}%)
+                                                    </span>
+                                                </div>
+                                                <ProgressBar :value="selectedCampaign.progress.queuedPercent" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <div class="flex items-center justify-between gap-3 text-sm">
+                                                    <span :style="{ color: 'var(--dashboard-muted-text)' }">Đã gửi thành công</span>
+                                                    <span class="font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                        {{ selectedCampaign.progress.sentRecipients }} ({{ selectedCampaign.progress.sentPercent }}%)
+                                                    </span>
+                                                </div>
+                                                <ProgressBar :value="selectedCampaign.progress.sentPercent" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <div class="flex items-center justify-between gap-3 text-sm">
+                                                    <span :style="{ color: 'var(--dashboard-muted-text)' }">Lỗi gửi</span>
+                                                    <span class="font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                        {{ selectedCampaign.progress.failedRecipients }} ({{ selectedCampaign.progress.failedPercent }}%)
+                                                    </span>
+                                                </div>
+                                                <ProgressBar :value="selectedCampaign.progress.failedPercent" />
+                                            </div>
+                                        </div>
+
+                                        <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Còn lại {{ selectedCampaign.progress.pendingRecipients }} người nhận chưa vào hàng đợi hoặc chưa được xử lý xong.
+                                        </p>
                                     </div>
                                 </div>
 
@@ -368,6 +561,9 @@ const closeRecipientPreview = (): void => {
                                             <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
                                                 Template: {{ selectedCampaign.template.name }}
                                             </p>
+                                            <p v-if="selectedCampaign.scheduledAt" class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                Lịch gửi: {{ new Date(selectedCampaign.scheduledAt).toLocaleString('vi-VN') }}
+                                            </p>
                                         </div>
 
                                         <Tag :value="selectedCampaign.statusLabel" severity="info" rounded />
@@ -376,6 +572,39 @@ const closeRecipientPreview = (): void => {
                                     <p v-if="selectedCampaign.notes" class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
                                         {{ selectedCampaign.notes }}
                                     </p>
+
+                                    <div v-if="canManageCampaigns" class="mt-4 border-t pt-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
+                                        <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Lên lịch gửi</label>
+                                                <input
+                                                    v-model="scheduleForm.scheduled_at"
+                                                    type="datetime-local"
+                                                    class="w-full rounded-2xl border px-4 py-3 shadow-none xl:w-[20rem]"
+                                                    :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)', color: 'var(--dashboard-strong-text)' }"
+                                                    :disabled="!canDispatchSelectedCampaign"
+                                                >
+                                                <small v-if="scheduleForm.errors.scheduled_at" class="text-red-500">{{ scheduleForm.errors.scheduled_at }}</small>
+                                            </div>
+
+                                            <div class="flex flex-wrap justify-end gap-3">
+                                                <Button
+                                                    type="button"
+                                                    label="Lên lịch gửi"
+                                                    severity="secondary"
+                                                    outlined
+                                                    :disabled="!canDispatchSelectedCampaign || scheduleForm.processing || !scheduleForm.scheduled_at"
+                                                    @click="scheduleDispatch"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    label="Gửi ngay"
+                                                    :disabled="!canDispatchSelectedCampaign"
+                                                    @click="startDispatchNow"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -424,9 +653,14 @@ const closeRecipientPreview = (): void => {
                                 </Column>
                                 <Column header="Lỗi gần nhất">
                                     <template #body="{ data }">
-                                        <span :style="{ color: 'var(--dashboard-muted-text)' }">
-                                            {{ data.latestErrorMessage || 'Không có' }}
-                                        </span>
+                                        <div class="space-y-1">
+                                            <span :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                {{ data.latestErrorMessage || 'Không có' }}
+                                            </span>
+                                            <p class="text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                Lịch sử: {{ data.attemptLogs.length }} bản ghi
+                                            </p>
+                                        </div>
                                     </template>
                                 </Column>
                                 <Column header="Thao tác">
@@ -438,6 +672,22 @@ const closeRecipientPreview = (): void => {
                                                 size="small"
                                                 outlined
                                                 @click="openRecipientPreview(data.id)"
+                                            />
+                                            <Button
+                                                type="button"
+                                                label="Chi tiết lỗi"
+                                                size="small"
+                                                severity="secondary"
+                                                outlined
+                                                @click="openRecipientErrorDialog(data)"
+                                            />
+                                            <Button
+                                                v-if="canManageCampaigns && data.canRetry"
+                                                type="button"
+                                                label="Retry"
+                                                size="small"
+                                                severity="warn"
+                                                @click="retryRecipient(data)"
                                             />
                                         </div>
                                     </template>
@@ -461,6 +711,67 @@ const closeRecipientPreview = (): void => {
                 v-if="selectedRecipientPreview"
                 :preview="selectedRecipientPreview"
             />
+        </Dialog>
+
+        <Dialog
+            :visible="isErrorDialogVisible"
+            modal
+            :style="{ width: 'min(760px, 96vw)' }"
+            header="Chi tiết lỗi gửi mail"
+            @update:visible="(visible) => { if (!visible) closeRecipientErrorDialog() }"
+        >
+            <div v-if="selectedRecipientErrorRow" class="space-y-4">
+                <div class="rounded-[1.25rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                    <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                        {{ selectedRecipientErrorRow.customerFullName }}
+                    </p>
+                    <p class="mt-1 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                        Mã số: {{ selectedRecipientErrorRow.customerCode }} | Email: {{ selectedRecipientErrorRow.recipientEmail || 'Chưa có email' }}
+                    </p>
+                    <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                        Trạng thái hiện tại: {{ selectedRecipientErrorRow.deliveryStatusLabel }}
+                    </p>
+                </div>
+
+                <div v-if="selectedRecipientErrorRow.attemptLogs.length === 0" class="rounded-[1.25rem] border p-4 text-sm leading-6" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)', color: 'var(--dashboard-muted-text)' }">
+                    Chưa có bản ghi lỗi hoặc lịch sử retry cho người nhận này.
+                </div>
+
+                <div v-else class="space-y-3">
+                    <div
+                        v-for="attempt in selectedRecipientErrorRow.attemptLogs"
+                        :key="attempt.id"
+                        class="rounded-[1.25rem] border p-4"
+                        :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
+                    >
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                    {{ attempt.eventLabel }}
+                                </p>
+                                <p class="mt-1 text-xs leading-5" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    {{ attempt.createdAt ? new Date(attempt.createdAt).toLocaleString('vi-VN') : 'Không có thời điểm' }}
+                                </p>
+                            </div>
+
+                            <Tag :value="attempt.statusLabel" :severity="attempt.status === 'failed' ? 'danger' : attempt.status === 'queued' ? 'warn' : 'success'" rounded />
+                        </div>
+
+                        <p class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                            {{ attempt.message || 'Không có thông điệp chi tiết.' }}
+                        </p>
+
+                        <div v-if="Object.keys(attempt.context).length > 0" class="mt-3 rounded-2xl border px-4 py-3 text-xs leading-6" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
+                            <p
+                                v-for="[key, value] in Object.entries(attempt.context)"
+                                :key="`${attempt.id}-${key}`"
+                            >
+                                {{ key }}: {{ String(value) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </Dialog>
     </AppLayout>
 </template>
