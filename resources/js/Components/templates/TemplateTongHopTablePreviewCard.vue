@@ -104,18 +104,86 @@ const shouldHideWhenValueZero = (value: string): boolean => {
     return Number(normalized) === 0;
 };
 
+const toRoman = (value: number): string => {
+    const map: Array<[number, string]> = [
+        [1000, 'M'],
+        [900, 'CM'],
+        [500, 'D'],
+        [400, 'CD'],
+        [100, 'C'],
+        [90, 'XC'],
+        [50, 'L'],
+        [40, 'XL'],
+        [10, 'X'],
+        [9, 'IX'],
+        [5, 'V'],
+        [4, 'IV'],
+        [1, 'I'],
+    ];
+
+    let remaining = value;
+    let roman = '';
+
+    for (const [number, glyph] of map) {
+        while (remaining >= number) {
+            roman += glyph;
+            remaining -= number;
+        }
+    }
+
+    return roman;
+};
+
+const recalculateVisibleNumbering = <
+    T extends {
+        rowType?: string;
+        numbering: string;
+    },
+>(rows: T[]): T[] => {
+    let parentCounter = 0;
+    let childCounter = 0;
+
+    return rows.map((row) => {
+        const rowType = row.rowType?.trim() ?? '';
+
+        if (rowType === 'parent') {
+            parentCounter += 1;
+            childCounter = 0;
+
+            return {
+                ...row,
+                numbering: toRoman(parentCounter),
+            };
+        }
+
+        if (rowType === 'child') {
+            childCounter += 1;
+
+            return {
+                ...row,
+                numbering: String(childCounter),
+            };
+        }
+
+        return {
+            ...row,
+            numbering: '',
+        };
+    });
+};
+
 const effectivePreviewRows = computed(() => {
     if (!props.preview) {
         return [];
     }
 
     if (!props.draftSection?.rows?.length) {
-        return props.preview.rows;
+        return recalculateVisibleNumbering(props.preview.rows);
     }
 
     const valueMap = new Map((props.bindingOptions ?? []).map((option) => [option.key, option.valuePreview]));
 
-    return props.draftSection.rows.flatMap((row) => {
+    const visibleRows = props.draftSection.rows.flatMap((row) => {
         const columnKey = row.columnKey?.trim() || row.content.trim();
         const value = valueMap.get(columnKey) ?? '';
 
@@ -128,6 +196,8 @@ const effectivePreviewRows = computed(() => {
             value,
         }];
     });
+
+    return recalculateVisibleNumbering(visibleRows);
 });
 </script>
 
