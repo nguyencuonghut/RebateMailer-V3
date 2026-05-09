@@ -121,11 +121,14 @@
                                                                     @foreach (($table['rows'] ?? []) as $row)
                                                                         @php($fontWeight = (($row['fontWeight'] ?? 'regular') === 'bold') ? '700' : '400')
                                                                         @php($valueRaw = trim((string) ($row['value'] ?? '')))
+                                                                        @php($isInWordsRow = in_array(($row['rowType'] ?? ''), ['in-words', 'text'], true)
+                                                                            || trim((string) ($row['columnKey'] ?? '')) === 'Bằng chữ'
+                                                                            || str_starts_with(trim((string) ($row['content'] ?? '')), 'Bằng chữ'))
                                                                         <tr>
                                                                             <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
                                                                             <td valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
                                                                             <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
-                                                                                @if (($row['rowType'] ?? '') === 'in-words')
+                                                                                @if ($isInWordsRow)
                                                                                     {{ $row['value'] ?? '' }}
                                                                                 @else
                                                                                     {{ $valueRaw !== '' ? number_format((float) str_replace(',', '', $valueRaw)) : '—' }}

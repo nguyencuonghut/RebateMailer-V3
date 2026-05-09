@@ -40,6 +40,7 @@ class MailCampaignPreviewTest extends TestCase
                     ['type' => 'tong-hop-table', 'rows' => [
                         ['content' => 'Tổng sản lượng (gồm cám thủy sản)', 'rowType' => 'data', 'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)', 'hideWhenValueZero' => false, 'isBold' => false],
                         ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => false, 'isBold' => true],
+                        ['content' => 'Bằng chữ:', 'rowType' => 'text', 'columnKey' => 'Bằng chữ', 'hideWhenValueZero' => false, 'isBold' => false],
                     ]],
                     ['type' => 'khoan-npp-table', 'rows' => [
                         ['rowType' => 'program-loop'],
@@ -179,6 +180,7 @@ class MailCampaignPreviewTest extends TestCase
                 ->where('selectedRecipientPreview.greeting.renderedText', "Kính gửi 90300 - Công ty A,\nĐịa chỉ: Địa chỉ A")
                 ->where('selectedRecipientPreview.tables.0.type', 'tong-hop-table')
                 ->where('selectedRecipientPreview.tables.0.rows.0.value', '123456')
+                ->where('selectedRecipientPreview.tables.0.rows.2.value', 'Bảy trăm tám mươi chín nghìn đồng')
                 ->where('selectedRecipientPreview.tables.1.type', 'khoan-npp-table')
                 ->where('selectedRecipientPreview.tables.1.rows.0.content', 'Chương trình khoán A')
                 ->where('selectedRecipientPreview.tables.2.type', 'cam-ca-table')
@@ -189,6 +191,7 @@ class MailCampaignPreviewTest extends TestCase
                     && str_contains($html, 'Chế độ tháng 03.2026 - 90300 - Công ty A')
                     && str_contains($html, 'Kính gửi 90300 - Công ty A')
                     && str_contains($html, 'Chế độ tháng 03.2026')
+                    && str_contains($html, 'Bảy trăm tám mươi chín nghìn đồng')
                     && str_contains($html, 'Chương trình khoán A')
                     && str_contains($html, 'Chiết khấu cám cá tháng 03.2026')
                     && str_contains($html, 'Chiết khấu Key Account tháng 03.2026')

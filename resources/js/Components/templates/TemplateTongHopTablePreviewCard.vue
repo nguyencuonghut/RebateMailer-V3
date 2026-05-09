@@ -69,12 +69,23 @@ const previewCustomerLabel = computed(() => {
     return `${sample.customerCode} - ${sample.customerFullName}`;
 });
 
-const formatPreviewValue = (content: string, value: string): string => {
+const isInWordsRow = (row: { content: string; rowType?: string; columnKey?: string | null }): boolean => {
+    const rowType = row.rowType?.trim() ?? '';
+    const content = row.content.trim();
+    const columnKey = row.columnKey?.trim() ?? '';
+
+    return rowType === 'in-words'
+        || rowType === 'text'
+        || columnKey === 'Bằng chữ'
+        || content.startsWith('Bằng chữ');
+};
+
+const formatPreviewValue = (row: { content: string; rowType?: string; columnKey?: string | null }, value: string): string => {
     if (value.trim() === '') {
         return '-';
     }
 
-    return content === 'Bằng chữ'
+    return isInWordsRow(row)
         ? value
         : formatImportNumber(value, value);
 };
@@ -190,7 +201,7 @@ const effectivePreviewRows = computed(() => {
                                             <div>{{ row.content }}</div>
                                         </td>
                                         <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 500 }">
-                                            {{ formatPreviewValue(row.content, row.value) }}
+                                            {{ formatPreviewValue(row, row.value) }}
                                         </td>
                                     </tr>
                                 </tbody>
