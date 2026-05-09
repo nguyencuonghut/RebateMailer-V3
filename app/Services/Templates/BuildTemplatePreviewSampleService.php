@@ -28,6 +28,8 @@ class BuildTemplatePreviewSampleService
             if ($selectedRecord) {
                 return $this->buildSamplePayload($selectedRecord);
             }
+
+            return null;
         }
 
         $defaultRecord = $this->eligibleRecords($requiredSource, $previewBatchId)->first();

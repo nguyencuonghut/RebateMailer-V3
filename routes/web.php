@@ -4,6 +4,8 @@ use App\Http\Controllers\ImportAggregatePreviewController;
 use App\Http\Controllers\ImportBatchStatusController;
 use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
+use App\Http\Controllers\MailCampaignPageController;
+use App\Http\Controllers\MailCampaignStoreController;
 use App\Http\Controllers\ImportPageController;
 use App\Http\Controllers\ImportKhoanNppPreviewController;
 use App\Http\Controllers\ImportProcessBatchController;
@@ -91,14 +93,12 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:'.PermissionName::TemplatesManage->value)
         ->name('templates.structure.update');
 
-    Route::get('/mail', function () {
-        return Inertia::render('ModulePage', [
-            'title' => 'Điều phối gửi mail',
-            'description' => 'Theo dõi các đợt gửi thử, hàng đợi xử lý và kênh mail testing cục bộ.',
-            'capability' => 'Giám sát luồng gửi email và trạng thái vận hành.',
-            'status' => 'Mailpit đã sẵn sàng',
-        ]);
-    })->middleware('permission:'.PermissionName::MailView->value)->name('mail.index');
+    Route::get('/mail', [MailCampaignPageController::class, 'index'])
+        ->middleware('permission:'.PermissionName::MailView->value)
+        ->name('mail.index');
+    Route::post('/mail/campaigns', [MailCampaignStoreController::class, 'store'])
+        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->name('mail.campaigns.store');
 
     Route::get('/tracking', function () {
         return Inertia::render('ModulePage', [
