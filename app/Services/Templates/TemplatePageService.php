@@ -57,10 +57,6 @@ class TemplatePageService
         return [
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
-            'currentSlice' => [
-                'code' => '2.4-C',
-                'label' => 'Smoke test end-to-end cho Giai đoạn 2',
-            ],
             'canManageTemplates' => $canManageTemplates,
             'writeCapabilities' => [
                 'Tạo template mới',
@@ -100,10 +96,6 @@ class TemplatePageService
             'tongHopBindingOptions' => $this->buildTemplateTongHopTablePreviewService->buildBindingOptions($resolvedPreviewBatchId, $resolvedPreviewRecordId),
             'camCaBindingOptions' => $this->buildTemplateCamCaTablePreviewService->buildBindingOptions($resolvedPreviewBatchId, $resolvedPreviewRecordId),
             'keyAccountBindingOptions' => $this->buildTemplateKeyAccountTablePreviewService->buildBindingOptions($resolvedPreviewBatchId, $resolvedPreviewRecordId),
-            'nextSlice' => [
-                'code' => 'DONE',
-                'label' => 'Giai đoạn 2 đã hoàn tất',
-            ],
         ];
     }
 

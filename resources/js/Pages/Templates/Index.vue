@@ -30,10 +30,6 @@ import AppLayout from '../../layout/AppLayout.vue';
 const props = defineProps<{
     title: string;
     description: string;
-    currentSlice: {
-        code: string;
-        label: string;
-    };
     canManageTemplates: boolean;
     writeCapabilities: string[];
     readOnlyNotice: string;
@@ -325,10 +321,6 @@ const props = defineProps<{
         description: string;
     }>;
     constraints: string[];
-    nextSlice: {
-        code: string;
-        label: string;
-    };
 }>();
 
 const page = usePage<PageProps>();
@@ -572,7 +564,6 @@ const keyAccountDraftSection = computed(() =>
                     </div>
 
                     <div class="flex flex-wrap gap-3 lg:max-w-sm lg:justify-end">
-                        <Tag :value="`Slice ${currentSlice.code}`" severity="info" rounded />
                         <Tag :value="canManageTemplates ? 'Có quyền chỉnh sửa' : 'Chỉ xem'" :severity="canManageTemplates ? 'success' : 'warn'" rounded />
                     </div>
                 </div>
@@ -691,7 +682,7 @@ const keyAccountDraftSection = computed(() =>
                                                         {{ canvasComposition.canvasName }}
                                                     </h2>
                                                     <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                        Slice `2.0-R3` đã chuyển write path sang từng part và canvas composition. `mail_templates` hiện chỉ còn là bridge đọc cho UI legacy.
+                                                        Canvas này đang ghép các version của từng part để tạo thành mẫu email hoàn chỉnh. Mỗi part có thể được quản lý, tái sử dụng và thay thế độc lập.
                                                     </p>
                                                 </div>
 
@@ -798,7 +789,7 @@ const keyAccountDraftSection = computed(() =>
                                             </div>
 
                                             <div v-if="templateList.length === 0" class="rounded-[1.4rem] border px-5 py-4 text-sm leading-6" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)', color: 'var(--dashboard-muted-text)' }">
-                                                Hệ thống chưa có template email nào được lưu. Bước tiếp theo sẽ mở form tạo template đầu tiên.
+                                                Hệ thống chưa có template email nào được lưu.
                                             </div>
 
                                             <div v-else class="space-y-3">
@@ -867,10 +858,10 @@ const keyAccountDraftSection = computed(() =>
                                         <div class="space-y-4">
                                             <div>
                                                 <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                                    Ràng buộc đã chốt
+                                                    Nguyên tắc thiết kế
                                                 </p>
                                                 <h2 class="mt-3 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                    Phạm vi của {{ currentSlice.code }}
+                                                    Ràng buộc của module template
                                                 </h2>
                                             </div>
 
@@ -892,21 +883,6 @@ const keyAccountDraftSection = computed(() =>
                                     </template>
                                 </Card>
 
-                                <Card class="sakai-panel rounded-[2rem] border-0">
-                                    <template #content>
-                                        <div class="space-y-3">
-                                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                                Bước tiếp theo
-                                            </p>
-                                            <h2 class="text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                                {{ nextSlice.code }} - {{ nextSlice.label }}
-                                            </h2>
-                                            <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                Sau lát này, module template sẽ được khóa bằng smoke test cho flow tạo, chỉnh, kích hoạt và reload lại đúng state.
-                                            </p>
-                                        </div>
-                                    </template>
-                                </Card>
                             </div>
                         </TabPanel>
 

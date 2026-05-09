@@ -264,7 +264,6 @@ class TemplatesEndToEndSmokeTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
-                ->where('currentSlice.code', '2.4-C')
                 ->where('activeTemplateId', $mailTemplate->id)
                 ->where('builderTemplate.id', $mailTemplate->id)
                 ->where('selectedPreviewBatchId', $importBatch->id)
