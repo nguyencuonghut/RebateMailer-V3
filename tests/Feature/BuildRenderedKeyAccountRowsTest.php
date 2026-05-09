@@ -91,8 +91,32 @@ class BuildRenderedKeyAccountRowsTest extends TestCase
 
         $this->assertCount(1, $result['rows']);
         $this->assertSame('Tổng sản lượng', $result['rows'][0]['content']);
-        $this->assertSame('147300', $result['rows'][0]['quantity']);
-        $this->assertSame('', $result['rows'][0]['amount']);
+        $this->assertSame('', $result['rows'][0]['quantity']);
+        $this->assertSame('147300', $result['rows'][0]['amount']);
+        $this->assertCount(0, $result['errors']);
+    }
+
+    public function test_it_can_render_total_quantity_into_amount_column_when_user_selects_tong_column(): void
+    {
+        $service = new BuildRenderedKeyAccountRowsService;
+
+        $result = $service->build(
+            [
+                ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'valueColumn' => 'amount', 'hideWhenValueZero' => false, 'isBold' => false],
+            ],
+            [
+                'Tổng sản lượng' => ['quantity' => '147300', 'supportRate' => '', 'amount' => '', 'defaultValueColumn' => 'quantity'],
+            ],
+            [],
+            '',
+            '',
+        );
+
+        $this->assertCount(1, $result['rows']);
+        $this->assertSame('Tổng sản lượng', $result['rows'][0]['content']);
+        $this->assertSame('', $result['rows'][0]['quantity']);
+        $this->assertSame('', $result['rows'][0]['supportRate']);
+        $this->assertSame('147300', $result['rows'][0]['amount']);
         $this->assertCount(0, $result['errors']);
     }
 }

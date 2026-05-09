@@ -33,8 +33,9 @@ class BuildRenderedKeyAccountRowsService
                     continue;
                 }
 
-                $valueColumn = $this->resolveValueColumn($row, $valueMap[$columnKey]);
-                $slots = $this->makeValueSlots($valueColumn, (string) ($valueMap[$columnKey][$valueColumn] ?? ''));
+                $targetColumn = $this->resolveTargetColumn($row, $valueMap[$columnKey]);
+                $resolvedValue = $this->resolveDisplayValue($valueMap[$columnKey], $targetColumn);
+                $slots = $this->makeValueSlots($targetColumn, $resolvedValue);
 
                 if ($hideWhenValueZero && $this->shouldHideValueSlots($slots)) {
                     continue;
@@ -140,23 +141,45 @@ class BuildRenderedKeyAccountRowsService
      * @param  array<string, mixed>  $row
      * @param  array{quantity: string, supportRate: string, amount: string, defaultValueColumn: string}  $valueEntry
      */
-    private function resolveValueColumn(array $row, array $valueEntry): string
+    private function resolveTargetColumn(array $row, array $valueEntry): string
     {
         $valueColumn = (string) ($row['valueColumn'] ?? '');
         $defaultValueColumn = (string) ($valueEntry['defaultValueColumn'] ?? 'amount');
 
         if (in_array($valueColumn, ['quantity', 'supportRate', 'amount'], true)) {
-            $selectedValue = trim((string) ($valueEntry[$valueColumn] ?? ''));
-            $defaultValue = trim((string) ($valueEntry[$defaultValueColumn] ?? ''));
-
-            if ($selectedValue === '' && $defaultValue !== '') {
-                return $defaultValueColumn;
-            }
-
             return $valueColumn;
         }
 
         return $defaultValueColumn;
+    }
+
+    /**
+     * @param  array{quantity: string, supportRate: string, amount: string, defaultValueColumn: string}  $valueEntry
+     */
+    private function resolveDisplayValue(array $valueEntry, string $targetColumn): string
+    {
+        $targetValue = trim((string) ($valueEntry[$targetColumn] ?? ''));
+
+        if ($targetValue !== '') {
+            return $targetValue;
+        }
+
+        $defaultValueColumn = (string) ($valueEntry['defaultValueColumn'] ?? 'amount');
+        $defaultValue = trim((string) ($valueEntry[$defaultValueColumn] ?? ''));
+
+        if ($defaultValue !== '') {
+            return $defaultValue;
+        }
+
+        foreach (['quantity', 'supportRate', 'amount'] as $candidateColumn) {
+            $candidateValue = trim((string) ($valueEntry[$candidateColumn] ?? ''));
+
+            if ($candidateValue !== '') {
+                return $candidateValue;
+            }
+        }
+
+        return '';
     }
 
     /**

@@ -95,6 +95,41 @@ const shouldSkipProgramItem = (programItem: { content?: string; quantity?: strin
         && isBlank(programItem.supportRate ?? '')
         && isBlank(programItem.amount ?? '');
 
+const resolveTargetColumn = (
+    rowValueColumn: 'quantity' | 'supportRate' | 'amount' | null | undefined,
+    defaultValueColumn: 'quantity' | 'supportRate' | 'amount',
+): 'quantity' | 'supportRate' | 'amount' =>
+    rowValueColumn && ['quantity', 'supportRate', 'amount'].includes(rowValueColumn)
+        ? rowValueColumn
+        : defaultValueColumn;
+
+const resolveDisplayValue = (
+    entry: { quantity: string; supportRate: string; amount: string; defaultValueColumn: 'quantity' | 'supportRate' | 'amount' },
+    targetColumn: 'quantity' | 'supportRate' | 'amount',
+): string => {
+    const targetValue = (entry[targetColumn] ?? '').trim();
+
+    if (targetValue !== '') {
+        return targetValue;
+    }
+
+    const defaultValue = (entry[entry.defaultValueColumn] ?? '').trim();
+
+    if (defaultValue !== '') {
+        return defaultValue;
+    }
+
+    for (const candidateColumn of ['quantity', 'supportRate', 'amount'] as const) {
+        const candidateValue = (entry[candidateColumn] ?? '').trim();
+
+        if (candidateValue !== '') {
+            return candidateValue;
+        }
+    }
+
+    return '';
+};
+
 const effectivePreviewRows = computed(() => {
     const preview = props.preview;
 
@@ -131,10 +166,11 @@ const effectivePreviewRows = computed(() => {
                 continue;
             }
 
-            const valueColumn = row.valueColumn ?? entry.defaultValueColumn;
-            const quantity = valueColumn === 'quantity' ? entry.quantity : '';
-            const supportRate = valueColumn === 'supportRate' ? entry.supportRate : '';
-            const amount = valueColumn === 'amount' ? entry.amount : '';
+            const valueColumn = resolveTargetColumn(row.valueColumn, entry.defaultValueColumn);
+            const resolvedValue = resolveDisplayValue(entry, valueColumn);
+            const quantity = valueColumn === 'quantity' ? resolvedValue : '';
+            const supportRate = valueColumn === 'supportRate' ? resolvedValue : '';
+            const amount = valueColumn === 'amount' ? resolvedValue : '';
 
             if (row.hideWhenValueZero && isZeroOrBlank(quantity) && isZeroOrBlank(supportRate) && isZeroOrBlank(amount)) {
                 continue;
