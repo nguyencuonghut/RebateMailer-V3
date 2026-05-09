@@ -302,7 +302,7 @@ const formatCell = (value: string, rowType: string): string => {
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
-                                        <template v-if="row.rowType === 'total'">
+                                        <template v-if="row.rowType === 'total' || row.rowType === 'in-words'">
                                             <td class="px-4 py-3 text-sm align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
                                                 {{ row.numbering }}
                                             </td>

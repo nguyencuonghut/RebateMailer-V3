@@ -52,6 +52,7 @@ class MailCampaignPreviewTest extends TestCase
                     ['type' => 'key-account-table', 'rows' => [
                         ['content' => 'Tổng sản lượng', 'rowType' => 'value-row', 'columnKey' => 'Tổng sản lượng', 'valueColumn' => 'quantity', 'hideWhenValueZero' => false, 'isBold' => false],
                         ['content' => 'Cộng', 'rowType' => 'total', 'isBold' => true],
+                        ['content' => 'Bằng chữ:', 'rowType' => 'in-words', 'isBold' => false],
                     ]],
                 ],
             ],
@@ -190,7 +191,9 @@ class MailCampaignPreviewTest extends TestCase
                     && str_contains($html, 'Chế độ tháng 03.2026')
                     && str_contains($html, 'Chương trình khoán A')
                     && str_contains($html, 'Chiết khấu cám cá tháng 03.2026')
-                    && str_contains($html, 'Chiết khấu Key Account tháng 03.2026'))
+                    && str_contains($html, 'Chiết khấu Key Account tháng 03.2026')
+                    && str_contains($html, 'Bằng chữ:')
+                    && str_contains($html, 'colspan="3"'))
             );
     }
 

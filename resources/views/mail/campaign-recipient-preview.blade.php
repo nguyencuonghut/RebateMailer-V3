@@ -77,11 +77,17 @@
                                                                 <tbody>
                                                                     @foreach (($table['rows'] ?? []) as $row)
                                                                         @php($fontWeight = (($row['fontWeight'] ?? 'regular') === 'bold') ? '700' : '400')
-                                                                        @if (($row['rowType'] ?? '') === 'total')
+                                                                        @if (in_array(($row['rowType'] ?? ''), ['total', 'in-words'], true))
                                                                             <tr>
                                                                                 <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
                                                                                 <td colspan="3" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
-                                                                                <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ ($row['amount'] ?? '') !== '' ? number_format((float) str_replace(',', '', (string) $row['amount'])) : '—' }}</td>
+                                                                                <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
+                                                                                    @if (($row['rowType'] ?? '') === 'in-words')
+                                                                                        {{ $row['amount'] ?? '' }}
+                                                                                    @else
+                                                                                        {{ ($row['amount'] ?? '') !== '' ? number_format((float) str_replace(',', '', (string) $row['amount'])) : '—' }}
+                                                                                    @endif
+                                                                                </td>
                                                                             </tr>
                                                                         @else
                                                                             @php($amountRaw = trim((string) ($row['amount'] ?? '')))
