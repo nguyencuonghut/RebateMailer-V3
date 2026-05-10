@@ -21,6 +21,26 @@ const emit = defineEmits<{
     load: [];
 }>();
 
+const resolveSourceSheetSeverity = (sheet: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' => {
+    if (sheet === 'Tổng hợp') {
+        return 'info';
+    }
+
+    if (sheet === 'Khoán NPP') {
+        return 'contrast';
+    }
+
+    if (sheet === 'Cám cá') {
+        return 'success';
+    }
+
+    if (sheet === 'Key Account') {
+        return 'warn';
+    }
+
+    return 'secondary';
+};
+
 const { showDetailsTable, detailToggleLabel, detailToggleIcon, detailToggleHelper, toggleDetailsTable } = useImportDetailTableVisibility();
 const {
     filters,
@@ -142,7 +162,7 @@ const {
                                 v-for="sheet in data.sourceSheets"
                                 :key="`${data.customerCode}-${sheet}`"
                                 :value="sheet"
-                                severity="contrast"
+                                :severity="resolveSourceSheetSeverity(sheet)"
                                 rounded
                             />
                         </div>
@@ -151,10 +171,10 @@ const {
                 <Column header="Section có dữ liệu">
                     <template #body="{ data }">
                         <div class="flex flex-wrap gap-2">
-                            <Tag v-if="data.tongHop" value="Tổng hợp" severity="info" rounded />
-                            <Tag v-if="data.khoanNpp" value="Khoán NPP" severity="info" rounded />
-                            <Tag v-if="data.camCa" value="Cám cá" severity="info" rounded />
-                            <Tag v-if="data.keyAccount" value="Key Account" severity="warn" rounded />
+                            <Tag v-if="data.tongHop" value="Tổng hợp" :severity="resolveSourceSheetSeverity('Tổng hợp')" rounded />
+                            <Tag v-if="data.khoanNpp" value="Khoán NPP" :severity="resolveSourceSheetSeverity('Khoán NPP')" rounded />
+                            <Tag v-if="data.camCa" value="Cám cá" :severity="resolveSourceSheetSeverity('Cám cá')" rounded />
+                            <Tag v-if="data.keyAccount" value="Key Account" :severity="resolveSourceSheetSeverity('Key Account')" rounded />
                         </div>
                     </template>
                 </Column>

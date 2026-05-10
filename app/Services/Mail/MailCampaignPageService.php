@@ -201,6 +201,7 @@ class MailCampaignPageService
     {
         return MailCampaignRecipient::query()
             ->where('mail_campaign_id', $campaign->id)
+            ->with(['aggregatedRecord', 'attemptLogs'])
             ->orderBy('customer_code')
             ->get()
             ->map(fn (MailCampaignRecipient $recipient): array => [
@@ -208,7 +209,8 @@ class MailCampaignPageService
                 'customerCode' => $recipient->customer_code,
                 'customerFullName' => $recipient->customer_full_name,
                 'recipientEmail' => $recipient->recipient_email,
-                'customerType' => $recipient->customer_type,
+                'sourceSheets' => $recipient->aggregatedRecord?->source_sheets ?? [],
+                'sourceSheetsLabel' => $this->presentSourceSheets($recipient->aggregatedRecord?->source_sheets),
                 'deliveryStatus' => $recipient->delivery_status,
                 'deliveryStatusLabel' => $this->presentRecipientStatus($recipient->delivery_status),
                 'latestErrorMessage' => $recipient->latest_error_message,
@@ -227,6 +229,18 @@ class MailCampaignPageService
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  mixed  $sourceSheets
+     */
+    private function presentSourceSheets(mixed $sourceSheets): string
+    {
+        if (! is_array($sourceSheets) || $sourceSheets === []) {
+            return 'Không xác định';
+        }
+
+        return implode(' | ', array_map(static fn ($value): string => (string) $value, $sourceSheets));
     }
 
     private function presentCampaignStatus(string $status): string

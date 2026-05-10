@@ -44,7 +44,8 @@ type RecipientRow = {
     customerCode: string;
     customerFullName: string;
     recipientEmail: string | null;
-    customerType: string;
+    sourceSheets: string[];
+    sourceSheetsLabel: string;
     deliveryStatus: string;
     deliveryStatusLabel: string;
     latestErrorMessage: string | null;
@@ -169,7 +170,7 @@ const {
     'customerCode',
     'customerFullName',
     'recipientEmail',
-    'customerType',
+    'sourceSheetsLabel',
     'deliveryStatusLabel',
     'latestErrorMessage',
 ]);
@@ -214,6 +215,25 @@ const shouldAutoRefreshCampaign = computed(() =>
     !!props.selectedCampaign
     && ['scheduled', 'dispatching'].includes(props.selectedCampaign.status),
 );
+const resolveSourceSheetSeverity = (sheet: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' => {
+    if (sheet === 'Tổng hợp') {
+        return 'info';
+    }
+
+    if (sheet === 'Khoán NPP') {
+        return 'contrast';
+    }
+
+    if (sheet === 'Cám cá') {
+        return 'success';
+    }
+
+    if (sheet === 'Key Account') {
+        return 'warn';
+    }
+
+    return 'secondary';
+};
 const selectedRecipientErrorRow = ref<RecipientRow | null>(null);
 const isErrorDialogVisible = computed(() => selectedRecipientErrorRow.value !== null);
 
@@ -656,7 +676,7 @@ onBeforeUnmount(() => {
                         <div v-else class="space-y-3">
                             <DataTableGlobalFilterToolbar
                                 v-model="recipientGlobalFilterValue"
-                                placeholder="Tìm theo mã số, khách hàng, email, loại khách, trạng thái"
+                                placeholder="Tìm theo mã số, khách hàng, email, nguồn dữ liệu, trạng thái"
                                 @clear="clearRecipientGlobalFilter"
                             />
 
@@ -678,7 +698,25 @@ onBeforeUnmount(() => {
                                         </span>
                                     </template>
                                 </Column>
-                                <Column field="customerType" header="Loại khách" />
+                                <Column header="Nguồn dữ liệu">
+                                    <template #body="{ data }">
+                                        <div class="flex flex-wrap gap-2">
+                                            <Tag
+                                                v-for="sheet in data.sourceSheets"
+                                                :key="`${data.customerCode}-${sheet}`"
+                                                :value="sheet"
+                                                :severity="resolveSourceSheetSeverity(sheet)"
+                                                rounded
+                                            />
+                                            <Tag
+                                                v-if="data.sourceSheets.length === 0"
+                                                value="Không xác định"
+                                                severity="secondary"
+                                                rounded
+                                            />
+                                        </div>
+                                    </template>
+                                </Column>
                                 <Column header="Trạng thái gửi">
                                     <template #body="{ data }">
                                         <Tag :value="data.deliveryStatusLabel" :severity="data.deliveryStatus === 'failed' ? 'danger' : data.deliveryStatus === 'sent' ? 'success' : 'warn'" rounded />

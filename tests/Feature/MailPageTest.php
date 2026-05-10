@@ -208,6 +208,9 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.progress.queuedPercent', 33)
                 ->where('selectedCampaign.progress.sentPercent', 33)
                 ->where('selectedCampaign.progress.failedPercent', 33)
+                ->where('recipientList.0.sourceSheetsLabel', 'Tổng hợp')
+                ->where('recipientList.1.sourceSheetsLabel', 'Tổng hợp')
+                ->where('recipientList.2.sourceSheetsLabel', 'Tổng hợp')
             );
     }
 }
