@@ -86,6 +86,8 @@ class DashboardPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->where('title', 'Bảng điều khiển vận hành')
+                ->where('autoRefresh.enabled', true)
+                ->where('autoRefresh.intervalSeconds', 5)
                 ->where('overviewCards.0.value', 1)
                 ->where('overviewCards.1.value', 1)
                 ->where('overviewCards.2.value', 1)
@@ -95,9 +97,14 @@ class DashboardPageTest extends TestCase
                 ->where('quickActions.0.routeName', 'imports.index')
                 ->where('quickActions.1.routeName', 'templates.index')
                 ->where('quickActions.2.routeName', 'mail.index')
+                ->where('operationalPanels.0.action.label', 'Mở batch này')
+                ->where('operationalPanels.1.action.label', 'Mở template mail')
+                ->where('operationalPanels.2.action.label', 'Mở chiến dịch này')
                 ->where('recentImportBatches.0.batchCode', 'IMP-2026-05')
+                ->where('recentImportBatches.0.href', route('imports.index', ['batch' => $batch->id]))
                 ->where('recentImportBatches.0.aggregatedRecordCount', 1)
                 ->where('recentCampaigns.0.name', 'Chiến dịch tháng 5')
+                ->where('recentCampaigns.0.href', route('mail.index', ['campaign' => $campaign->id]))
                 ->where('recentCampaigns.0.recipientCount', 1)
                 ->where('recentCampaigns.0.status', 'dispatching')
             );
@@ -112,7 +119,11 @@ class DashboardPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
+                ->where('autoRefresh.enabled', false)
                 ->has('quickActions', 2)
+                ->where('operationalPanels.0.action', null)
+                ->where('operationalPanels.1.action', null)
+                ->where('operationalPanels.2.action', null)
                 ->where('quickActions.0.routeName', 'imports.index')
                 ->where('quickActions.1.routeName', 'mail.index')
             );

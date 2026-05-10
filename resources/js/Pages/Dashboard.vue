@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PageProps } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
 import ProgressBar from 'primevue/progressbar';
@@ -19,6 +20,10 @@ type OperationalPanel = {
     title: string;
     status: string;
     lines: string[];
+    action: {
+        label: string;
+        href: string;
+    } | null;
 };
 
 type QuickAction = {
@@ -35,6 +40,7 @@ type ImportBatchRow = {
     statusLabel: string;
     aggregatedRecordCount: number;
     completedAt: string | null;
+    href: string | null;
 };
 
 type CampaignRow = {
@@ -47,11 +53,18 @@ type CampaignRow = {
     recipientCount: number;
     scheduledForAt: string | null;
     createdAt: string | null;
+    href: string | null;
 };
 
 const props = defineProps<{
     title: string;
     subtitle: string;
+    autoRefresh: {
+        enabled: boolean;
+        intervalSeconds: number;
+        reason: string;
+        lastUpdatedAt: string;
+    };
     overviewCards: OverviewCard[];
     operationalPanels: OperationalPanel[];
     deliveryHealth: {
@@ -67,6 +80,7 @@ const props = defineProps<{
 
 const page = usePage<PageProps>();
 const user = page.props.auth.user;
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 const formatDateTime = (value: string | null): string => {
     if (!value) {
@@ -107,6 +121,51 @@ const resolveCampaignSeverity = (status: string): 'success' | 'info' | 'warn' | 
 
     return 'secondary';
 };
+
+const autoRefreshLabel = computed(() => {
+    if (!props.autoRefresh.enabled) {
+        return 'Tĩnh';
+    }
+
+    return `Tự động mỗi ${props.autoRefresh.intervalSeconds} giây`;
+});
+
+const setupAutoRefresh = (): void => {
+    if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+    }
+
+    if (!props.autoRefresh.enabled) {
+        return;
+    }
+
+    refreshTimer = setInterval(() => {
+        router.get(route('dashboard'), {}, {
+            only: ['autoRefresh', 'overviewCards', 'operationalPanels', 'deliveryHealth', 'recentImportBatches', 'recentCampaigns'],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    }, props.autoRefresh.intervalSeconds * 1000);
+};
+
+onMounted(() => {
+    setupAutoRefresh();
+});
+
+watch(
+    () => [props.autoRefresh.enabled, props.autoRefresh.intervalSeconds],
+    () => {
+        setupAutoRefresh();
+    },
+);
+
+onBeforeUnmount(() => {
+    if (refreshTimer) {
+        clearInterval(refreshTimer);
+    }
+});
 </script>
 
 <template>
@@ -135,9 +194,17 @@ const resolveCampaignSeverity = (status: string): 'success' | 'info' | 'warn' | 
                             </div>
 
                             <div class="min-w-[18rem] rounded-[1.6rem] border p-5" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
-                                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
-                                    Sức khỏe gửi mail
-                                </p>
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-teal-500">
+                                            Sức khỏe gửi mail
+                                        </p>
+                                        <p class="mt-2 text-xs leading-5" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            {{ autoRefresh.reason }}
+                                        </p>
+                                    </div>
+                                    <Tag :value="autoRefreshLabel" :severity="autoRefresh.enabled ? 'warn' : 'secondary'" rounded />
+                                </div>
                                 <div class="mt-4 space-y-4">
                                     <div class="flex items-center justify-between text-sm">
                                         <span :style="{ color: 'var(--dashboard-muted-text)' }">Đã gửi thành công</span>
@@ -157,6 +224,9 @@ const resolveCampaignSeverity = (status: string): 'success' | 'info' | 'warn' | 
                                             <span class="font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">{{ deliveryHealth.failureRatePercent }}%</span>
                                         </div>
                                         <ProgressBar :value="deliveryHealth.failureRatePercent" />
+                                    </div>
+                                    <div class="border-t pt-3 text-xs leading-5" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
+                                        Cập nhật lần cuối: {{ formatDateTime(autoRefresh.lastUpdatedAt) }}
                                     </div>
                                 </div>
                             </div>
@@ -248,10 +318,19 @@ const resolveCampaignSeverity = (status: string): 'success' | 'info' | 'warn' | 
                                 :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
                             >
                                 <div class="flex items-start justify-between gap-3">
-                                    <p class="text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                        {{ panel.title }}
-                                    </p>
-                                    <Tag :value="panel.status" severity="secondary" rounded />
+                                    <div class="space-y-3">
+                                        <p class="text-base font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                            {{ panel.title }}
+                                        </p>
+                                        <Button
+                                            v-if="panel.action"
+                                            size="small"
+                                            outlined
+                                            :label="panel.action.label"
+                                            @click="$inertia.get(panel.action.href)"
+                                        />
+                                    </div>
+                                    <Tag :value="panel.status" severity="secondary" rounded class="shrink-0" />
                                 </div>
 
                                 <ul class="mt-3 space-y-2">
@@ -306,7 +385,16 @@ const resolveCampaignSeverity = (status: string): 'success' | 'info' | 'warn' | 
                                                 {{ batch.aggregatedRecordCount }} khách aggregate · Hoàn thành: {{ formatDateTime(batch.completedAt) }}
                                             </p>
                                         </div>
-                                        <Tag :value="batch.statusLabel" :severity="resolveBatchSeverity(batch.status)" rounded />
+                                        <div class="flex flex-wrap items-center justify-end gap-2">
+                                            <Tag :value="batch.statusLabel" :severity="resolveBatchSeverity(batch.status)" rounded />
+                                            <Button
+                                                v-if="batch.href"
+                                                size="small"
+                                                outlined
+                                                label="Mở batch"
+                                                @click="$inertia.get(batch.href)"
+                                            />
+                                        </div>
                                     </div>
                                 </article>
                             </div>
@@ -355,7 +443,16 @@ const resolveCampaignSeverity = (status: string): 'success' | 'info' | 'warn' | 
                                                 Lịch gửi: {{ formatDateTime(campaign.scheduledForAt) }}
                                             </p>
                                         </div>
-                                        <Tag :value="campaign.statusLabel" :severity="resolveCampaignSeverity(campaign.status)" rounded />
+                                        <div class="flex flex-wrap items-center justify-end gap-2">
+                                            <Tag :value="campaign.statusLabel" :severity="resolveCampaignSeverity(campaign.status)" rounded />
+                                            <Button
+                                                v-if="campaign.href"
+                                                size="small"
+                                                outlined
+                                                label="Mở chiến dịch"
+                                                @click="$inertia.get(campaign.href)"
+                                            />
+                                        </div>
                                     </div>
                                 </article>
                             </div>

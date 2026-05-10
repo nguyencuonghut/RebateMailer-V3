@@ -8,6 +8,7 @@ use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
 use App\Support\Authorization\PermissionName;
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 
 class DashboardPageService
 {
@@ -16,14 +17,23 @@ class DashboardPageService
      */
     public function getPageData(?User $user = null): array
     {
+        $activeImportStatuses = ['uploaded', 'analyzed', 'parsed'];
+        $activeCampaignStatuses = ['scheduled', 'dispatching'];
+
         $importBatchCount = ImportBatch::query()->count();
         $readyImportBatchCount = ImportBatch::query()
             ->whereIn('status', ['aggregated', 'validated_ready', 'validated_with_warnings'])
+            ->count();
+        $processingImportBatchCount = ImportBatch::query()
+            ->whereIn('status', $activeImportStatuses)
             ->count();
         $mailTemplateCount = MailTemplateCanvas::query()->count();
         $activeTemplateCount = MailTemplateCanvas::query()->where('is_active', true)->count();
         $mailCampaignCount = MailCampaign::query()->count();
         $dispatchingCampaignCount = MailCampaign::query()->where('status', 'dispatching')->count();
+        $activeCampaignCount = MailCampaign::query()
+            ->whereIn('status', $activeCampaignStatuses)
+            ->count();
         $queuedRecipientCount = MailCampaignRecipient::query()->where('delivery_status', 'queued')->count();
         $sentRecipientCount = MailCampaignRecipient::query()->where('delivery_status', 'sent')->count();
         $failedRecipientCount = MailCampaignRecipient::query()->where('delivery_status', 'failed')->count();
@@ -43,10 +53,23 @@ class DashboardPageService
             ->withCount('recipients')
             ->latest('id')
             ->first();
+        $canViewImports = $user?->can(PermissionName::ImportsView->value) ?? false;
+        $canViewTemplates = $user?->can(PermissionName::TemplatesView->value) ?? false;
+        $canViewMail = $user?->can(PermissionName::MailView->value) ?? false;
+
+        $shouldAutoRefresh = $processingImportBatchCount > 0 || $activeCampaignCount > 0;
 
         return [
             'title' => 'Bảng điều khiển vận hành',
             'subtitle' => 'Theo dõi toàn bộ tình trạng import dữ liệu, mẫu email và chiến dịch gửi mail trên một màn hình.',
+            'autoRefresh' => [
+                'enabled' => $shouldAutoRefresh,
+                'intervalSeconds' => 5,
+                'reason' => $shouldAutoRefresh
+                    ? $this->buildAutoRefreshReason($processingImportBatchCount, $activeCampaignCount)
+                    : 'Dashboard đang ở trạng thái ổn định, không cần tự động làm mới.',
+                'lastUpdatedAt' => now()->toIso8601String(),
+            ],
             'overviewCards' => [
                 [
                     'label' => 'Batch import đã tạo',
@@ -88,6 +111,12 @@ class DashboardPageService
                             sprintf('Số khách aggregate: %d', $latestImportBatch->aggregated_records_count),
                         ]
                         : ['Chưa có dữ liệu import nào được ghi nhận.'],
+                    'action' => $latestImportBatch && $canViewImports
+                        ? [
+                            'label' => 'Mở batch này',
+                            'href' => route('imports.index', ['batch' => $latestImportBatch->id]),
+                        ]
+                        : null,
                 ],
                 [
                     'title' => 'Template đang hoạt động',
@@ -99,6 +128,12 @@ class DashboardPageService
                             'Template này sẽ được ưu tiên khi người dùng tạo chiến dịch mới.',
                         ]
                         : ['Chưa có template canvas nào được kích hoạt.'],
+                    'action' => $activeTemplate && $canViewTemplates
+                        ? [
+                            'label' => 'Mở template mail',
+                            'href' => route('templates.index'),
+                        ]
+                        : null,
                 ],
                 [
                     'title' => 'Chiến dịch gần nhất',
@@ -110,6 +145,12 @@ class DashboardPageService
                             sprintf('Template: %s', $latestCampaign->templateCanvas?->name ?? 'Không có template'),
                         ]
                         : ['Chưa có chiến dịch gửi mail nào được tạo.'],
+                    'action' => $latestCampaign && $canViewMail
+                        ? [
+                            'label' => 'Mở chiến dịch này',
+                            'href' => route('mail.index', ['campaign' => $latestCampaign->id]),
+                        ]
+                        : null,
                 ],
             ],
             'deliveryHealth' => [
@@ -134,6 +175,7 @@ class DashboardPageService
                     'statusLabel' => $this->presentImportStatus((string) $batch->status),
                     'aggregatedRecordCount' => $batch->aggregated_records_count,
                     'completedAt' => optional($batch->completed_at)->toIso8601String(),
+                    'href' => $canViewImports ? route('imports.index', ['batch' => $batch->id]) : null,
                 ])
                 ->values()
                 ->all(),
@@ -153,10 +195,40 @@ class DashboardPageService
                     'recipientCount' => $campaign->recipients_count,
                     'scheduledForAt' => optional($campaign->scheduled_for_at)->toIso8601String(),
                     'createdAt' => optional($campaign->created_at)->toIso8601String(),
+                    'href' => $canViewMail ? route('mail.index', ['campaign' => $campaign->id]) : null,
                 ])
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function buildAutoRefreshReason(int $processingImportBatchCount, int $activeCampaignCount): string
+    {
+        $reasons = [];
+
+        if ($processingImportBatchCount > 0) {
+            $reasons[] = sprintf('%d batch import đang xử lý', $processingImportBatchCount);
+        }
+
+        if ($activeCampaignCount > 0) {
+            $reasons[] = sprintf('%d chiến dịch đang lên lịch hoặc gửi mail', $activeCampaignCount);
+        }
+
+        return 'Dashboard đang tự động làm mới vì còn '.$this->joinReasons($reasons).'.';
+    }
+
+    /**
+     * @param  array<int, string>  $reasons
+     */
+    private function joinReasons(array $reasons): string
+    {
+        if (count($reasons) <= 1) {
+            return $reasons[0] ?? 'hoạt động đang diễn ra';
+        }
+
+        $lastReason = array_pop($reasons);
+
+        return implode(', ', $reasons).' và '.$lastReason;
     }
 
     /**
