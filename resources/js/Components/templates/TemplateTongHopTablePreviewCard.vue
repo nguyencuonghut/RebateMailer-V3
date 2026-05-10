@@ -264,7 +264,10 @@ const effectivePreviewRows = computed(() => {
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
-                                        <td class="px-4 py-3 align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                        <td
+                                            class="px-4 py-3 align-top"
+                                            :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                        >
                                             {{ row.numbering }}
                                         </td>
                                         <td class="px-4 py-3 align-top" :style="{ paddingLeft: `${1 + (row.indentLevel ?? 0) * 1.25}rem`, color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }">

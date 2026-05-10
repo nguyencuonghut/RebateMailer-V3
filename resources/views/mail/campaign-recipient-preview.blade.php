@@ -79,7 +79,7 @@
                                                                         @php($fontWeight = (($row['fontWeight'] ?? 'regular') === 'bold') ? '700' : '400')
                                                                         @if (in_array(($row['rowType'] ?? ''), ['total', 'in-words'], true))
                                                                             <tr>
-                                                                                <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
+                                                                                <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
                                                                                 <td colspan="3" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
                                                                                 <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
                                                                                     @if (($row['rowType'] ?? '') === 'in-words')
@@ -92,7 +92,7 @@
                                                                         @else
                                                                             @php($amountRaw = trim((string) ($row['amount'] ?? '')))
                                                                             <tr>
-                                                                                <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
+                                                                                <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
                                                                                 <td valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
                                                                                 <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; border-top:1px solid #e2e8f0;">{{ ($row['quantity'] ?? '') !== '' ? number_format((float) str_replace(',', '', (string) $row['quantity'])) : '—' }}</td>
                                                                                 <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; border-top:1px solid #e2e8f0;">{{ ($row['supportRate'] ?? '') !== '' ? number_format((float) str_replace(',', '', (string) $row['supportRate'])) : '—' }}</td>
@@ -125,7 +125,7 @@
                                                                             || trim((string) ($row['columnKey'] ?? '')) === 'Bằng chữ'
                                                                             || str_starts_with(trim((string) ($row['content'] ?? '')), 'Bằng chữ'))
                                                                         <tr>
-                                                                            <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
+                                                                            <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
                                                                             <td valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
                                                                             <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
                                                                                 @if ($isInWordsRow)

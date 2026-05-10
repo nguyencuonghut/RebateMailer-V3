@@ -38,7 +38,8 @@ class MailCampaignPreviewTest extends TestCase
                     ['type' => 'subject', 'content' => 'Chế độ tháng {{tháng}} - {{mã & tên khách hàng}}'],
                     ['type' => 'greeting', 'content' => "Kính gửi {{mã & tên khách hàng}},\nĐịa chỉ: {{địa chỉ}}"],
                     ['type' => 'tong-hop-table', 'rows' => [
-                        ['content' => 'Tổng sản lượng (gồm cám thủy sản)', 'rowType' => 'data', 'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)', 'hideWhenValueZero' => false, 'isBold' => false],
+                        ['content' => 'Chiết khấu theo hóa đơn', 'rowType' => 'parent', 'hideWhenValueZero' => false, 'isBold' => true],
+                        ['content' => 'Tổng sản lượng (gồm cám thủy sản)', 'rowType' => 'child', 'columnKey' => 'Tổng sản lượng (gồm cám thủy sản)', 'hideWhenValueZero' => false, 'isBold' => false],
                         ['content' => 'Cộng', 'rowType' => 'total', 'hideWhenValueZero' => false, 'isBold' => true],
                         ['content' => 'Bằng chữ:', 'rowType' => 'text', 'columnKey' => 'Bằng chữ', 'hideWhenValueZero' => false, 'isBold' => false],
                     ]],
@@ -179,8 +180,10 @@ class MailCampaignPreviewTest extends TestCase
                 ->where('selectedRecipientPreview.subject.renderedText', 'Chế độ tháng 03.2026 - 90300 - Công ty A')
                 ->where('selectedRecipientPreview.greeting.renderedText', "Kính gửi 90300 - Công ty A,\nĐịa chỉ: Địa chỉ A")
                 ->where('selectedRecipientPreview.tables.0.type', 'tong-hop-table')
-                ->where('selectedRecipientPreview.tables.0.rows.0.value', '123456')
-                ->where('selectedRecipientPreview.tables.0.rows.2.value', 'Bảy trăm tám mươi chín nghìn đồng')
+                ->where('selectedRecipientPreview.tables.0.rows.0.numbering', 'I')
+                ->where('selectedRecipientPreview.tables.0.rows.0.fontWeight', 'bold')
+                ->where('selectedRecipientPreview.tables.0.rows.1.value', '123456')
+                ->where('selectedRecipientPreview.tables.0.rows.3.value', 'Bảy trăm tám mươi chín nghìn đồng')
                 ->where('selectedRecipientPreview.tables.1.type', 'khoan-npp-table')
                 ->where('selectedRecipientPreview.tables.1.rows.0.content', 'Chương trình khoán A')
                 ->where('selectedRecipientPreview.tables.2.type', 'cam-ca-table')
@@ -196,7 +199,8 @@ class MailCampaignPreviewTest extends TestCase
                     && str_contains($html, 'Chiết khấu cám cá tháng 03.2026')
                     && str_contains($html, 'Chiết khấu Key Account tháng 03.2026')
                     && str_contains($html, 'Bằng chữ:')
-                    && str_contains($html, 'colspan="3"'))
+                    && str_contains($html, 'colspan="3"')
+                    && str_contains($html, 'font-weight:700; border-top:1px solid #e2e8f0;">I</td>'))
             );
     }
 

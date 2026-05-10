@@ -313,7 +313,10 @@ const formatPreviewValue = (rowType: string, value: string): string => {
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
-                                        <td class="px-4 py-3 align-top" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                        <td
+                                            class="px-4 py-3 align-top"
+                                            :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                        >
                                             {{ row.numbering }}
                                         </td>
                                         <td class="px-4 py-3 align-top" :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }">
