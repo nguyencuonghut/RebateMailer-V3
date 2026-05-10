@@ -118,9 +118,8 @@ class MailCampaignPageService
                 'createdBy' => $campaign->creator?->name ?? 'Không xác định',
                 'createdAt' => optional($campaign->created_at)->toIso8601String(),
                 'label' => trim(sprintf(
-                    '%s - %s - Người tạo: %s - Tạo lúc: %s',
+                    '%s - Người tạo: %s - Tạo lúc: %s',
                     $campaign->name,
-                    $campaign->importBatch?->batch_code ?? 'Không có batch',
                     $campaign->creator?->name ?? 'Không xác định',
                     optional($campaign->created_at)->format('d/m/Y H:i') ?? 'Không xác định',
                 )),

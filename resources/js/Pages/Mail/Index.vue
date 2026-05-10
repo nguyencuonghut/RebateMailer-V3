@@ -489,9 +489,6 @@ onBeforeUnmount(() => {
                                             {{ selectedCampaign.name }}
                                         </h2>
                                         <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                            Batch: {{ selectedCampaign.batch.batchCode }} - {{ selectedCampaign.batch.batchName || 'Chưa đặt tên' }}
-                                        </p>
-                                        <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
                                             Template: {{ selectedCampaign.template.name }}
                                         </p>
                                         <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
@@ -542,7 +539,7 @@ onBeforeUnmount(() => {
                                                 Tiến độ gửi theo batch
                                             </h3>
                                             <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                Batch ID: {{ selectedCampaign.progress.batchId }}<span v-if="selectedCampaign.progress.batchCode"> - {{ selectedCampaign.progress.batchCode }}</span>
+                                                Tên chiến dịch: {{ selectedCampaign.name }}
                                             </p>
                                         </div>
 
