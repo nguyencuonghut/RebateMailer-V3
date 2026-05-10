@@ -216,16 +216,78 @@
     * cần snapshot hoặc khóa reference rõ ràng tại thời điểm dispatch.
 
 * **Acceptance Criteria tổng cho Giai đoạn 3:**
-  * Tạo được campaign từ `batch import + template email`.
-  * Nhìn thấy DataTable người nhận đã aggregate ngay sau khi tạo campaign.
-  * Preview full email đúng theo dữ liệu thật của từng khách.
-  * HTML email render qua Mailpit HTML check với điểm số cao và không còn lỗi nghiêm trọng chặn gửi.
-  * Toàn bộ giao diện người dùng của module gửi mail hiển thị bằng tiếng Việt có dấu 100%.
-  * Tạo được schedule gửi mail.
-  * Dispatch hàng loạt qua queue với throttle chống spam.
-  * Dashboard hiển thị progress realtime theo campaign/batch.
-  * Lỗi từng mail được ghi chi tiết.
-  * Có thể retry mail lỗi mà không gửi trùng mail đã thành công.
+  * Người dùng có quyền điều phối tạo được `campaign` từ đúng 3 thành phần:
+    * `Batch import` đã aggregate hợp lệ;
+    * `Template email` đã có thể dùng để render;
+    * metadata chiến dịch gồm `Tên chiến dịch` và `Ghi chú` nếu có.
+  * Ngay sau khi tạo campaign, hệ thống materialize được danh sách `mail_campaign_recipients` từ `import_batch_aggregated_records` của batch đã chọn, và màn hình hiển thị DataTable người nhận mà không cần bước xử lý tay bổ sung.
+  * DataTable người nhận của campaign phải có ít nhất:
+    * global search hoạt động;
+    * hiển thị được `Mã số`, `Mã & tên khách hàng`, `Email`, `Loại khách`, `Trạng thái gửi`, `Lỗi gần nhất`, `Thao tác`;
+    * phản ánh đúng recipient list của campaign đang được chọn, không lẫn batch/campaign khác.
+  * Preview full email của từng recipient phải render từ dữ liệu thật của đúng:
+    * `campaign`;
+    * `template canvas`;
+    * `aggregated record`;
+    * và không được fallback sang khách khác nếu khách đang chọn thiếu dữ liệu ở một sheet nào đó.
+  * Preview full email phải có giao diện như mở một email thật:
+    * có header người nhận;
+    * có `Subject`;
+    * có `Lời chào`;
+    * có đầy đủ các bảng chiết khấu tương ứng với loại khách;
+    * phần HTML preview và mail gửi thật phải dùng cùng một renderer để tránh lệch nội dung.
+  * Các bảng trong `template`, `preview`, và `mail gửi đi` phải thống nhất rule render:
+    * `ẩn khi = 0 hoặc rỗng` hoạt động đúng;
+    * STT được đánh lại đúng trên các dòng thực sự render;
+    * bold ở nội dung thì cột `STT` của dòng đó cũng bold tương ứng;
+    * các dòng đặc biệt như `Cộng`, `Bằng chữ` giữ đúng colspan/semantics giữa builder, preview và email thật.
+  * HTML email phải:
+    * đi qua Mailpit HTML check;
+    * không còn lỗi HTML nghiêm trọng chặn gửi;
+    * dùng cấu trúc email-friendly đủ ổn định để hiển thị đúng trên Mailpit và các mail client phổ biến.
+  * Toàn bộ giao diện người dùng của module gửi mail phải là **tiếng Việt có dấu 100%**:
+    * label, placeholder, button, trạng thái, empty state, toast, dialog, progress, lỗi hiển thị;
+    * không để lộ wording kỹ thuật tiếng Anh ra UI nghiệp vụ.
+  * Campaign phải hỗ trợ cả 2 cách điều phối:
+    * `Gửi ngay`;
+    * `Lên lịch gửi`.
+  * Với campaign được lên lịch:
+    * đến thời điểm schedule, hệ thống tự mở dispatch mà không cần thao tác tay;
+    * metadata lịch gửi phải còn được lưu để khi xem lại campaign đã gửi xong vẫn biết nó được điều phối bằng lịch và lịch đã cấu hình lúc nào.
+  * Dispatch hàng loạt phải chạy qua queue nền:
+    * từng recipient là job riêng;
+    * có rate limit/throttle chống spam;
+    * có queue boundary rõ ràng để tách khỏi các job nền khác.
+  * Dashboard tiến độ phải hiển thị được:
+    * tổng số recipient;
+    * `pending`, `queued`, `sent`, `failed`;
+    * progress bar tổng;
+    * progress bar theo batch/campaign;
+    * trạng thái cập nhật theo dữ liệu thực tế từ backend/worker, qua polling hoặc realtime stack.
+  * Sau khi campaign đã xử lý xong:
+    * nếu đã `completed` hoặc `completed_with_failures`, khối thao tác `Lên lịch gửi` không còn xuất hiện;
+    * nhưng thông tin về việc campaign từng được điều phối bằng lịch vẫn phải xem lại được nếu metadata còn đầy đủ.
+  * Mỗi mail lỗi phải có log chẩn đoán chi tiết:
+    * event type;
+    * trạng thái;
+    * message lỗi;
+    * context liên quan;
+    * thời điểm xảy ra;
+    * số lần thử.
+  * UI phải cho phép:
+    * xem chi tiết lỗi của từng recipient;
+    * retry từng mail lỗi;
+    * không retry lại các mail đã `sent`.
+  * Retry phải idempotent về mặt nghiệp vụ:
+    * chỉ re-queue các recipient còn retryable;
+    * không làm gửi trùng mail đã gửi thành công;
+    * cập nhật đúng trạng thái campaign sau retry.
+  * Hệ thống phải lưu đủ audit trail để điều tra lại sau này:
+    * ai tạo campaign;
+    * batch nào được dùng;
+    * template/canvas nào được dùng;
+    * campaign được gửi ngay hay gửi bằng lịch;
+    * quá trình xử lý recipient đã đi qua những trạng thái gì.
 
 ---
 
