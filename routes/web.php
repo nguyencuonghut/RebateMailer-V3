@@ -4,6 +4,7 @@ use App\Http\Controllers\ImportAggregatePreviewController;
 use App\Http\Controllers\ImportBatchStatusController;
 use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
+use App\Http\Controllers\DashboardPageController;
 use App\Http\Controllers\MailCampaignPageController;
 use App\Http\Controllers\MailCampaignDispatchController;
 use App\Http\Controllers\MailCampaignRecipientRetryController;
@@ -36,9 +37,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardPageController::class)->name('dashboard');
 
     Route::get('/imports', [ImportPageController::class, 'index'])
         ->middleware('permission:'.PermissionName::ImportsView->value)
