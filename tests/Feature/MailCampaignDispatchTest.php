@@ -12,6 +12,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -130,6 +131,18 @@ class MailCampaignDispatchTest extends TestCase
         Queue::assertPushed(DispatchMailCampaignRecipientJob::class, function (DispatchMailCampaignRecipientJob $job) use ($dueRecipient): bool {
             return $job->mailCampaignRecipientId === $dueRecipient->id;
         });
+    }
+
+    public function test_scheduled_campaign_dispatch_command_is_registered_in_scheduler(): void
+    {
+        $schedule = app(Schedule::class);
+
+        $event = collect($schedule->events())->first(
+            fn ($scheduledEvent) => str_contains($scheduledEvent->command, 'mail:dispatch-scheduled-campaigns')
+        );
+
+        $this->assertNotNull($event);
+        $this->assertSame('* * * * *', $event->expression);
     }
 
     /**
