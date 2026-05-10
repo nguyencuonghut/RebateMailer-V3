@@ -140,7 +140,9 @@ class MailCampaignPageService
             'notes' => $campaign->notes,
             'status' => $campaign->status,
             'statusLabel' => $this->presentCampaignStatus($campaign->status),
+            'dispatchTrigger' => $campaign->dispatch_trigger,
             'scheduledAt' => optional($campaign->scheduled_at)->toIso8601String(),
+            'scheduledForAt' => optional($campaign->scheduled_for_at)->toIso8601String(),
             'createdBy' => $campaign->creator?->name ?? 'Không xác định',
             'createdAt' => optional($campaign->created_at)->toIso8601String(),
             'batch' => [

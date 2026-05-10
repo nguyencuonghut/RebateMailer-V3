@@ -123,6 +123,10 @@ class MailCampaignDispatchTest extends TestCase
             'status' => 'dispatching',
         ]);
 
+        $dueCampaign->refresh();
+        $this->assertNotNull($dueCampaign->scheduled_at);
+        $this->assertTrue($dueCampaign->scheduled_at->lessThanOrEqualTo(now()));
+
         $this->assertDatabaseHas('mail_campaigns', [
             'id' => $futureCampaign->id,
             'status' => 'scheduled',

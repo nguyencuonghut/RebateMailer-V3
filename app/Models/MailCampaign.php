@@ -14,7 +14,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'mail_template_canvas_id',
     'notes',
     'status',
+    'dispatch_trigger',
     'scheduled_at',
+    'scheduled_for_at',
     'created_by',
     'updated_by',
 ])]
@@ -29,6 +31,7 @@ class MailCampaign extends Model
     {
         return [
             'scheduled_at' => 'datetime',
+            'scheduled_for_at' => 'datetime',
         ];
     }
 

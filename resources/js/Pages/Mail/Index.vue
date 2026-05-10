@@ -78,7 +78,9 @@ const props = defineProps<{
         notes: string | null;
         status: string;
         statusLabel: string;
+        dispatchTrigger: string | null;
         scheduledAt: string | null;
+        scheduledForAt: string | null;
         createdBy: string;
         createdAt: string | null;
         batch: {
@@ -181,6 +183,32 @@ const canDispatchSelectedCampaign = computed(() =>
     props.canManageCampaigns
     && !!props.selectedCampaign
     && ['draft', 'scheduled'].includes(props.selectedCampaign.status),
+);
+const showScheduleControls = computed(() =>
+    props.canManageCampaigns
+    && !!props.selectedCampaign
+    && ['draft', 'scheduled'].includes(props.selectedCampaign.status),
+);
+const showScheduledDispatchInfo = computed(() =>
+    !!props.selectedCampaign
+    && (
+        props.selectedCampaign.dispatchTrigger === 'scheduled'
+        || !!props.selectedCampaign.scheduledForAt
+        || !!props.selectedCampaign.scheduledAt
+    )
+    && ['dispatching', 'completed', 'completed_with_failures'].includes(props.selectedCampaign.status),
+);
+const scheduledDispatchDisplayAt = computed(() =>
+    props.selectedCampaign?.scheduledForAt
+    ?? props.selectedCampaign?.scheduledAt
+    ?? null,
+);
+const showLegacyMissingScheduleInfo = computed(() =>
+    !!props.selectedCampaign
+    && ['dispatching', 'completed', 'completed_with_failures'].includes(props.selectedCampaign.status)
+    && props.selectedCampaign.dispatchTrigger === null
+    && !props.selectedCampaign.scheduledForAt
+    && !props.selectedCampaign.scheduledAt,
 );
 const shouldAutoRefreshCampaign = computed(() =>
     !!props.selectedCampaign
@@ -545,7 +573,7 @@ onBeforeUnmount(() => {
                                         </p>
                                     </div>
                                 </div>
-                            <div v-if="canManageCampaigns" class="rounded-[1.4rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                            <div v-if="showScheduleControls" class="rounded-[1.4rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
                                 <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                                     <div class="space-y-2">
                                         <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Lên lịch gửi</label>
@@ -576,6 +604,33 @@ onBeforeUnmount(() => {
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            <div
+                                v-else-if="showScheduledDispatchInfo"
+                                class="rounded-[1.4rem] border p-4"
+                                :style="{ borderColor: 'rgba(20, 184, 166, 0.32)', background: 'rgba(20, 184, 166, 0.08)' }"
+                            >
+                                <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                    Chiến dịch này đã được điều phối bằng lịch gửi
+                                </p>
+                                <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    Thời điểm lịch đã cấu hình:
+                                    {{ scheduledDispatchDisplayAt ? new Date(scheduledDispatchDisplayAt).toLocaleString('vi-VN') : 'Không còn dữ liệu lịch gửi' }}.
+                                </p>
+                            </div>
+
+                            <div
+                                v-else-if="showLegacyMissingScheduleInfo"
+                                class="rounded-[1.4rem] border p-4"
+                                :style="{ borderColor: 'rgba(245, 158, 11, 0.32)', background: 'rgba(245, 158, 11, 0.08)' }"
+                            >
+                                <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                    Không còn dữ liệu lịch gửi của chiến dịch này
+                                </p>
+                                <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    Các campaign cũ được gửi trước khi hệ thống lưu vĩnh viễn metadata lịch gửi có thể đã mất thông tin này sau lúc mở dispatch.
+                                </p>
                             </div>
                         </template>
                     </div>

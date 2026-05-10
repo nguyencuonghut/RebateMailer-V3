@@ -15,7 +15,9 @@ return new class extends Migration
             $table->foreignId('mail_template_canvas_id')->constrained('mail_template_canvases')->restrictOnDelete();
             $table->text('notes')->nullable();
             $table->string('status')->default('draft');
+            $table->string('dispatch_trigger')->nullable();
             $table->timestamp('scheduled_at')->nullable();
+            $table->timestamp('scheduled_for_at')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

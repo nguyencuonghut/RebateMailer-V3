@@ -17,7 +17,9 @@ class ScheduleMailCampaignService
 
         $campaign->forceFill([
             'status' => 'scheduled',
+            'dispatch_trigger' => 'scheduled',
             'scheduled_at' => $scheduledAt,
+            'scheduled_for_at' => $scheduledAt,
             'updated_by' => $actor?->id,
         ])->save();
 

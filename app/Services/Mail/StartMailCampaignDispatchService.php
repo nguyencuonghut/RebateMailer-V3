@@ -30,7 +30,7 @@ class StartMailCampaignDispatchService
 
             $campaign->forceFill([
                 'status' => 'dispatching',
-                'scheduled_at' => null,
+                'dispatch_trigger' => $campaign->dispatch_trigger ?: 'manual',
                 'updated_by' => $actor?->id,
             ])->save();
 
