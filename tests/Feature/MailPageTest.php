@@ -192,6 +192,10 @@ class MailPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Mail/Index')
                 ->where('selectedCampaign.id', $campaign->id)
+                ->where('selectedCampaign.createdBy', $user->name)
+                ->where('campaignOptions.0.createdBy', $user->name)
+                ->where('selectedCampaign.createdAt', $campaign->created_at?->toIso8601String())
+                ->where('campaignOptions.0.createdAt', $campaign->created_at?->toIso8601String())
                 ->where('selectedCampaign.recipientSummary.total', 3)
                 ->where('selectedCampaign.recipientSummary.queued', 1)
                 ->where('selectedCampaign.recipientSummary.sent', 1)

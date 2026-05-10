@@ -36,6 +36,8 @@ type CampaignOption = {
     campaignId: number;
     name: string;
     status: string;
+    createdBy: string;
+    createdAt: string | null;
     label: string;
 };
 
@@ -491,6 +493,12 @@ onBeforeUnmount(() => {
                                         </p>
                                         <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
                                             Template: {{ selectedCampaign.template.name }}
+                                        </p>
+                                        <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Người tạo: {{ selectedCampaign.createdBy }}
+                                        </p>
+                                        <p v-if="selectedCampaign.createdAt" class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Thời gian tạo: {{ new Date(selectedCampaign.createdAt).toLocaleString('vi-VN') }}
                                         </p>
                                         <p v-if="selectedCampaign.scheduledAt" class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
                                             Lịch gửi: {{ new Date(selectedCampaign.scheduledAt).toLocaleString('vi-VN') }}

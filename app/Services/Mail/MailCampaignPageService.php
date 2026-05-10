@@ -106,7 +106,7 @@ class MailCampaignPageService
     private function buildCampaignOptions(): array
     {
         return MailCampaign::query()
-            ->with(['importBatch'])
+            ->with(['importBatch', 'creator'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit(20)
@@ -115,7 +115,15 @@ class MailCampaignPageService
                 'campaignId' => $campaign->id,
                 'name' => $campaign->name,
                 'status' => $campaign->status,
-                'label' => trim(sprintf('%s - %s', $campaign->name, $campaign->importBatch?->batch_code ?? 'Không có batch')),
+                'createdBy' => $campaign->creator?->name ?? 'Không xác định',
+                'createdAt' => optional($campaign->created_at)->toIso8601String(),
+                'label' => trim(sprintf(
+                    '%s - %s - Người tạo: %s - Tạo lúc: %s',
+                    $campaign->name,
+                    $campaign->importBatch?->batch_code ?? 'Không có batch',
+                    $campaign->creator?->name ?? 'Không xác định',
+                    optional($campaign->created_at)->format('d/m/Y H:i') ?? 'Không xác định',
+                )),
             ])
             ->values()
             ->all();
