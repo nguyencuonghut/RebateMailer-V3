@@ -18,9 +18,6 @@ enum PermissionName: string
     case MailView = 'mail.view';
     case MailSend = 'mail.send';
 
-    case TrackingView = 'tracking.view';
-    case TrackingManage = 'tracking.manage';
-
     /**
      * @return list<string>
      */
@@ -44,8 +41,6 @@ enum PermissionName: string
             self::TemplatesManage->value,
             self::MailView->value,
             self::MailSend->value,
-            self::TrackingView->value,
-            self::TrackingManage->value,
         ];
     }
 

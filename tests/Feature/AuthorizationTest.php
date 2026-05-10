@@ -72,7 +72,6 @@ class AuthorizationTest extends TestCase
 
         $this->actingAs($guest)->get(route('imports.index'))->assertOk();
         $this->actingAs($guest)->get(route('mail.index'))->assertOk();
-        $this->actingAs($guest)->get(route('tracking.index'))->assertForbidden();
 
         $this->actingAs($user)->get(route('templates.index'))->assertOk();
         $this->actingAs($user)->get(route('users.index'))->assertForbidden();

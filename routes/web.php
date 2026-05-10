@@ -112,15 +112,6 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:'.PermissionName::MailSend->value)
         ->name('mail.campaigns.recipients.retry');
 
-    Route::get('/tracking', function () {
-        return Inertia::render('ModulePage', [
-            'title' => 'Theo dõi và gửi lại',
-            'description' => 'Tổng hợp lịch sử gửi, trạng thái mở thư và các ca cần gửi lại thủ công.',
-            'capability' => 'Giám sát retry và xử lý ngoại lệ chiến dịch.',
-            'status' => 'Đang chờ slice nghiệp vụ',
-        ]);
-    })->middleware('permission:'.PermissionName::TrackingView->value)->name('tracking.index');
-
     Route::get('/users', [UserManagementController::class, 'index'])
         ->middleware('permission:'.PermissionName::UsersView->value)
         ->name('users.index');

@@ -54,7 +54,6 @@ const menuSections: MenuSection[] = [
             { label: 'Import dữ liệu', icon: 'pi pi-upload', routeName: 'imports.index', permission: 'imports.view' },
             { label: 'Thiết kế mẫu email', icon: 'pi pi-pencil', routeName: 'templates.index', permission: 'templates.view' },
             { label: 'Điều phối gửi mail', icon: 'pi pi-send', routeName: 'mail.index', permission: 'mail.view' },
-            { label: 'Theo dõi và gửi lại', icon: 'pi pi-sync', routeName: 'tracking.index', permission: 'tracking.view' },
         ],
     },
     {
