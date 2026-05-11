@@ -9,7 +9,13 @@
       "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Services/Mail/SendSampleMailCampaignService.php)",
       "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Http/Controllers/MailCampaignSampleSendController.php)",
       "Bash(grep -E \"\\\\.php$\")",
-      "Bash(php -r \"echo date\\('Y_m_d_His'\\);\")"
+      "Bash(php -r \"echo date\\('Y_m_d_His'\\);\")",
+      "Bash(xargs basename -a)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('node engines:', d.get\\('engines',{}\\)\\); print\\('scripts:', list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(mkdir -p /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docker/nginx /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docker/php)"
+    ],
+    "additionalDirectories": [
+      "/run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/docker"
     ]
   }
 }

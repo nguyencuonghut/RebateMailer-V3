@@ -1,0 +1,55 @@
+# Dependencies (installed inside Docker)
+node_modules/
+vendor/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Environment files (never bake into image)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Compiled frontend (built inside Docker from source)
+public/build/
+public/hot
+
+# Laravel runtime (populated at startup, managed via volumes)
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+bootstrap/cache/
+
+# Test files
+tests/
+phpunit.xml
+.phpunit.result.cache
+.phpunit.cache/
+
+# Development tools
+.editorconfig
+.php-cs-fixer.php
+.phpstan.neon
+phpstan.neon
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data files
+data/

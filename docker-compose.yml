@@ -1,0 +1,170 @@
+version: "3.9"
+
+# ── Shared config cho app / worker / scheduler ────────────────────────────
+x-app-base: &app-base
+  build:
+    context: .
+    target: app
+  image: rebate-mailer-app:latest
+  env_file: .env.production
+  volumes:
+    - app-storage:/var/www/html/storage
+  networks:
+    - rebate-net
+  restart: unless-stopped
+
+services:
+
+  # ────────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16
+  # ────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       rebate_mailer_v3
+      POSTGRES_USER:     rebate_mailer
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required in .env.production}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rebate_mailer -d rebate_mailer_v3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - rebate-net
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Redis 7
+  # ────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass "${REDIS_PASSWORD:?REDIS_PASSWORD is required in .env.production}"
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - rebate-net
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Migrator — chạy một lần khi deploy: migrate + storage:link
+  # Dùng: docker compose run --rm migrator
+  # ────────────────────────────────────────────────────────────────────────
+  migrator:
+    <<: *app-base
+    restart: "no"
+    entrypoint: []
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        echo "==> Ensuring storage directories..."
+        mkdir -p storage/logs \
+                 storage/framework/cache \
+                 storage/framework/sessions \
+                 storage/framework/views
+        echo "==> Running database migrations..."
+        php artisan migrate --force --no-ansi
+        echo "==> Creating storage symlink..."
+        php artisan storage:link --force --no-ansi 2>/dev/null || true
+        echo "==> Migrator complete."
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ────────────────────────────────────────────────────────────────────────
+  # App — PHP 8.3-FPM (web request handler)
+  # ────────────────────────────────────────────────────────────────────────
+  app:
+    <<: *app-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f php-fpm > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Nginx — Web server (port 80)
+  # ────────────────────────────────────────────────────────────────────────
+  nginx:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - rebate-net
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Worker — Queue job processor
+  # ────────────────────────────────────────────────────────────────────────
+  worker:
+    <<: *app-base
+    entrypoint: []
+    command:
+      - php
+      - artisan
+      - queue:work
+      - "--queue=default"
+      - "--sleep=3"
+      - "--tries=5"
+      - "--max-time=3600"
+      - "--no-ansi"
+    depends_on:
+      app:
+        condition: service_started
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Scheduler — Chạy php artisan schedule:run mỗi 60 giây
+  # ────────────────────────────────────────────────────────────────────────
+  scheduler:
+    <<: *app-base
+    entrypoint: []
+    command:
+      - /bin/sh
+      - -c
+      - "while true; do php artisan schedule:run --no-ansi 2>&1; sleep 60; done"
+    depends_on:
+      app:
+        condition: service_started
+
+# ── Named volumes ──────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  app-storage:
+    driver: local
+
+# ── Internal network ───────────────────────────────────────────────────────
+networks:
+  rebate-net:
+    driver: bridge
