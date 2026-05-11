@@ -9,6 +9,7 @@ use App\Http\Controllers\MailCampaignPageController;
 use App\Http\Controllers\MailCampaignDispatchController;
 use App\Http\Controllers\MailCampaignFailedRecipientsExportController;
 use App\Http\Controllers\MailCampaignRecipientRetryController;
+use App\Http\Controllers\MailCampaignSampleSendController;
 use App\Http\Controllers\MailCampaignScheduleController;
 use App\Http\Controllers\MailCampaignStoreController;
 use App\Http\Controllers\ImportPageController;
@@ -114,6 +115,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/mail/campaigns/{mailCampaign}/recipients/export-failed', MailCampaignFailedRecipientsExportController::class)
         ->middleware('permission:'.PermissionName::MailView->value)
         ->name('mail.campaigns.recipients.export-failed');
+    Route::post('/mail/campaigns/{mailCampaign}/send-sample', MailCampaignSampleSendController::class)
+        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->name('mail.campaigns.send-sample');
 
     Route::get('/users', [UserManagementController::class, 'index'])
         ->middleware('permission:'.PermissionName::UsersView->value)

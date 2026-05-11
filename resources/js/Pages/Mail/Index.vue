@@ -3,6 +3,7 @@ import type { PageProps } from '@/types';
 import MailRecipientEmailPreview from '@/Components/mail/MailRecipientEmailPreview.vue';
 import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
+import axios from 'axios';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
@@ -382,6 +383,61 @@ const closeRecipientErrorDialog = (): void => {
     expandedTechnicalIds.value = [];
 };
 
+type SampleSendResult = {
+    label: string;
+    customerCode: string;
+    customerFullName: string;
+    status: 'sent' | 'error' | 'skipped';
+    message: string;
+};
+
+const isSampleDialogVisible = ref(false);
+const sampleEmail = ref('');
+const sampleEmailError = ref('');
+const isSampleSending = ref(false);
+const sampleResults = ref<SampleSendResult[]>([]);
+
+const openSampleDialog = (): void => {
+    sampleEmail.value = '';
+    sampleEmailError.value = '';
+    sampleResults.value = [];
+    isSampleDialogVisible.value = true;
+};
+
+const closeSampleDialog = (): void => {
+    isSampleDialogVisible.value = false;
+};
+
+const submitSampleSend = async (): Promise<void> => {
+    if (!props.selectedCampaignId) return;
+
+    sampleEmailError.value = '';
+    if (!sampleEmail.value.trim()) {
+        sampleEmailError.value = 'Vui lòng nhập địa chỉ email nhận.';
+        return;
+    }
+
+    isSampleSending.value = true;
+    sampleResults.value = [];
+
+    try {
+        const response = await axios.post<{ status: string; message: string; results: SampleSendResult[] }>(
+            route('mail.campaigns.send-sample', { mailCampaign: props.selectedCampaignId }),
+            { target_email: sampleEmail.value.trim() },
+        );
+        sampleResults.value = response.data.results;
+    } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 422) {
+            const errors = err.response.data?.errors as Record<string, string[]> | undefined;
+            sampleEmailError.value = errors?.target_email?.[0] ?? 'Email không hợp lệ.';
+        } else {
+            sampleResults.value = [{ label: '', customerCode: '', customerFullName: '', status: 'error', message: 'Gửi mẫu thất bại. Kiểm tra lại cấu hình mail.' }];
+        }
+    } finally {
+        isSampleSending.value = false;
+    }
+};
+
 const retryRecipient = (recipient: RecipientRow): void => {
     if (!props.selectedCampaignId || !props.canManageCampaigns) {
         return;
@@ -660,6 +716,14 @@ onBeforeUnmount(() => {
                                     <div class="flex flex-wrap justify-end gap-3">
                                         <Button
                                             type="button"
+                                            label="Gửi mẫu"
+                                            severity="secondary"
+                                            outlined
+                                            icon="pi pi-send"
+                                            @click="openSampleDialog"
+                                        />
+                                        <Button
+                                            type="button"
                                             label="Lên lịch gửi"
                                             severity="secondary"
                                             outlined
@@ -681,13 +745,26 @@ onBeforeUnmount(() => {
                                 class="rounded-[1.4rem] border p-4"
                                 :style="{ borderColor: 'rgba(20, 184, 166, 0.32)', background: 'rgba(20, 184, 166, 0.08)' }"
                             >
-                                <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    Chiến dịch này đã được điều phối bằng lịch gửi
-                                </p>
-                                <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                    Thời điểm lịch đã cấu hình:
-                                    {{ scheduledDispatchDisplayAt ? new Date(scheduledDispatchDisplayAt).toLocaleString('vi-VN') : 'Không còn dữ liệu lịch gửi' }}.
-                                </p>
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                            Chiến dịch này đã được điều phối bằng lịch gửi
+                                        </p>
+                                        <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Thời điểm lịch đã cấu hình:
+                                            {{ scheduledDispatchDisplayAt ? new Date(scheduledDispatchDisplayAt).toLocaleString('vi-VN') : 'Không còn dữ liệu lịch gửi' }}.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        label="Gửi mẫu"
+                                        severity="secondary"
+                                        outlined
+                                        size="small"
+                                        icon="pi pi-send"
+                                        @click="openSampleDialog"
+                                    />
+                                </div>
                             </div>
 
                             <div
@@ -695,12 +772,25 @@ onBeforeUnmount(() => {
                                 class="rounded-[1.4rem] border p-4"
                                 :style="{ borderColor: 'rgba(245, 158, 11, 0.32)', background: 'rgba(245, 158, 11, 0.08)' }"
                             >
-                                <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                    Không còn dữ liệu lịch gửi của chiến dịch này
-                                </p>
-                                <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                    Các campaign cũ được gửi trước khi hệ thống lưu vĩnh viễn metadata lịch gửi có thể đã mất thông tin này sau lúc mở dispatch.
-                                </p>
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                            Không còn dữ liệu lịch gửi của chiến dịch này
+                                        </p>
+                                        <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Các campaign cũ được gửi trước khi hệ thống lưu vĩnh viễn metadata lịch gửi có thể đã mất thông tin này sau lúc mở dispatch.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        label="Gửi mẫu"
+                                        severity="secondary"
+                                        outlined
+                                        size="small"
+                                        icon="pi pi-send"
+                                        @click="openSampleDialog"
+                                    />
+                                </div>
                             </div>
                         </template>
                     </div>
@@ -1018,6 +1108,71 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </Dialog>
+
+        <Dialog
+            v-model:visible="isSampleDialogVisible"
+            modal
+            :style="{ width: 'min(520px, 96vw)' }"
+            header="Gửi mail mẫu"
+            @hide="closeSampleDialog"
+        >
+            <div class="space-y-4">
+                <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                    Hệ thống sẽ chọn tối đa 3 khách hàng đại diện (Tổng hợp/Khoán NPP, Cám cá, Key Account) và gửi mail mẫu đến email bạn nhập bên dưới.
+                </p>
+
+                <div class="space-y-2">
+                    <label class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Email nhận</label>
+                    <InputText
+                        v-model="sampleEmail"
+                        type="email"
+                        placeholder="example@email.com"
+                        fluid
+                        :disabled="isSampleSending"
+                        @keyup.enter="submitSampleSend"
+                    />
+                    <small v-if="sampleEmailError" class="text-red-500">{{ sampleEmailError }}</small>
+                </div>
+
+                <div v-if="sampleResults.length > 0" class="space-y-2">
+                    <p class="text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">Kết quả gửi</p>
+                    <div
+                        v-for="(result, idx) in sampleResults"
+                        :key="idx"
+                        class="flex items-start gap-3 rounded-2xl border px-4 py-3"
+                        :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
+                    >
+                        <Tag
+                            :value="result.status === 'sent' ? 'Đã gửi' : result.status === 'skipped' ? 'Bỏ qua' : 'Lỗi'"
+                            :severity="result.status === 'sent' ? 'success' : result.status === 'skipped' ? 'warn' : 'danger'"
+                            rounded
+                            class="shrink-0"
+                        />
+                        <div class="min-w-0 flex-1">
+                            <p v-if="result.label" class="text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                {{ result.label }}
+                                <span v-if="result.customerCode" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    — {{ result.customerCode }} {{ result.customerFullName }}
+                                </span>
+                            </p>
+                            <p class="mt-0.5 text-xs leading-5" :style="{ color: 'var(--dashboard-muted-text)' }">{{ result.message }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <Button type="button" label="Đóng" severity="secondary" text @click="closeSampleDialog" />
+                    <Button
+                        type="button"
+                        label="Gửi mẫu"
+                        icon="pi pi-send"
+                        :loading="isSampleSending"
+                        :disabled="isSampleSending"
+                        @click="submitSampleSend"
+                    />
                 </div>
             </div>
         </Dialog>
