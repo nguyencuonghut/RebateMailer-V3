@@ -844,7 +844,6 @@ onBeforeUnmount(() => {
                                             :severity="isFilteringFailed ? 'secondary' : 'danger'"
                                             :outlined="!isFilteringFailed"
                                             :disabled="failedRecipientCount === 0"
-                                            size="small"
                                             @click="toggleFailedFilter"
                                         />
                                         <a
@@ -856,7 +855,6 @@ onBeforeUnmount(() => {
                                                 type="button"
                                                 label="Export lỗi"
                                                 severity="danger"
-                                                size="small"
                                                 icon="pi pi-download"
                                             />
                                         </a>

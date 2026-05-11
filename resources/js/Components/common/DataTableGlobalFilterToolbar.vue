@@ -38,7 +38,7 @@ const clearFilter = (): void => {
             icon="pi pi-times"
             severity="secondary"
             outlined
-            size="small"
+            class="whitespace-nowrap"
             @click="clearFilter"
         />
     </div>
