@@ -51,6 +51,7 @@ type RecipientRow = {
     deliveryStatus: string;
     deliveryStatusLabel: string;
     latestErrorMessage: string | null;
+    latestFriendlyMessage: string | null;
     attemptsCount: number;
     canRetry: boolean;
     attemptLogs: Array<{
@@ -819,7 +820,7 @@ onBeforeUnmount(() => {
                                     <template #body="{ data }">
                                         <div class="space-y-1">
                                             <span :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                {{ data.latestErrorMessage || 'Không có' }}
+                                                {{ data.latestFriendlyMessage || 'Không có' }}
                                             </span>
                                             <p class="text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
                                                 Lịch sử: {{ data.attemptLogs.length }} bản ghi

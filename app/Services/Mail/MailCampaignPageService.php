@@ -221,6 +221,7 @@ class MailCampaignPageService
                 'deliveryStatus' => $recipient->delivery_status,
                 'deliveryStatusLabel' => $this->presentRecipientStatus($recipient->delivery_status),
                 'latestErrorMessage' => $recipient->latest_error_message,
+                'latestFriendlyMessage' => $this->resolveLatestFriendlyMessage($recipient),
                 'attemptsCount' => $recipient->attempts_count,
                 'canRetry' => $recipient->delivery_status === 'failed',
                 'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
@@ -237,6 +238,21 @@ class MailCampaignPageService
             ])
             ->values()
             ->all();
+    }
+
+    private function resolveLatestFriendlyMessage(MailCampaignRecipient $recipient): ?string
+    {
+        if ($recipient->latest_error_message === null) {
+            return null;
+        }
+
+        $latestFailedAttempt = $recipient->attemptLogs
+            ->first(fn ($attempt): bool => $attempt->status === 'failed');
+
+        return $this->presentAttemptFriendlyMessage(
+            $latestFailedAttempt?->event_type ?? 'dispatch_attempt_failed',
+            $recipient->latest_error_message,
+        );
     }
 
     /**
