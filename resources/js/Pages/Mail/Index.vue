@@ -780,6 +780,8 @@ onBeforeUnmount(() => {
                                 :global-filter-fields="recipientGlobalFilterFields"
                                 paginator
                                 :rows="10"
+                                paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                                current-page-report-template="Hiển thị {first} đến {last} trong tổng số {totalRecords}"
                                 responsive-layout="scroll"
                                 class="p-datatable-sm"
                             >
