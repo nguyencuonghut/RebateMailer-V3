@@ -111,11 +111,7 @@ class SendSampleMailCampaignService
 
             // Priority: prefer customer with BOTH Tổng hợp + Khoán NPP for richest template
             if ($tongHopKhoanNpp === null && ($hasTongHop || $hasKhoanNpp) && ! $hasCamCa && ! $hasKeyAccount) {
-                if ($hasTongHop && $hasKhoanNpp) {
-                    $tongHopKhoanNpp = $recipient;
-                } elseif ($tongHopKhoanNpp === null) {
-                    $tongHopKhoanNpp = $recipient;
-                }
+                $tongHopKhoanNpp = $recipient;
             }
 
             if ($camCa === null && $hasCamCa) {

@@ -104,19 +104,19 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:'.PermissionName::MailSend->value)
         ->name('mail.campaigns.store');
     Route::post('/mail/campaigns/{mailCampaign}/schedule', MailCampaignScheduleController::class)
-        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->middleware(['permission:'.PermissionName::MailSend->value, 'throttle:10,1'])
         ->name('mail.campaigns.schedule');
     Route::post('/mail/campaigns/{mailCampaign}/dispatch', MailCampaignDispatchController::class)
-        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->middleware(['permission:'.PermissionName::MailSend->value, 'throttle:5,1'])
         ->name('mail.campaigns.dispatch');
     Route::post('/mail/campaigns/{mailCampaign}/recipients/{mailCampaignRecipient}/retry', MailCampaignRecipientRetryController::class)
-        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->middleware(['permission:'.PermissionName::MailSend->value, 'throttle:30,1'])
         ->name('mail.campaigns.recipients.retry');
     Route::get('/mail/campaigns/{mailCampaign}/recipients/export-failed', MailCampaignFailedRecipientsExportController::class)
-        ->middleware('permission:'.PermissionName::MailView->value)
+        ->middleware(['permission:'.PermissionName::MailView->value, 'throttle:10,1'])
         ->name('mail.campaigns.recipients.export-failed');
     Route::post('/mail/campaigns/{mailCampaign}/send-sample', MailCampaignSampleSendController::class)
-        ->middleware('permission:'.PermissionName::MailSend->value)
+        ->middleware(['permission:'.PermissionName::MailSend->value, 'throttle:5,1'])
         ->name('mail.campaigns.send-sample');
 
     Route::get('/users', [UserManagementController::class, 'index'])

@@ -7,7 +7,9 @@
       "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Services/Mail/MailCampaignPageService.php)",
       "Bash(npx tsc *)",
       "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Services/Mail/SendSampleMailCampaignService.php)",
-      "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Http/Controllers/MailCampaignSampleSendController.php)"
+      "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Http/Controllers/MailCampaignSampleSendController.php)",
+      "Bash(grep -E \"\\\\.php$\")",
+      "Bash(php -r \"echo date\\('Y_m_d_His'\\);\")"
     ]
   }
 }

@@ -43,7 +43,7 @@ class MailCampaignPageService
     private function resolveSelectedCampaign(?int $selectedCampaignId): ?MailCampaign
     {
         $query = MailCampaign::query()
-            ->with(['importBatch', 'templateCanvas', 'creator', 'recipients.attemptLogs'])
+            ->with(['importBatch', 'templateCanvas', 'creator', 'recipients'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -208,7 +208,7 @@ class MailCampaignPageService
     {
         return MailCampaignRecipient::query()
             ->where('mail_campaign_id', $campaign->id)
-            ->with(['aggregatedRecord', 'attemptLogs'])
+            ->with(['aggregatedRecord', 'attemptLogs' => fn ($q) => $q->latest()->limit(20)])
             ->orderBy('customer_code')
             ->get()
             ->map(fn (MailCampaignRecipient $recipient): array => [
