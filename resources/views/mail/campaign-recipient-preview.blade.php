@@ -49,9 +49,6 @@
                                                 @foreach (($preview['tables'] ?? []) as $table)
                                                     <div style="margin-top:28px;">
                                                         <h2 style="margin:0 0 6px 0; font-size:20px; line-height:1.4; color:#0f172a;">{{ $table['title'] ?? $table['label'] ?? 'Bảng chi tiết' }}</h2>
-                                                        @if (! empty($table['sourceSheet']))
-                                                            <div style="margin-bottom:12px; font-size:13px; color:#64748b;">Nguồn dữ liệu: {{ $table['sourceSheet'] }}</div>
-                                                        @endif
 
                                                         @if (! empty($table['errors']) && is_array($table['errors']))
                                                             <div style="margin-bottom:16px; padding:12px 16px; border:1px solid rgba(245,158,11,0.32); border-radius:16px; background:rgba(245,158,11,0.08); color:#92400e; font-size:14px;">
@@ -141,10 +138,6 @@
                                                         @endif
                                                     </div>
                                                 @endforeach
-
-                                                <div style="margin-top:32px; padding-top:20px; border-top:1px solid #e2e8f0; font-size:13px; color:#64748b;">
-                                                    Email này được render từ dữ liệu aggregate thật của khách hàng đã chọn trong chiến dịch.
-                                                </div>
                                             </td>
                                         </tr>
                                     </table>

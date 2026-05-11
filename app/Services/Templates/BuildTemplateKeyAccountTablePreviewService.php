@@ -52,7 +52,7 @@ class BuildTemplateKeyAccountTablePreviewService
         );
 
         return [
-            'title' => sprintf('Chiết khấu Key Account tháng %s', $sample['month']),
+            'title' => sprintf('Chiết khấu tháng %s', $sample['month']),
             'sourceSheet' => 'Key Account',
             'rows' => $rendered['rows'],
             'errors' => $rendered['errors'],
