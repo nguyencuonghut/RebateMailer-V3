@@ -64,7 +64,7 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
             return;
         }
 
-        if ($recipient->delivery_status !== 'queued') {
+        if (! in_array($recipient->delivery_status, ['queued', 'failed'], true)) {
             return;
         }
 
@@ -160,6 +160,7 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
             $updateMailCampaignDispatchStatusService->refresh($campaign);
         } catch (Throwable $throwable) {
             $recipient->forceFill([
+                'delivery_status' => 'failed',
                 'attempts_count' => $recipient->attempts_count + 1,
                 'latest_error_message' => $throwable->getMessage(),
                 'failed_at' => now(),
@@ -174,6 +175,8 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
                     'exception' => $throwable::class,
                 ],
             );
+
+            $updateMailCampaignDispatchStatusService->refresh($campaign);
 
             throw $throwable;
         }

@@ -230,6 +230,7 @@ class MailCampaignPageService
                     'status' => $attempt->status,
                     'statusLabel' => $this->presentRecipientAttemptStatus($attempt->status),
                     'message' => $attempt->message,
+                    'friendlyMessage' => $this->presentAttemptFriendlyMessage($attempt->event_type, $attempt->message),
                     'createdAt' => optional($attempt->created_at)->toIso8601String(),
                     'context' => $attempt->context ?? [],
                 ])->values()->all(),
@@ -299,5 +300,131 @@ class MailCampaignPageService
             'success' => 'Thành công',
             default => $status,
         };
+    }
+
+    private function presentAttemptFriendlyMessage(string $eventType, ?string $message): string
+    {
+        // Events that are already in Vietnamese or informational — return as-is
+        if (in_array($eventType, ['queued', 'retry_queued', 'sent'], true)) {
+            return $message ?? '';
+        }
+
+        // Our own render/block errors are already written in Vietnamese
+        if (in_array($eventType, ['render_failed', 'queue_blocked', 'retry_blocked'], true)) {
+            return $message ?? 'Không có thông tin chi tiết.';
+        }
+
+        if ($message === null || $message === '') {
+            return 'Gửi email thất bại. Không có thông tin chi tiết về lỗi.';
+        }
+
+        $lower = strtolower($message);
+
+        // Email address does not exist
+        if (
+            str_contains($lower, 'does not exist')
+            || str_contains($lower, 'no such user')
+            || str_contains($lower, 'user unknown')
+            || str_contains($lower, 'invalid address')
+            || str_contains($lower, 'bad destination')
+            || str_contains($lower, 'mailbox not found')
+            || str_contains($lower, 'invalid recipient')
+            || str_contains($lower, 'address rejected')
+            || str_contains($lower, 'recipient address')
+            || (bool) preg_match('/\b55[013]\b/', $message)
+        ) {
+            return 'Địa chỉ email người nhận không tồn tại hoặc không hợp lệ. Kiểm tra lại email của khách hàng.';
+        }
+
+        // Spam / policy rejected
+        if (
+            str_contains($lower, 'spam')
+            || str_contains($lower, 'blacklist')
+            || str_contains($lower, 'blocked by policy')
+            || str_contains($lower, 'rejected')
+            || (bool) preg_match('/\b55[24]\b/', $message)
+        ) {
+            return 'Email bị từ chối bởi máy chủ người nhận (có thể bị đánh dấu spam hoặc bị chặn theo chính sách bảo mật).';
+        }
+
+        // Authentication failure
+        if (
+            str_contains($lower, 'authentication failed')
+            || str_contains($lower, 'authenticate')
+            || str_contains($lower, 'username and password')
+            || str_contains($lower, 'invalid credentials')
+            || (bool) preg_match('/\b53[045]\b/', $message)
+        ) {
+            return 'Xác thực với máy chủ mail thất bại. Kiểm tra lại tên đăng nhập và mật khẩu SMTP trong cấu hình hệ thống.';
+        }
+
+        // Connection timeout
+        if (
+            str_contains($lower, 'timed out')
+            || str_contains($lower, 'timeout')
+            || str_contains($lower, 'etimedout')
+        ) {
+            return 'Kết nối đến máy chủ mail bị timeout. Máy chủ có thể đang quá tải hoặc không phản hồi.';
+        }
+
+        // Connection refused / unreachable
+        if (
+            str_contains($lower, 'connection refused')
+            || str_contains($lower, 'econnrefused')
+            || str_contains($lower, 'could not connect')
+            || str_contains($lower, 'unable to connect')
+            || str_contains($lower, 'failed to connect')
+        ) {
+            return 'Không thể kết nối đến máy chủ mail. Kiểm tra lại địa chỉ host và port SMTP trong cấu hình.';
+        }
+
+        // DNS resolution failure
+        if (
+            str_contains($lower, 'getaddrinfo')
+            || str_contains($lower, 'name or service not known')
+            || str_contains($lower, 'nxdomain')
+            || str_contains($lower, 'no such host')
+        ) {
+            return 'Không tìm thấy máy chủ mail (lỗi DNS). Kiểm tra lại giá trị MAIL_HOST trong cấu hình.';
+        }
+
+        // SSL / TLS errors
+        if (
+            str_contains($lower, 'ssl')
+            || str_contains($lower, 'tls')
+            || str_contains($lower, 'crypto')
+            || str_contains($lower, 'certificate')
+            || str_contains($lower, 'handshake')
+        ) {
+            return 'Lỗi kết nối bảo mật SSL/TLS với máy chủ mail. Kiểm tra lại cấu hình MAIL_SCHEME và port.';
+        }
+
+        // Mailbox full
+        if (
+            str_contains($lower, 'mailbox full')
+            || str_contains($lower, 'quota exceeded')
+            || str_contains($lower, 'over quota')
+            || str_contains($lower, 'insufficient storage')
+        ) {
+            return 'Hộp thư của người nhận đã đầy. Không thể gửi email vào thời điểm này.';
+        }
+
+        // Rate limiting / temporary deferral
+        if (
+            str_contains($lower, 'too many')
+            || str_contains($lower, 'rate limit')
+            || str_contains($lower, 'throttle')
+            || (bool) preg_match('/\b42[01]\b/', $message)
+            || (bool) preg_match('/\b450\b/', $message)
+        ) {
+            return 'Gửi mail bị giới hạn tốc độ bởi máy chủ. Hệ thống sẽ tự động thử lại sau.';
+        }
+
+        // Generic SMTP protocol error
+        if (str_contains($lower, 'expected response code') || str_contains($lower, 'smtp')) {
+            return 'Máy chủ mail từ chối yêu cầu gửi. Xem chi tiết kỹ thuật để biết thêm thông tin.';
+        }
+
+        return 'Gửi email thất bại. Xem chi tiết kỹ thuật để biết thêm thông tin.';
     }
 }

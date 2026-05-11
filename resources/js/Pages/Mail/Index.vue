@@ -60,6 +60,7 @@ type RecipientRow = {
         status: string;
         statusLabel: string;
         message: string | null;
+        friendlyMessage: string;
         createdAt: string | null;
         context: Record<string, unknown>;
     }>;
@@ -190,6 +191,19 @@ const filteredRecipientList = computed(() =>
         ? props.recipientList.filter((recipient) => recipient.deliveryStatus === selectedRecipientDeliveryStatus.value)
         : props.recipientList,
 );
+const failedRecipientCount = computed(() =>
+    props.recipientList.filter((r) => r.deliveryStatus === 'failed').length,
+);
+const isFilteringFailed = computed(() => selectedRecipientDeliveryStatus.value === 'failed');
+const exportFailedUrl = computed(() =>
+    props.selectedCampaignId
+        ? route('mail.campaigns.recipients.export-failed', { mailCampaign: props.selectedCampaignId })
+        : null,
+);
+
+const toggleFailedFilter = (): void => {
+    selectedRecipientDeliveryStatus.value = isFilteringFailed.value ? null : 'failed';
+};
 
 const selectedCampaignOption = computed(() =>
     props.campaignOptions.find((campaign) => campaign.campaignId === props.selectedCampaignId)?.campaignId ?? null,
@@ -346,12 +360,25 @@ const closeRecipientPreview = (): void => {
     );
 };
 
+const expandedTechnicalIds = ref<number[]>([]);
+const isTechnicalExpanded = (id: number): boolean => expandedTechnicalIds.value.includes(id);
+const toggleTechnicalDetail = (id: number): void => {
+    const idx = expandedTechnicalIds.value.indexOf(id);
+    if (idx >= 0) {
+        expandedTechnicalIds.value.splice(idx, 1);
+    } else {
+        expandedTechnicalIds.value.push(id);
+    }
+};
+
 const openRecipientErrorDialog = (recipient: RecipientRow): void => {
     selectedRecipientErrorRow.value = recipient;
+    expandedTechnicalIds.value = [];
 };
 
 const closeRecipientErrorDialog = (): void => {
     selectedRecipientErrorRow.value = null;
+    expandedTechnicalIds.value = [];
 };
 
 const retryRecipient = (recipient: RecipientRow): void => {
@@ -703,19 +730,46 @@ onBeforeUnmount(() => {
                                     @clear="clearRecipientGlobalFilter"
                                 />
 
-                                <div class="w-full lg:max-w-xs">
-                                    <label class="mb-2 block text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                        Trạng thái gửi
-                                    </label>
-                                    <Select
-                                        v-model="selectedRecipientDeliveryStatus"
-                                        :options="recipientDeliveryStatusOptions"
-                                        option-label="label"
-                                        option-value="value"
-                                        fluid
-                                        placeholder="Lọc theo trạng thái gửi"
-                                        show-clear
-                                    />
+                                <div class="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-end">
+                                    <div class="w-full lg:max-w-xs">
+                                        <label class="mb-2 block text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Trạng thái gửi
+                                        </label>
+                                        <Select
+                                            v-model="selectedRecipientDeliveryStatus"
+                                            :options="recipientDeliveryStatusOptions"
+                                            option-label="label"
+                                            option-value="value"
+                                            fluid
+                                            placeholder="Lọc theo trạng thái gửi"
+                                            show-clear
+                                        />
+                                    </div>
+
+                                    <div class="flex shrink-0 gap-2">
+                                        <Button
+                                            type="button"
+                                            :label="isFilteringFailed ? 'Xem tất cả' : `Chỉ xem lỗi${failedRecipientCount > 0 ? ` (${failedRecipientCount})` : ''}`"
+                                            :severity="isFilteringFailed ? 'secondary' : 'danger'"
+                                            :outlined="!isFilteringFailed"
+                                            :disabled="failedRecipientCount === 0"
+                                            size="small"
+                                            @click="toggleFailedFilter"
+                                        />
+                                        <a
+                                            v-if="exportFailedUrl && failedRecipientCount > 0"
+                                            :href="exportFailedUrl"
+                                            download
+                                        >
+                                            <Button
+                                                type="button"
+                                                label="Export lỗi"
+                                                severity="danger"
+                                                size="small"
+                                                icon="pi pi-download"
+                                            />
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
 
@@ -930,16 +984,35 @@ onBeforeUnmount(() => {
                         </div>
 
                         <p class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                            {{ attempt.message || 'Không có thông điệp chi tiết.' }}
+                            {{ attempt.friendlyMessage || 'Không có thông tin chi tiết.' }}
                         </p>
 
-                        <div v-if="Object.keys(attempt.context).length > 0" class="mt-3 rounded-2xl border px-4 py-3 text-xs leading-6" :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }">
-                            <p
-                                v-for="[key, value] in Object.entries(attempt.context)"
-                                :key="`${attempt.id}-${key}`"
+                        <div v-if="attempt.message || Object.keys(attempt.context).length > 0" class="mt-3">
+                            <button
+                                type="button"
+                                class="flex items-center gap-1 text-xs"
+                                :style="{ color: 'var(--dashboard-muted-text)' }"
+                                @click="toggleTechnicalDetail(attempt.id)"
                             >
-                                {{ key }}: {{ String(value) }}
-                            </p>
+                                <span>{{ isTechnicalExpanded(attempt.id) ? 'Ẩn chi tiết kỹ thuật' : 'Xem chi tiết kỹ thuật' }}</span>
+                                <i :class="isTechnicalExpanded(attempt.id) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="text-[10px]" />
+                            </button>
+
+                            <div v-if="isTechnicalExpanded(attempt.id)" class="mt-2 rounded-2xl border px-4 py-3" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
+                                <p v-if="attempt.message" class="break-all font-mono text-xs leading-5" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                    {{ attempt.message }}
+                                </p>
+                                <div v-if="Object.keys(attempt.context).length > 0" :class="attempt.message ? 'mt-2 pt-2 border-t' : ''" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
+                                    <p
+                                        v-for="[key, value] in Object.entries(attempt.context)"
+                                        :key="`${attempt.id}-${key}`"
+                                        class="break-all font-mono text-xs leading-5"
+                                        :style="{ color: 'var(--dashboard-muted-text)' }"
+                                    >
+                                        {{ key }}: {{ String(value) }}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

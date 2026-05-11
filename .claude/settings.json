@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Http/Controllers/MailCampaignFailedRecipientsExportController.php)",
+      "Bash(xargs cat)",
+      "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Jobs/DispatchMailCampaignRecipientJob.php)",
+      "Bash(php -l /run/media/cuong/DATA/02_Project/205_RebateFlow/RebateMailer-V3/app/Services/Mail/MailCampaignPageService.php)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
