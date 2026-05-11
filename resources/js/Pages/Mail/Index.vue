@@ -176,6 +176,20 @@ const {
     'deliveryStatusLabel',
     'latestErrorMessage',
 ]);
+const selectedRecipientDeliveryStatus = ref<string | null>(null);
+const recipientDeliveryStatusOptions = [
+    { label: 'Tất cả trạng thái', value: null },
+    { label: 'Chưa gửi', value: 'pending' },
+    { label: 'Đã vào hàng đợi', value: 'queued' },
+    { label: 'Đang gửi', value: 'sending' },
+    { label: 'Đã gửi', value: 'sent' },
+    { label: 'Lỗi gửi', value: 'failed' },
+];
+const filteredRecipientList = computed(() =>
+    selectedRecipientDeliveryStatus.value
+        ? props.recipientList.filter((recipient) => recipient.deliveryStatus === selectedRecipientDeliveryStatus.value)
+        : props.recipientList,
+);
 
 const selectedCampaignOption = computed(() =>
     props.campaignOptions.find((campaign) => campaign.campaignId === props.selectedCampaignId)?.campaignId ?? null,
@@ -385,6 +399,9 @@ const syncAutoRefresh = (): void => {
 
 onMounted(syncAutoRefresh);
 watch(() => [props.selectedCampaignId, props.selectedCampaign?.status, props.selectedRecipientId], syncAutoRefresh);
+watch(() => props.selectedCampaignId, () => {
+    selectedRecipientDeliveryStatus.value = null;
+});
 onBeforeUnmount(() => {
     if (autoRefreshTimer) {
         clearInterval(autoRefreshTimer);
@@ -679,15 +696,32 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div v-else class="space-y-3">
-                            <DataTableGlobalFilterToolbar
-                                v-model="recipientGlobalFilterValue"
-                                placeholder="Tìm theo mã số, khách hàng, email, nguồn dữ liệu, trạng thái"
-                                @clear="clearRecipientGlobalFilter"
-                            />
+                            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <DataTableGlobalFilterToolbar
+                                    v-model="recipientGlobalFilterValue"
+                                    placeholder="Tìm theo mã số, khách hàng, email, nguồn dữ liệu, trạng thái"
+                                    @clear="clearRecipientGlobalFilter"
+                                />
+
+                                <div class="w-full lg:max-w-xs">
+                                    <label class="mb-2 block text-sm font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                        Trạng thái gửi
+                                    </label>
+                                    <Select
+                                        v-model="selectedRecipientDeliveryStatus"
+                                        :options="recipientDeliveryStatusOptions"
+                                        option-label="label"
+                                        option-value="value"
+                                        fluid
+                                        placeholder="Lọc theo trạng thái gửi"
+                                        show-clear
+                                    />
+                                </div>
+                            </div>
 
                             <DataTable
                                 v-model:filters="recipientFilters"
-                                :value="recipientList"
+                                :value="filteredRecipientList"
                                 :global-filter-fields="recipientGlobalFilterFields"
                                 paginator
                                 :rows="10"
