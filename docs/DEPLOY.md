@@ -285,11 +285,21 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD" llen queues:default
 
 ### 5.4 Tạo user admin đầu tiên
 
-```bash
-# Mở Laravel tinker trong container app
-docker compose exec app php artisan tinker
+**Bước 1** — Chạy seeder để tạo roles và permissions:
 
-# Trong tinker, tạo user + assign role:
+```bash
+docker compose exec app php artisan db:seed --class=RoleAndPermissionSeeder
+```
+
+**Bước 2** — Tạo user và gán role admin:
+
+```bash
+docker compose exec app php artisan tinker
+```
+
+Trong tinker:
+
+```php
 $user = \App\Models\User::create([
     'name'     => 'Admin',
     'email'    => 'admin@company.vn',
@@ -298,6 +308,9 @@ $user = \App\Models\User::create([
 $user->assignRole('admin');
 exit
 ```
+
+> **Lưu ý:** Bước 1 phải chạy trước — nếu chạy `assignRole` khi chưa có role sẽ báo lỗi
+> `RoleDoesNotExist: There is no role named 'admin' for guard 'web'`.
 
 ---
 
@@ -625,6 +638,8 @@ docker compose build --no-cache
 docker compose up -d postgres redis
 docker compose run --rm migrator
 docker compose up -d
+docker compose exec app php artisan db:seed --class=RoleAndPermissionSeeder
+docker compose exec app php artisan tinker  # tạo user admin (xem Phần 5.4)
 
 # ── Update code mới ─────────────────────────────────────────────────────────
 git pull && docker compose build --no-cache
