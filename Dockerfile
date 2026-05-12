@@ -11,6 +11,8 @@ RUN npm ci --frozen-lockfile
 COPY vite.config.js postcss.config.js tailwind.config.js tsconfig.json ./
 COPY resources/ resources/
 COPY public/ public/
+# Ziggy is imported directly from vendor/ by resources/js/app.ts
+COPY vendor/tightenco/ziggy ./vendor/tightenco/ziggy
 
 RUN npx vite build
 
