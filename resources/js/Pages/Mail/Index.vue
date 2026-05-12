@@ -55,6 +55,7 @@ type RecipientRow = {
     latestFriendlyMessage: string | null;
     attemptsCount: number;
     canRetry: boolean;
+    canResend: boolean;
     attemptLogs: Array<{
         id: number;
         eventType: string;
@@ -449,6 +450,31 @@ const retryRecipient = (recipient: RecipientRow): void => {
     }), {}, {
         preserveScroll: true,
         preserveState: true,
+    });
+};
+
+const resendConfirmRecipient = ref<RecipientRow | null>(null);
+
+const openResendConfirm = (recipient: RecipientRow): void => {
+    resendConfirmRecipient.value = recipient;
+};
+
+const closeResendConfirm = (): void => {
+    resendConfirmRecipient.value = null;
+};
+
+const confirmResend = (): void => {
+    if (!resendConfirmRecipient.value || !props.selectedCampaignId || !props.canManageCampaigns) {
+        return;
+    }
+
+    router.post(route('mail.campaigns.recipients.retry', {
+        mailCampaign: props.selectedCampaignId,
+        mailCampaignRecipient: resendConfirmRecipient.value.id,
+    }), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => closeResendConfirm(),
     });
 };
 
@@ -939,10 +965,19 @@ onBeforeUnmount(() => {
                                             <Button
                                                 v-if="canManageCampaigns && data.canRetry"
                                                 type="button"
-                                                label="Retry"
+                                                label="Thử lại"
                                                 size="small"
                                                 severity="warn"
                                                 @click="retryRecipient(data)"
+                                            />
+                                            <Button
+                                                v-if="canManageCampaigns && data.canResend"
+                                                type="button"
+                                                label="Gửi lại"
+                                                size="small"
+                                                severity="secondary"
+                                                outlined
+                                                @click="openResendConfirm(data)"
                                             />
                                         </div>
                                     </template>
@@ -953,6 +988,36 @@ onBeforeUnmount(() => {
                 </template>
             </Card>
         </div>
+
+        <Dialog
+            :visible="resendConfirmRecipient !== null"
+            modal
+            :style="{ width: 'min(480px, 96vw)' }"
+            header="Xác nhận gửi lại"
+            @update:visible="(visible) => { if (!visible) closeResendConfirm() }"
+        >
+            <p class="mb-4">
+                Khách hàng <strong>{{ resendConfirmRecipient?.customerFullName }}</strong>
+                (<code>{{ resendConfirmRecipient?.recipientEmail }}</code>)
+                đã nhận được mail này rồi.
+            </p>
+            <p class="mb-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                Bạn có chắc muốn gửi lại? Khách hàng sẽ nhận được email trùng.
+            </p>
+            <div class="flex justify-end gap-2">
+                <Button
+                    label="Hủy"
+                    severity="secondary"
+                    outlined
+                    @click="closeResendConfirm"
+                />
+                <Button
+                    label="Gửi lại"
+                    severity="secondary"
+                    @click="confirmResend"
+                />
+            </div>
+        </Dialog>
 
         <Dialog
             :visible="isCreateDialogVisible"

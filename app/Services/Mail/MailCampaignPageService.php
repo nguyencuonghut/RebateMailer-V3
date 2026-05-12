@@ -224,6 +224,7 @@ class MailCampaignPageService
                 'latestFriendlyMessage' => $this->resolveLatestFriendlyMessage($recipient),
                 'attemptsCount' => $recipient->attempts_count,
                 'canRetry' => $recipient->delivery_status === 'failed',
+                'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
                 'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
                     'id' => $attempt->id,
                     'eventType' => $attempt->event_type,

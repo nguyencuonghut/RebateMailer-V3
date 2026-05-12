@@ -391,7 +391,8 @@
         <li><a href="#s6-schedule">Lên lịch gửi</a></li>
         <li><a href="#s6-dispatch">Gửi ngay</a></li>
         <li><a href="#s6-monitor">Theo dõi kết quả</a></li>
-        <li><a href="#s6-retry">Retry – Gửi lại mail lỗi</a></li>
+        <li><a href="#s6-retry">Thử lại – Mail lỗi</a></li>
+        <li><a href="#s6-resend">Gửi lại – Mail đã gửi thành công</a></li>
         <li><a href="#s6-export">Export lỗi</a></li>
       </ul>
     </li>
@@ -423,7 +424,7 @@
     <li>Import dữ liệu chiết khấu từ file Excel (4 sheet) lên hệ thống.</li>
     <li>Thiết kế template email với bảng chiết khấu động, tự động điền số liệu riêng của từng khách hàng.</li>
     <li>Tạo và điều phối chiến dịch gửi hàng loạt email cá nhân hoá.</li>
-    <li>Theo dõi trạng thái gửi theo thời gian thực (tự động làm mới mỗi 5 giây), retry mail thất bại, xuất báo cáo lỗi.</li>
+    <li>Theo dõi trạng thái gửi theo thời gian thực (tự động làm mới mỗi 5 giây), thử lại mail thất bại, gửi lại mail thành công, xuất báo cáo lỗi.</li>
   </ul>
 
   <h3 id="s1-nav">Điều hướng hệ thống</h3>
@@ -471,7 +472,7 @@
     <div class="flow-step">③ Tạo chiến dịch</div><div class="flow-arrow">→</div>
     <div class="flow-step">④ Gửi mail mẫu</div><div class="flow-arrow">→</div>
     <div class="flow-step">⑤ Gửi ngay / Lên lịch</div><div class="flow-arrow">→</div>
-    <div class="flow-step">⑥ Theo dõi & Retry</div>
+    <div class="flow-step">⑥ Theo dõi & Xử lý lỗi</div>
   </div>
 </div>
 </section>
@@ -924,7 +925,12 @@
       <tr>
         <td>15002</td><td>15002 - Trần Thị B</td><td>b@email.com</td><td>Key Account</td>
         <td><span class="badge b-danger">Lỗi gửi</span></td><td>Mailbox full</td>
-        <td><span class="btn btn-warn">Chi tiết lỗi</span> <span class="btn btn-outline">Retry</span></td>
+        <td><span class="btn btn-warn">Chi tiết lỗi</span> <span class="btn btn-warn">Thử lại</span></td>
+      </tr>
+      <tr>
+        <td>15003</td><td>15003 - Lê Văn C</td><td>c@email.com</td><td>Tổng hợp</td>
+        <td><span class="badge b-ok">Đã gửi</span></td><td>—</td>
+        <td><span class="btn btn-outline">Xem trước email</span> <span class="btn btn-secondary">Gửi lại</span></td>
       </tr>
     </tbody>
   </table>
@@ -948,22 +954,23 @@
   <h4>Xem trước & Chi tiết lỗi</h4>
   <ul class="bl">
     <li><span class="btn btn-outline">Xem trước email</span> – Mở hộp thoại <strong>"Xem trước toàn bộ email"</strong>, hiển thị email đầy đủ sẽ gửi đến khách hàng đó.</li>
-    <li><span class="btn btn-warn">Chi tiết lỗi</span> – Mở hộp thoại <strong>"Chi tiết lỗi gửi mail"</strong> với lịch sử retry và thông tin lỗi kỹ thuật (có thể mở/ẩn bằng "Xem chi tiết kỹ thuật" / "Ẩn chi tiết kỹ thuật").</li>
+    <li><span class="btn btn-warn">Chi tiết lỗi</span> – Mở hộp thoại <strong>"Chi tiết lỗi gửi mail"</strong> với lịch sử thử lại và thông tin lỗi kỹ thuật (có thể mở/ẩn bằng "Xem chi tiết kỹ thuật" / "Ẩn chi tiết kỹ thuật").</li>
+    <li><span class="btn btn-secondary">Gửi lại</span> – Chỉ xuất hiện với mail trạng thái <span class="badge b-ok">Đã gửi</span>. Dùng khi cần gửi lại cho khách đã nhận thành công (ví dụ: khách báo không thấy mail). Nhấn nút sẽ mở <strong>hộp thoại xác nhận</strong> trước khi gửi.</li>
   </ul>
 
-  <h3 id="s6-retry">Retry – Gửi lại mail lỗi</h3>
+  <h3 id="s6-retry">Thử lại – Mail lỗi</h3>
   <ol class="steps">
     <li><div class="st">
       <span class="st-title">Lọc mail lỗi</span>
       Nhấn <span class="btn btn-danger">Chỉ xem lỗi (N)</span> để chỉ hiển thị các mail thất bại.
     </div></li>
     <li><div class="st">
-      <span class="st-title">Retry từng mail</span>
-      Nhấn <span class="btn btn-outline">Retry</span> ở cột Thao tác để gửi lại một mail cụ thể.
+      <span class="st-title">Nhấn "Thử lại"</span>
+      Nhấn <span class="btn btn-warn">Thử lại</span> ở cột Thao tác để gửi lại mail bị lỗi. Không có hộp thoại xác nhận — hệ thống đưa mail vào hàng đợi ngay lập tức.
     </div></li>
     <li><div class="st">
       <span class="st-title">Theo dõi kết quả</span>
-      Trạng thái sẽ cập nhật tự động (mỗi 5 giây). Lặp lại nếu cần.
+      Trạng thái cập nhật tự động mỗi 5 giây. Lặp lại nếu cần.
     </div></li>
   </ol>
   <div class="callout danger">
@@ -977,6 +984,27 @@
         <li>Mail bị chặn bởi bộ lọc spam của bên nhận.</li>
       </ul>
     </div>
+  </div>
+
+  <h3 id="s6-resend">Gửi lại – Mail đã gửi thành công</h3>
+  <p>Dùng khi khách hàng đã nhận mail nhưng cần gửi lại (ví dụ: khách báo không tìm thấy, cần bản sao).</p>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Tìm khách hàng cần gửi lại</span>
+      Tìm kiếm theo email hoặc tên trong bảng. Chỉ những khách có trạng thái <span class="badge b-ok">Đã gửi</span> mới hiển thị nút <span class="btn btn-secondary">Gửi lại</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn "Gửi lại"</span>
+      Nhấn <span class="btn btn-secondary">Gửi lại</span>. Hộp thoại <strong>"Xác nhận gửi lại"</strong> hiển thị tên và email khách hàng kèm cảnh báo: <em>"Khách hàng sẽ nhận được email trùng."</em>
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Xác nhận</span>
+      Nhấn <span class="btn btn-secondary">Gửi lại</span> trong dialog để xác nhận, hoặc <span class="btn btn-secondary">Hủy</span> để bỏ qua. Sau khi xác nhận, mail được đưa vào hàng đợi và gửi lại.
+    </div></li>
+  </ol>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div><p>Khách hàng sẽ nhận được <strong>email trùng</strong> so với lần gửi trước. Chỉ dùng khi thực sự cần thiết.</p></div>
   </div>
 
   <h3 id="s6-export">Export lỗi – Xuất danh sách mail thất bại</h3>
@@ -1111,11 +1139,11 @@
     <li>Kiểm tra card <strong>"Cấu trúc tệp Excel"</strong> — nếu báo sheet không tìm thấy, kiểm tra lại tên sheet trong file.</li>
   </ul>
 
-  <h3>❓ Mail khách hàng bị lỗi liên tục dù đã Retry nhiều lần?</h3>
+  <h3>❓ Mail khách hàng bị lỗi liên tục dù đã Thử lại nhiều lần?</h3>
   <ul class="bl">
     <li>Nhấn <span class="btn btn-warn">Chi tiết lỗi</span> để đọc nội dung lỗi và <strong>"Xem chi tiết kỹ thuật"</strong>.</li>
     <li>Nếu lỗi <em>"invalid email"</em>: kiểm tra lại cột Email trong file Excel.</li>
-    <li>Nếu lỗi <em>"Mailbox full"</em>: yêu cầu khách hàng dọn hòm thư rồi Retry.</li>
+    <li>Nếu lỗi <em>"Mailbox full"</em>: yêu cầu khách hàng dọn hòm thư rồi nhấn <span class="btn btn-warn">Thử lại</span>.</li>
     <li>Dùng <span class="btn btn-danger">Export lỗi</span> để xuất danh sách rồi chuyển cho bộ phận liên quan xử lý.</li>
   </ul>
 
