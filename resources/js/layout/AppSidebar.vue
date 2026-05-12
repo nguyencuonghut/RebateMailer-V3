@@ -6,9 +6,11 @@ import AppLogo from './AppLogo.vue';
 type MenuItem = {
     label: string;
     icon: string;
-    routeName: string;
     permission?: string;
-};
+} & (
+    | { routeName: string; href?: never }
+    | { href: string; routeName?: never; target?: string }
+);
 
 type MenuSection = {
     label: string;
@@ -41,6 +43,9 @@ const handleNavigation = (): void => {
     }
 };
 
+const itemRouteUrl = (item: MenuItem): string => (item.routeName ? route(item.routeName) : '');
+const itemIsActive = (item: MenuItem): boolean => (item.routeName ? (route().current(item.routeName) ?? false) : false);
+
 const menuSections: MenuSection[] = [
     {
         label: 'Trang chính',
@@ -61,6 +66,12 @@ const menuSections: MenuSection[] = [
         items: [
             { label: 'Người dùng', icon: 'pi pi-users', routeName: 'users.index', permission: 'users.view' },
             { label: 'Hồ sơ cá nhân', icon: 'pi pi-user', routeName: 'profile.edit' },
+        ],
+    },
+    {
+        label: 'Trợ giúp',
+        items: [
+            { label: 'Hướng dẫn sử dụng', icon: 'pi pi-book', routeName: 'user-guide.index' },
         ],
     },
 ];
@@ -110,10 +121,21 @@ const menuSections: MenuSection[] = [
 
                 <div class="mt-3 space-y-1.5">
                     <template v-for="item in section.items.filter((entry) => hasPermission(entry.permission))" :key="item.label">
-                        <Link
-                            :href="route(item.routeName)"
+                        <a
+                            v-if="item.href"
+                            :href="item.href"
+                            :target="item.target"
                             class="sakai-sidebar-link"
-                            :class="{ 'sakai-sidebar-link-active': route().current(item.routeName) }"
+                            @click="handleNavigation"
+                        >
+                            <i :class="item.icon" class="text-sm" />
+                            <span class="font-medium">{{ item.label }}</span>
+                        </a>
+                        <Link
+                            v-else
+                            :href="itemRouteUrl(item)"
+                            class="sakai-sidebar-link"
+                            :class="{ 'sakai-sidebar-link-active': itemIsActive(item) }"
                             @click="handleNavigation"
                         >
                             <i :class="item.icon" class="text-sm" />

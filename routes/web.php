@@ -132,6 +132,8 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:'.PermissionName::UsersDelete->value)
         ->name('users.destroy');
 
+    Route::get('/huong-dan-su-dung', fn () => inertia('UserGuide'))->name('user-guide.index');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
