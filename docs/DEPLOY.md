@@ -137,12 +137,12 @@ rm rebate-mailer.tar.gz
 
 ## Phần 3 — Cấu hình môi trường production
 
-### 3.1 Tạo file .env.production
+### 3.1 Tạo file .env
 
 ```bash
 cd /opt/rebate-mailer
-cp .env.production.example .env.production
-nano .env.production    # Hoặc dùng editor khác
+cp .env.example .env
+nano .env    # Hoặc dùng editor khác
 ```
 
 **Những giá trị BẮT BUỘC phải thay đổi:**
@@ -167,13 +167,13 @@ nano .env.production    # Hoặc dùng editor khác
 # Chạy lệnh này để lấy key mới
 docker run --rm php:8.3-alpine php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
 
-# Dán kết quả vào .env.production tại dòng APP_KEY=
+# Dán kết quả vào .env tại dòng APP_KEY=
 ```
 
 ### 3.3 Bảo mật file cấu hình
 
 ```bash
-chmod 600 /opt/rebate-mailer/.env.production
+chmod 600 /opt/rebate-mailer/.env
 ```
 
 ---
@@ -620,7 +620,7 @@ docker compose up -d
 
 ```bash
 # ── Lần đầu deploy ──────────────────────────────────────────────────────────
-cp .env.production.example .env.production && nano .env.production
+cp .env.example .env && nano .env
 docker compose build --no-cache
 docker compose up -d postgres redis
 docker compose run --rm migrator
