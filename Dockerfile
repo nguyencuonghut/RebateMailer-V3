@@ -35,7 +35,7 @@ RUN npx vite build
 ###############################################################################
 # Stage 3 — PHP 8.3-FPM production image  (used by: app, worker, scheduler)
 ###############################################################################
-FROM php:8.3-fpm-alpine AS app
+FROM php:8.4-fpm-alpine AS app
 
 # ── System packages ────────────────────────────────────────────────────────
 RUN apk add --no-cache \
