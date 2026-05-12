@@ -12,7 +12,7 @@ COPY vite.config.js postcss.config.js tailwind.config.js tsconfig.json ./
 COPY resources/ resources/
 COPY public/ public/
 
-RUN npm run build
+RUN npx vite build
 
 ###############################################################################
 # Stage 2 — PHP 8.3-FPM production image  (used by: app, worker, scheduler)
