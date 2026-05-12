@@ -1,5 +1,20 @@
 ###############################################################################
-# Stage 1 — Build frontend assets (Node 20)
+# Stage 1 — Install PHP/Composer dependencies (produces vendor/)
+#   Chạy riêng để frontend stage có thể lấy Ziggy mà không cần vendor/ trên host
+###############################################################################
+FROM composer:2 AS composer-deps
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install \
+        --no-dev \
+        --no-interaction \
+        --no-scripts \
+        --prefer-dist
+
+###############################################################################
+# Stage 2 — Build frontend assets (Node 20)
 ###############################################################################
 FROM node:20-alpine AS frontend
 
@@ -11,13 +26,14 @@ RUN npm ci --frozen-lockfile
 COPY vite.config.js postcss.config.js tailwind.config.js tsconfig.json ./
 COPY resources/ resources/
 COPY public/ public/
-# Ziggy is imported directly from vendor/ by resources/js/app.ts
-COPY vendor/tightenco/ziggy ./vendor/tightenco/ziggy
+
+# Ziggy JS is imported from vendor/ by resources/js/app.ts — get it from Stage 1
+COPY --from=composer-deps /app/vendor/tightenco/ziggy ./vendor/tightenco/ziggy
 
 RUN npx vite build
 
 ###############################################################################
-# Stage 2 — PHP 8.3-FPM production image  (used by: app, worker, scheduler)
+# Stage 3 — PHP 8.3-FPM production image  (used by: app, worker, scheduler)
 ###############################################################################
 FROM php:8.3-fpm-alpine AS app
 
@@ -52,27 +68,19 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && apk del autoconf g++ make linux-headers \
     && rm -rf /tmp/pear /var/cache/apk/*
 
-# ── Composer ──────────────────────────────────────────────────────────────
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
 WORKDIR /var/www/html
 
-# ── PHP vendor dependencies (separate layer for cache efficiency) ──────────
-COPY composer.json composer.lock ./
-RUN composer install \
-        --no-dev \
-        --no-interaction \
-        --no-autoloader \
-        --no-scripts \
-        --prefer-dist
+# ── PHP vendor từ Stage 1 (đã install sẵn, không cần composer trên image) ─
+COPY --from=composer-deps /app/vendor ./vendor
 
 # ── Application source ─────────────────────────────────────────────────────
 COPY . .
 
-# ── Compiled frontend assets from Stage 1 ────────────────────────────────
+# ── Compiled frontend assets từ Stage 2 ──────────────────────────────────
 COPY --from=frontend /build/public/build ./public/build
 
-# ── Finalise Composer + framework discovery ───────────────────────────────
+# ── Finalise Composer autoloader + framework discovery ───────────────────
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN composer dump-autoload --classmap-authoritative --no-dev \
     && php artisan package:discover --ansi
 
@@ -98,7 +106,7 @@ ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
 
 ###############################################################################
-# Stage 3 — Nginx  (serves static files + reverse-proxies PHP-FPM)
+# Stage 4 — Nginx  (serves static files + reverse-proxies PHP-FPM)
 ###############################################################################
 FROM nginx:1.26-alpine AS web
 

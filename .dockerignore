@@ -1,9 +1,6 @@
 # Dependencies (installed inside Docker)
 node_modules/
 vendor/
-# Exception: Ziggy JS is imported directly from vendor/ by Vite
-!vendor/tightenco/
-!vendor/tightenco/ziggy/
 
 # Version control
 .git/
