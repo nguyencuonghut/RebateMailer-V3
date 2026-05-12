@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hướng Dẫn Sử Dụng – RebateMailer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:        #2563eb;
+      --brand-dark:   #1e40af;
+      --brand-light:  #dbeafe;
+      --accent:       #059669;
+      --accent-light: #d1fae5;
+      --warn:         #d97706;
+      --warn-light:   #fef3c7;
+      --danger:       #dc2626;
+      --danger-light: #fee2e2;
+      --purple:       #7c3aed;
+      --purple-light: #ede9fe;
+      --text:         #1e293b;
+      --text-muted:   #64748b;
+      --border:       #e2e8f0;
+      --bg:           #f8fafc;
+      --white:        #ffffff;
+      --shadow-sm:    0 1px 3px rgba(0,0,0,.08);
+      --shadow:       0 4px 14px rgba(0,0,0,.10);
+      --radius:       12px;
+      --radius-sm:    6px;
+    }
+
+    html { font-size: 14px; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.7;
+    }
+
+    @media print {
+      body { background: white; font-size: 11.5px; }
+      .no-print { display: none !important; }
+      .cover { page-break-after: always; min-height: auto; padding: 60px 40px; }
+      .toc   { page-break-after: always; }
+      section { page-break-before: always; }
+      .page-card { box-shadow: none !important; border: 1px solid #ddd; }
+      a { color: inherit; text-decoration: none; }
+      @page { margin: 18mm 16mm; size: A4; }
+    }
+
+    .wrapper { max-width: 900px; margin: 0 auto; padding: 0 16px 60px; }
+
+    /* ── COVER ─────────────────────────────────────────────────────────── */
+    .cover {
+      background: linear-gradient(140deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 40px;
+    }
+    .cover-icon {
+      font-size: 4rem;
+      margin-bottom: 28px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
+    }
+    .cover-eyebrow {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 100px;
+      padding: 5px 18px;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .cover h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -.5px; }
+    .cover h2 { font-size: 1.1rem; font-weight: 400; opacity: .8; margin-top: 8px; }
+    .cover hr {
+      width: 60px; border: none; border-top: 3px solid rgba(255,255,255,.35);
+      border-radius: 2px; margin: 32px auto;
+    }
+    .cover-meta { font-size: .85rem; opacity: .65; line-height: 2.2; }
+
+    /* ── TOC ─────────────────────────────────────────────────────────── */
+    .toc {
+      background: white; border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 40px 44px; margin: 40px 0;
+    }
+    .toc-title {
+      font-size: 1.2rem; font-weight: 700; color: var(--brand-dark);
+      margin-bottom: 24px; padding-bottom: 14px;
+      border-bottom: 2px solid var(--brand-light);
+    }
+    .toc ol { list-style: none; counter-reset: toc; }
+    .toc > ol > li { counter-increment: toc; margin-bottom: 6px; }
+    .toc > ol > li > a {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--text); text-decoration: none; font-weight: 600;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+    }
+    .toc > ol > li > a:hover { color: var(--brand); }
+    .toc > ol > li > a::before {
+      content: counter(toc, decimal-leading-zero);
+      min-width: 30px; height: 26px; line-height: 26px;
+      text-align: center; background: var(--brand-light);
+      color: var(--brand-dark); border-radius: 6px;
+      font-size: .78rem; font-weight: 700;
+    }
+    .toc .sub { list-style: none; margin: 5px 0 3px 40px; }
+    .toc .sub li { margin: 3px 0; }
+    .toc .sub a { color: var(--text-muted); text-decoration: none; font-size: .88rem; }
+    .toc .sub a:hover { color: var(--brand); }
+    .toc .sub a::before { content: "→ "; color: var(--brand); }
+
+    /* ── PAGE CARD ───────────────────────────────────────────────────── */
+    .page-card {
+      background: white; border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 40px 44px; margin: 32px 0;
+    }
+
+    /* ── SECTION HEADER ──────────────────────────────────────────────── */
+    .sec-head {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 28px; padding-bottom: 16px;
+      border-bottom: 2px solid var(--brand-light);
+    }
+    .sec-num {
+      display: flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; min-width: 46px;
+      background: var(--brand); color: white;
+      border-radius: 12px; font-size: 1.25rem; font-weight: 800;
+    }
+    .sec-meta h2 { font-size: 1.35rem; font-weight: 700; color: var(--brand-dark); }
+    .sec-meta p  { font-size: .83rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── TYPOGRAPHY ──────────────────────────────────────────────────── */
+    h3 {
+      font-size: 1.03rem; font-weight: 700; color: var(--text);
+      margin: 26px 0 10px; display: flex; align-items: center; gap: 8px;
+    }
+    h3::before {
+      content: ""; display: inline-block; width: 4px; height: 18px;
+      background: var(--brand); border-radius: 2px;
+    }
+    h4 { font-size: .93rem; font-weight: 600; color: var(--text); margin: 14px 0 6px; }
+    p  { margin-bottom: 10px; }
+    ul.bl { list-style: none; margin: 8px 0 14px; padding: 0; }
+    ul.bl li { padding: 3px 0 3px 16px; position: relative; }
+    ul.bl li::before { content:"•"; position:absolute; left:0; color:var(--brand); font-weight:700; }
+
+    /* ── STEPS ───────────────────────────────────────────────────────── */
+    ol.steps { list-style: none; counter-reset: step; margin: 12px 0 20px; }
+    ol.steps > li {
+      counter-increment: step; display: flex; gap: 14px;
+      margin-bottom: 14px; align-items: flex-start;
+    }
+    ol.steps > li::before {
+      content: counter(step);
+      display: flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 28px;
+      background: var(--brand); color: white;
+      border-radius: 50%; font-size: .8rem; font-weight: 700; margin-top: 2px;
+    }
+    ol.steps .st { flex: 1; }
+    ol.steps .st-title { font-weight: 600; color: var(--brand-dark); display: block; margin-bottom: 2px; }
+
+    /* ── CALLOUT ─────────────────────────────────────────────────────── */
+    .callout {
+      border-radius: var(--radius-sm); padding: 13px 16px; margin: 14px 0;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .callout-icon { font-size: 1.05rem; flex-shrink: 0; margin-top: 2px; }
+    .callout p { margin: 0; }
+    .callout strong { display: block; margin-bottom: 3px; }
+    .info    { background: var(--brand-light);  border-left: 4px solid var(--brand); }
+    .success { background: var(--accent-light); border-left: 4px solid var(--accent); }
+    .warn    { background: var(--warn-light);   border-left: 4px solid var(--warn); }
+    .danger  { background: var(--danger-light); border-left: 4px solid var(--danger); }
+
+    /* ── BADGES ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 100px;
+      font-size: .73rem; font-weight: 700; vertical-align: middle;
+      white-space: nowrap;
+    }
+    .b-admin   { background: var(--purple-light); color: var(--purple); }
+    .b-user    { background: var(--brand-light);  color: var(--brand-dark); }
+    .b-guest   { background: #f1f5f9; color: #475569; }
+    .b-ok      { background: var(--accent-light); color: #065f46; }
+    .b-warn    { background: var(--warn-light);   color: #92400e; }
+    .b-danger  { background: var(--danger-light); color: #991b1b; }
+    .b-muted   { background: #f1f5f9; color: #475569; }
+    .b-purple  { background: var(--purple-light); color: var(--purple); }
+
+    /* ── UI MOCK BUTTONS ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 6px;
+      font-size: .78rem; font-weight: 600; vertical-align: middle;
+      white-space: nowrap; line-height: 1.6;
+    }
+    .btn-primary { background: var(--brand); color: white; }
+    .btn-success { background: var(--accent); color: white; }
+    .btn-danger  { background: var(--danger); color: white; }
+    .btn-warn    { background: var(--warn);   color: white; }
+    .btn-outline { background: white; color: var(--brand); border: 1px solid var(--brand); }
+    .btn-secondary { background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── MENU MOCK ───────────────────────────────────────────────────── */
+    .sidebar-mock {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      overflow: hidden; margin: 14px 0; max-width: 240px;
+    }
+    .sidebar-group {
+      padding: 6px 12px 3px;
+      font-size: .72rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .8px;
+    }
+    .sidebar-item {
+      padding: 8px 16px; font-size: .88rem;
+      display: flex; align-items: center; gap: 10px; color: var(--text);
+      border-left: 3px solid transparent;
+    }
+    .sidebar-item.active {
+      background: var(--brand-light); color: var(--brand-dark); font-weight: 600;
+      border-left-color: var(--brand);
+    }
+    .sidebar-icon { width: 18px; text-align: center; font-size: .95rem; }
+
+    /* ── TABLES ──────────────────────────────────────────────────────── */
+    .dtable {
+      width: 100%; border-collapse: collapse; font-size: .85rem; margin: 12px 0;
+    }
+    .dtable th {
+      background: var(--brand); color: white; text-align: left;
+      padding: 9px 12px; font-weight: 600; white-space: nowrap;
+    }
+    .dtable th:first-child { border-radius: var(--radius-sm) 0 0 0; }
+    .dtable th:last-child  { border-radius: 0 var(--radius-sm) 0 0; }
+    .dtable td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .dtable tr:nth-child(even) td { background: var(--bg); }
+    .dtable tr:last-child td { border-bottom: none; }
+    .check { color: var(--accent); font-size: 1.05rem; }
+    .cross { color: #cbd5e1; }
+
+    /* ── FLOW ────────────────────────────────────────────────────────── */
+    .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 14px 0; }
+    .flow-step {
+      background: var(--brand); color: white; border-radius: var(--radius-sm);
+      padding: 7px 14px; font-size: .8rem; font-weight: 600; white-space: nowrap;
+    }
+    .flow-arrow { color: var(--brand); font-weight: 700; font-size: 1.1rem; }
+
+    /* ── STATUS GRID ─────────────────────────────────────────────────── */
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 10px; margin: 12px 0; }
+    .status-card { border-radius: var(--radius-sm); padding: 12px 14px; border: 1px solid var(--border); }
+    .status-card .sn { font-weight: 700; font-size: .84rem; margin-bottom: 4px; }
+    .status-card .sd { font-size: .79rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── TABS MOCK ───────────────────────────────────────────────────── */
+    .tabs-mock { display: flex; flex-wrap: wrap; gap: 0; margin: 12px 0 0; }
+    .tab-item {
+      padding: 7px 14px; font-size: .82rem; font-weight: 600;
+      border: 1px solid var(--border); border-bottom: none;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: var(--bg); color: var(--text-muted); margin-right: 3px;
+    }
+    .tab-item.act {
+      background: white; color: var(--brand-dark);
+      border-top: 3px solid var(--brand);
+    }
+    .tab-body {
+      border: 1px solid var(--border);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+      padding: 14px 16px; background: white; margin-bottom: 12px; font-size: .88rem;
+    }
+
+    /* ── SEARCH BOX MOCK ─────────────────────────────────────────────── */
+    .search-mock {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px;
+    }
+    .search-input {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 6px 12px; font-size: .83rem; color: var(--text-muted);
+      background: white; flex: 1; min-width: 200px;
+    }
+
+    /* ── CARD MOCK ───────────────────────────────────────────────────── */
+    .card-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+    .card-mini { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; background: white; }
+    .card-mini .cm-label { font-size: .78rem; color: var(--text-muted); }
+    .card-mini .cm-value { font-size: 1.3rem; font-weight: 800; color: var(--brand-dark); }
+
+    /* ── INLINE CODE / KBD ───────────────────────────────────────────── */
+    code {
+      background: #f1f5f9; color: var(--brand-dark);
+      padding: 1px 6px; border-radius: 4px;
+      font-family: 'Consolas','Courier New',monospace; font-size: .84em;
+    }
+
+    /* ── FIELD LABEL MOCK ─────────────────────────────────────────────── */
+    .field { margin: 10px 0 14px; }
+    .field-label { font-size: .78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; }
+    .field-input {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 7px 12px; font-size: .88rem; color: var(--text-muted);
+      background: #fafafa; display: block; width: 100%; max-width: 380px;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────────────────── */
+    .doc-footer {
+      text-align: center; font-size: .82rem; color: var(--text-muted);
+      margin: 40px 0 20px; padding-top: 20px; border-top: 1px solid var(--border);
+    }
+
+    /* ── PRINT BUTTON ─────────────────────────────────────────────────── */
+    .print-btn {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--brand); color: white; border: none;
+      border-radius: 50px; padding: 12px 22px;
+      font-size: .88rem; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow); display: flex; align-items: center; gap: 8px;
+      transition: background .15s, transform .1s; z-index: 100;
+    }
+    .print-btn:hover { background: var(--brand-dark); transform: translateY(-2px); }
+    @media print { .print-btn { display: none; } }
+    @media (max-width: 600px) { .page-card, .toc { padding: 24px 18px; } }
+  </style>
+</head>
+<body>
+
+<!-- ═════════════════════════════════════════════════════════════ COVER -->
+<div class="cover">
+  <div class="cover-icon">📧</div>
+  <div class="cover-eyebrow">Tài liệu hướng dẫn sử dụng</div>
+  <h1>RebateMailer</h1>
+  <h2>Hệ thống điều phối gửi mail chiết khấu hàng tháng</h2>
+  <hr />
+  <div class="cover-meta">
+    Phiên bản 3.0 &nbsp;·&nbsp; Tháng 5 năm 2026<br/>
+    Dành cho người dùng cuối · Nội bộ
+  </div>
+</div>
+
+<div class="wrapper">
+
+<!-- ═══════════════════════════════════════════════════════════ TOC -->
+<div class="toc">
+  <div class="toc-title">📋 Mục lục</div>
+  <ol>
+    <li><a href="#s1">Tổng quan & Phân quyền</a>
+      <ul class="sub">
+        <li><a href="#s1-intro">Giới thiệu phần mềm</a></li>
+        <li><a href="#s1-nav">Điều hướng hệ thống</a></li>
+        <li><a href="#s1-roles">Phân quyền người dùng</a></li>
+        <li><a href="#s1-flow">Quy trình tổng quát mỗi tháng</a></li>
+      </ul>
+    </li>
+    <li><a href="#s2">Đăng nhập & Hồ sơ cá nhân</a>
+      <ul class="sub">
+        <li><a href="#s2-login">Đăng nhập</a></li>
+        <li><a href="#s2-profile">Cập nhật thông tin & Đổi mật khẩu</a></li>
+      </ul>
+    </li>
+    <li><a href="#s3">Tổng quan – Bảng điều khiển vận hành</a></li>
+    <li><a href="#s4">Import dữ liệu</a>
+      <ul class="sub">
+        <li><a href="#s4-prepare">Chuẩn bị file Excel</a></li>
+        <li><a href="#s4-upload">Tải file lên (Tải file dữ liệu)</a></li>
+        <li><a href="#s4-result">Xem kết quả import</a></li>
+        <li><a href="#s4-history">Lịch sử nhập dữ liệu</a></li>
+      </ul>
+    </li>
+    <li><a href="#s5">Thiết kế mẫu email</a>
+      <ul class="sub">
+        <li><a href="#s5-list">Danh sách template</a></li>
+        <li><a href="#s5-canvas">Thiết kế canvas</a></li>
+        <li><a href="#s5-activate">Đặt làm template hoạt động</a></li>
+      </ul>
+    </li>
+    <li><a href="#s6">Điều phối gửi mail</a>
+      <ul class="sub">
+        <li><a href="#s6-create">Tạo chiến dịch gửi mail</a></li>
+        <li><a href="#s6-sample">Gửi mail mẫu</a></li>
+        <li><a href="#s6-schedule">Lên lịch gửi</a></li>
+        <li><a href="#s6-dispatch">Gửi ngay</a></li>
+        <li><a href="#s6-monitor">Theo dõi kết quả</a></li>
+        <li><a href="#s6-retry">Retry – Gửi lại mail lỗi</a></li>
+        <li><a href="#s6-export">Export lỗi</a></li>
+      </ul>
+    </li>
+    <li><a href="#s7">Người dùng <span class="badge b-admin">Chỉ Admin</span></a>
+      <ul class="sub">
+        <li><a href="#s7-list">Danh sách tài khoản</a></li>
+        <li><a href="#s7-create">Tạo người dùng mới</a></li>
+        <li><a href="#s7-edit">Sửa & Xóa tài khoản</a></li>
+      </ul>
+    </li>
+    <li><a href="#s8">Câu hỏi thường gặp</a></li>
+  </ol>
+</div>
+
+<!-- ═════════════════════════════════════════ SECTION 1 — TỔNG QUAN -->
+<section id="s1">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">1</div>
+    <div class="sec-meta">
+      <h2>Tổng quan & Phân quyền</h2>
+      <p>Giới thiệu, cấu trúc giao diện và vai trò người dùng</p>
+    </div>
+  </div>
+
+  <h3 id="s1-intro">Giới thiệu phần mềm</h3>
+  <p><strong>RebateMailer</strong> là hệ thống điều phối gửi mail chiết khấu tự động hàng tháng cho các đại lý / nhà phân phối. Phần mềm cho phép:</p>
+  <ul class="bl">
+    <li>Import dữ liệu chiết khấu từ file Excel (4 sheet) lên hệ thống.</li>
+    <li>Thiết kế template email với bảng chiết khấu động, tự động điền số liệu riêng của từng khách hàng.</li>
+    <li>Tạo và điều phối chiến dịch gửi hàng loạt email cá nhân hoá.</li>
+    <li>Theo dõi trạng thái gửi theo thời gian thực (tự động làm mới mỗi 5 giây), retry mail thất bại, xuất báo cáo lỗi.</li>
+  </ul>
+
+  <h3 id="s1-nav">Điều hướng hệ thống</h3>
+  <p>Thanh menu bên trái được chia thành 3 nhóm:</p>
+  <div class="sidebar-mock">
+    <div class="sidebar-group">Trang chính</div>
+    <div class="sidebar-item active"><span class="sidebar-icon">🏠</span> Tổng quan</div>
+    <div class="sidebar-group">Nền tảng</div>
+    <div class="sidebar-item"><span class="sidebar-icon">📥</span> Import dữ liệu</div>
+    <div class="sidebar-item"><span class="sidebar-icon">✉️</span> Thiết kế mẫu email</div>
+    <div class="sidebar-item"><span class="sidebar-icon">📤</span> Điều phối gửi mail</div>
+    <div class="sidebar-group">Quản trị</div>
+    <div class="sidebar-item"><span class="sidebar-icon">👥</span> Người dùng</div>
+  </div>
+  <p>Ở góc trên bên phải: nhấn avatar / tên tài khoản để vào <strong>Hồ sơ cá nhân</strong> hoặc <strong>Đăng xuất</strong>.</p>
+
+  <h3 id="s1-roles">Phân quyền người dùng</h3>
+  <p>Hệ thống có <strong>3 vai trò</strong>:</p>
+  <table class="dtable">
+    <thead>
+      <tr>
+        <th>Tính năng</th>
+        <th style="text-align:center">Admin</th>
+        <th style="text-align:center">Người dùng</th>
+        <th style="text-align:center">Khách</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Xem Bảng điều khiển vận hành</td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="check">✓</span></td></tr>
+      <tr><td>Import dữ liệu Excel</td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="cross">—</span></td></tr>
+      <tr><td>Thiết kế mẫu email</td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="cross">—</span></td></tr>
+      <tr><td>Tạo & điều phối chiến dịch gửi mail</td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="cross">—</span></td></tr>
+      <tr><td>Quản lý Người dùng</td><td style="text-align:center"><span class="check">✓</span></td><td style="text-align:center"><span class="cross">—</span></td><td style="text-align:center"><span class="cross">—</span></td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div><strong>Tài khoản Khách:</strong> Chỉ xem Dashboard và các thông tin tổng quan. Không thể thực hiện bất kỳ thao tác nào. Trên giao diện hiển thị nhãn <span class="badge b-muted">Chỉ xem</span>; tài khoản có quyền thao tác hiển thị <span class="badge b-ok">Có quyền điều phối</span>.</div>
+  </div>
+
+  <h3 id="s1-flow">Quy trình tổng quát mỗi tháng</h3>
+  <div class="flow">
+    <div class="flow-step">① Import dữ liệu</div><div class="flow-arrow">→</div>
+    <div class="flow-step">② Kiểm tra kết quả</div><div class="flow-arrow">→</div>
+    <div class="flow-step">③ Tạo chiến dịch</div><div class="flow-arrow">→</div>
+    <div class="flow-step">④ Gửi mail mẫu</div><div class="flow-arrow">→</div>
+    <div class="flow-step">⑤ Gửi ngay / Lên lịch</div><div class="flow-arrow">→</div>
+    <div class="flow-step">⑥ Theo dõi & Retry</div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════ SECTION 2 — ĐĂNG NHẬP -->
+<section id="s2">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">2</div>
+    <div class="sec-meta">
+      <h2>Đăng nhập & Hồ sơ cá nhân</h2>
+      <p>Truy cập hệ thống và quản lý tài khoản</p>
+    </div>
+  </div>
+
+  <h3 id="s2-login">Đăng nhập</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Mở trình duyệt</span>
+      Nhập địa chỉ hệ thống vào thanh địa chỉ (ví dụ: <code>http://172.16.2.100</code>). Trang đăng nhập hiển thị.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhập thông tin</span>
+      Điền <strong>Email</strong> và <strong>Mật khẩu</strong> đã được cấp.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn Đăng nhập</span>
+      Hệ thống chuyển về trang <strong>Bảng điều khiển vận hành</strong> sau khi đăng nhập thành công.
+    </div></li>
+  </ol>
+  <div class="callout info">
+    <span class="callout-icon">🔑</span>
+    <div><p>Nếu quên mật khẩu, liên hệ quản trị hệ thống (Admin) để được đặt lại.</p></div>
+  </div>
+
+  <h3 id="s2-profile">Cập nhật thông tin & Đổi mật khẩu</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Vào Hồ sơ cá nhân</span>
+      Nhấn vào <strong>avatar / tên tài khoản</strong> góc trên phải → chọn <strong>"Hồ sơ cá nhân"</strong>. Trang tiêu đề <em>"Hồ sơ cá nhân"</em> hiển thị.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Cập nhật thông tin</span>
+      Chỉnh sửa Tên, Email. Nhấn <span class="btn btn-primary">Lưu thay đổi</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Đổi mật khẩu – mục "Cập nhật mật khẩu"</span>
+      Cuộn xuống phần <strong>"Cập nhật mật khẩu"</strong>. Điền <strong>Mật khẩu hiện tại</strong> → <strong>Mật khẩu mới</strong>. Nhấn <span class="btn btn-primary">Lưu mật khẩu mới</span>.
+    </div></li>
+  </ol>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════ SECTION 3 — DASHBOARD -->
+<section id="s3">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">3</div>
+    <div class="sec-meta">
+      <h2>Tổng quan – Bảng điều khiển vận hành</h2>
+      <p>Màn hình chính sau khi đăng nhập, menu: Tổng quan</p>
+    </div>
+  </div>
+
+  <p>Nhấn <strong>"Tổng quan"</strong> trên menu trái để vào trang <strong>Bảng điều khiển vận hành</strong>. Trang được chia thành các khu vực:</p>
+
+  <h3>Sức khỏe gửi mail</h3>
+  <p>Biểu đồ và thẻ thống kê tổng hợp:</p>
+  <ul class="bl">
+    <li><strong>Đã gửi thành công</strong> – Tổng số mail gửi thành công.</li>
+    <li><strong>Đang queued</strong> – Số mail đang chờ trong hàng đợi.</li>
+    <li><strong>Lỗi gửi</strong> – Số mail thất bại.</li>
+    <li><strong>Tỷ lệ lỗi</strong> – Phần trăm mail lỗi so với tổng đã xử lý.</li>
+  </ul>
+  <div class="callout info">
+    <span class="callout-icon">💡</span>
+    <div><p>Dữ liệu có thể xem <strong>"Tĩnh"</strong> (không tự làm mới) hoặc <strong>"Tự động mỗi N giây"</strong> tùy cài đặt.</p></div>
+  </div>
+
+  <h3>Điều hướng nhanh</h3>
+  <p>Các nút tắt điều hướng đến các module chính:</p>
+  <ul class="bl">
+    <li><span class="btn btn-primary">Mở import dữ liệu</span> – Chuyển đến trang Import dữ liệu.</li>
+    <li><span class="btn btn-primary">Mở điều phối gửi mail</span> – Chuyển đến trang Điều phối gửi mail.</li>
+  </ul>
+
+  <h3>Điểm cần chú ý</h3>
+  <p>Cảnh báo tự động nếu có chiến dịch đang dispatch hoặc có lỗi hệ thống cần xử lý.</p>
+
+  <h3>Batch import gần đây</h3>
+  <p>Hiển thị <strong>5 batch xử lý mới nhất</strong>. Mỗi dòng gồm: mã batch, số lượng khách aggregate, thời điểm hoàn thành và trạng thái. Nhấn <span class="btn btn-outline">Mở batch</span> để xem chi tiết.</p>
+
+  <h3>Chiến dịch gửi mail gần đây</h3>
+  <p>Hiển thị <strong>5 chiến dịch mới nhất</strong>. Mỗi dòng gồm: tên chiến dịch, số người nhận, lịch gửi (nếu có) và trạng thái. Nhấn <span class="btn btn-outline">Mở chiến dịch</span> để xem chi tiết.</p>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════ SECTION 4 — IMPORT -->
+<section id="s4">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">4</div>
+    <div class="sec-meta">
+      <h2>Import dữ liệu</h2>
+      <p>Menu: Import dữ liệu</p>
+    </div>
+  </div>
+
+  <p>Nhấn <strong>"Import dữ liệu"</strong> trên menu trái. Trang gồm 5 card chính:</p>
+  <ul class="bl">
+    <li><strong>Tải file dữ liệu</strong> – Upload file Excel mới.</li>
+    <li><strong>Lịch sử nhập dữ liệu</strong> – Danh sách tất cả batch đã import.</li>
+    <li><strong>Thông tin file đã nhận</strong> – Thông tin batch vừa upload.</li>
+    <li><strong>Cấu trúc tệp Excel</strong> – Nhận diện cấu trúc workbook (các sheet và cột).</li>
+    <li><strong>Kết quả import</strong> – Xem trước dữ liệu đã xử lý theo từng sheet.</li>
+  </ul>
+
+  <h3 id="s4-prepare">Chuẩn bị file Excel</h3>
+  <p>File phải có định dạng <code>.xlsx</code> và chứa đúng <strong>4 sheet</strong> theo tên sau:</p>
+  <div class="tabs-mock">
+    <div class="tab-item act">Tổng hợp</div>
+    <div class="tab-item">Khoán NPP</div>
+    <div class="tab-item">Cám cá</div>
+    <div class="tab-item">Key Account</div>
+  </div>
+  <div class="tab-body">
+    <strong>Tổng hợp</strong> – Chiết khấu của khách hàng thường. Cột bắt buộc: STT, Tháng, Mã số, Mã &amp; tên khách hàng, Email, Địa chỉ, Thức ăn chăn nuôi, Tổng sản lượng, Doanh thu, Tiền chiết khấu theo Hóa đơn, Tổng cộng, Bằng chữ.<br/><br/>
+    <strong>Khoán NPP</strong> – Khách tham gia chương trình khoán. Có thể không có dữ liệu nếu không có khách khoán.<br/><br/>
+    <strong>Cám cá</strong> – Khách bán cám cá (khách thường). Có thể không có dữ liệu.<br/><br/>
+    <strong>Key Account</strong> – Khách hàng Key Account (tách biệt hoàn toàn với khách thường).
+  </div>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div>
+      <strong>Lưu ý bắt buộc:</strong>
+      <ul class="bl" style="margin-bottom:0">
+        <li>Dữ liệu bắt đầu từ <strong>dòng 1</strong> (không có dòng tiêu đề phụ thêm).</li>
+        <li>Cột <strong>Email</strong> phải chứa địa chỉ email hợp lệ của từng khách hàng.</li>
+        <li>Một khách Key Account <strong>không được</strong> xuất hiện ở sheet Tổng hợp / Khoán NPP / Cám cá.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 id="s4-upload">Tải file lên – Card "Tải file dữ liệu"</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Nhập tên batch</span>
+      Trong card <strong>"Tải file dữ liệu"</strong>, điền vào ô <strong>"Tên batch"</strong> để đặt tên cho đợt import này.<br/>
+      Ví dụ: <code>Dữ liệu chiết khấu tháng 03-2026</code>
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Chọn file Excel</span>
+      Nhấn <span class="btn btn-outline">Chọn file Excel</span>. Duyệt đến file <code>.xlsx</code> cần upload.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Tải lên</span>
+      Nhấn <span class="btn btn-primary">Tải file lên</span>. Hệ thống tự động upload và xử lý (phân tích cấu trúc + aggregate dữ liệu theo mã khách hàng).
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Chờ xử lý hoàn tất</span>
+      Khi hoàn tất, card <strong>"Thông tin file đã nhận"</strong> và <strong>"Kết quả import"</strong> tự động hiển thị dữ liệu.
+    </div></li>
+  </ol>
+
+  <h3 id="s4-result">Xem kết quả import – Card "Kết quả import"</h3>
+  <p>Card này có các tab để kiểm tra dữ liệu đã đọc được:</p>
+  <div class="tabs-mock">
+    <div class="tab-item act">Dữ liệu hợp nhất</div>
+    <div class="tab-item">Tổng hợp</div>
+    <div class="tab-item">Khoán NPP</div>
+    <div class="tab-item">Cám cá</div>
+    <div class="tab-item">Key Account</div>
+  </div>
+  <div class="tab-body">
+    <strong>Dữ liệu hợp nhất</strong> (tab mặc định) – Dữ liệu đã được gom theo Mã số khách hàng từ tất cả các sheet. Đây là dữ liệu thực sự dùng để tạo nội dung email.<br/><br/>
+    <strong>Tổng hợp / Khoán NPP / Cám cá / Key Account</strong> – Dữ liệu thô từng sheet sau khi phân tích.
+  </div>
+  <div class="callout success">
+    <span class="callout-icon">✅</span>
+    <div><p>Hãy kiểm tra tab <strong>"Dữ liệu hợp nhất"</strong> để đảm bảo số lượng khách hàng và số liệu khớp với file gốc trước khi tạo chiến dịch.</p></div>
+  </div>
+
+  <h3 id="s4-history">Lịch sử nhập dữ liệu – Card "Lịch sử nhập dữ liệu"</h3>
+  <p>Bảng <strong>"Danh sách batch đã lưu"</strong> hiển thị tất cả batch đã import với các cột:</p>
+  <table class="dtable">
+    <thead><tr><th>Mã batch</th><th>Tên batch</th><th>File nguồn</th><th>Trạng thái</th><th>Người import</th><th>Thời điểm</th><th>Mở lại</th></tr></thead>
+    <tbody>
+      <tr><td colspan="6" style="color:var(--text-muted);font-size:.83rem">← Dữ liệu từ các lần import trước →</td><td><span class="btn btn-outline">Mở batch</span></td></tr>
+    </tbody>
+  </table>
+  <div class="search-mock">
+    <div class="search-input">🔍 Tìm theo mã batch, file nguồn, trạng thái, người import</div>
+    <span class="btn btn-secondary">Xóa lọc</span>
+  </div>
+  <p>Nhấn <span class="btn btn-outline">Mở batch</span> để tải lại kết quả import cũ từ DB. Nếu batch đang được xem, nút đổi thành <span class="badge b-ok">Đang xem</span>. Nhấn <span class="btn btn-outline">Mở template</span> để chuyển sang module template với batch đó làm dữ liệu preview.</p>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════ SECTION 5 — TEMPLATES -->
+<section id="s5">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">5</div>
+    <div class="sec-meta">
+      <h2>Thiết kế mẫu email</h2>
+      <p>Menu: Thiết kế mẫu email</p>
+    </div>
+  </div>
+
+  <p>Nhấn <strong>"Thiết kế mẫu email"</strong> trên menu trái. Template là mẫu email dùng khi gửi. Hệ thống cho phép nhiều template nhưng <strong>chỉ một template đang hoạt động</strong> tại mỗi thời điểm.</p>
+
+  <h3 id="s5-list">Danh sách template</h3>
+  <p>Bảng <strong>"Danh sách template"</strong> hiển thị các cột:</p>
+  <table class="dtable">
+    <thead><tr><th>Tên template</th><th>Trạng thái</th><th>Số phần</th><th>Tạo bởi</th><th>Thao tác</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Template tháng 2026</td>
+        <td><span class="badge b-ok">Đang hoạt động</span></td>
+        <td>6</td>
+        <td>Admin</td>
+        <td><span class="btn btn-secondary">Xem</span></td>
+      </tr>
+      <tr>
+        <td>Template cũ 2025</td>
+        <td><span class="badge b-muted">Ngừng hoạt động</span></td>
+        <td>6</td>
+        <td>Admin</td>
+        <td><span class="btn btn-outline">Đặt làm template hoạt động</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="search-mock">
+    <div class="search-input">🔍 Tìm theo tên template, trạng thái, người tạo</div>
+    <span class="btn btn-secondary">Xóa lọc</span>
+  </div>
+
+  <h3 id="s5-canvas">Thiết kế canvas – Cách mở và các tab</h3>
+  <p>Nhấn vào một template để mở <strong>trình thiết kế canvas</strong>. Giao diện chia thành phần trên (preview) và phần dưới (canvas), gồm các tab:</p>
+
+  <div class="tabs-mock">
+    <div class="tab-item act">Subject</div>
+    <div class="tab-item">Lời chào</div>
+    <div class="tab-item">Bảng chế độ tháng</div>
+    <div class="tab-item">Bảng chương trình khoán đặc biệt</div>
+    <div class="tab-item">Bảng chiết khấu cám cá</div>
+    <div class="tab-item">Bảng chiết khấu Key Account</div>
+  </div>
+  <div class="tab-body">
+    <strong>Tab Subject:</strong> Thiết kế tiêu đề email. Sử dụng biến động như <code>{{tháng}}</code>, <code>{{mã &amp; tên khách hàng}}</code>.<br/>
+    Ví dụ: <em>Chế độ tháng 02.2026 của khách hàng 15001 - Đồng Duy Trọng</em><br/><br/>
+    <strong>Tab Lời chào:</strong> Nội dung phần mở đầu email. Có thể dùng các biến <code>{{địa chỉ}}</code>, <code>{{thức ăn chăn nuôi}}</code>…<br/><br/>
+    <strong>Tab Bảng chế độ tháng:</strong> Cấu hình bảng chiết khấu từ sheet Tổng hợp (dành cho khách thường).<br/><br/>
+    <strong>Tab Bảng chương trình khoán đặc biệt:</strong> Cấu hình bảng khoán NPP (chỉ hiển thị trong mail nếu khách có dữ liệu khoán).<br/><br/>
+    <strong>Tab Bảng chiết khấu cám cá:</strong> Cấu hình bảng cám cá (chỉ hiển thị nếu khách có dữ liệu cám cá).<br/><br/>
+    <strong>Tab Bảng chiết khấu Key Account:</strong> Cấu hình bảng dành riêng cho khách Key Account.
+  </div>
+
+  <h4>Các thao tác trong canvas:</h4>
+  <ul class="bl">
+    <li><strong>Kéo thả</strong> để sắp xếp thứ tự các dòng trong bảng.</li>
+    <li><strong>Mục cha / Mục con:</strong> Số thứ tự tự động (I, II… cho cha; 1, 2, 3… cho con).</li>
+    <li><strong>Định dạng:</strong> Mục cha mặc định in đậm; mục con không in đậm. Có thể thay đổi.</li>
+    <li><strong>Dữ liệu preview:</strong> Chọn <strong>"Dữ liệu preview theo batch import"</strong> và <strong>"Khách hàng preview"</strong> để xem email mẫu ngay trên canvas.</li>
+  </ul>
+
+  <div class="callout info">
+    <span class="callout-icon">💡</span>
+    <div><p>Khu vực <strong>"Canvas Composition"</strong> hiển thị bản tổng hợp của toàn bộ 6 phần. Tab <strong>"Canvas chính"</strong> chịu trách nhiệm ghép các phần thành email hoàn chỉnh.</p></div>
+  </div>
+
+  <h3 id="s5-activate">Đặt làm template hoạt động</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Trong bảng danh sách template</span>
+      Tìm template muốn dùng (trạng thái <span class="badge b-muted">Ngừng hoạt động</span>).
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn "Đặt làm template hoạt động"</span>
+      Nút <span class="btn btn-outline">Đặt làm template hoạt động</span> ở cột Thao tác. Khi đang xử lý, nút chuyển thành <span class="btn btn-secondary">Đang kích hoạt...</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Xác nhận</span>
+      Template chuyển sang <span class="badge b-ok">Đang hoạt động</span>. Template cũ tự động chuyển về Ngừng hoạt động.
+    </div></li>
+  </ol>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div><p>Chỉ có <strong>1 template đang hoạt động</strong> tại mỗi thời điểm. Khi tạo chiến dịch mới, hệ thống dùng template đang hoạt động để render nội dung email.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════ SECTION 6 — MAIL CAMPAIGNS -->
+<section id="s6">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">6</div>
+    <div class="sec-meta">
+      <h2>Điều phối gửi mail</h2>
+      <p>Menu: Điều phối gửi mail – Tiêu đề trang: Gửi mail chiết khấu</p>
+    </div>
+  </div>
+
+  <p>Nhấn <strong>"Điều phối gửi mail"</strong> trên menu trái. Trang chia thành 2 khu vực:</p>
+  <ul class="bl">
+    <li><strong>Card trái – "Chiến dịch đang xem":</strong> Danh sách các chiến dịch, chọn chiến dịch để xem chi tiết bên phải.</li>
+    <li><strong>Card phải – "Danh sách người nhận đã aggregate":</strong> Chi tiết trạng thái gửi cho từng khách hàng của chiến dịch đang chọn.</li>
+  </ul>
+
+  <h3>Các trạng thái chiến dịch</h3>
+  <div class="status-grid">
+    <div class="status-card" style="border-top:3px solid #94a3b8">
+      <div class="sn"><span class="badge b-muted">Nháp</span></div>
+      <div class="sd">Mới tạo, chưa gửi và chưa lên lịch.</div>
+    </div>
+    <div class="status-card" style="border-top:3px solid var(--warn)">
+      <div class="sn"><span class="badge b-warn">Đã lên lịch</span></div>
+      <div class="sd">Đã đặt lịch gửi tự động.</div>
+    </div>
+    <div class="status-card" style="border-top:3px solid var(--brand)">
+      <div class="sn"><span class="badge b-user">Đang gửi</span></div>
+      <div class="sd">Đang dispatch, email đang được gửi.</div>
+    </div>
+    <div class="status-card" style="border-top:3px solid var(--accent)">
+      <div class="sn"><span class="badge b-ok">Hoàn thành</span></div>
+      <div class="sd">Tất cả đã gửi thành công.</div>
+    </div>
+    <div class="status-card" style="border-top:3px solid var(--danger)">
+      <div class="sn"><span class="badge b-danger">Hoàn thành có lỗi</span></div>
+      <div class="sd">Xong nhưng có một số mail thất bại.</div>
+    </div>
+    <div class="status-card" style="border-top:3px solid #94a3b8">
+      <div class="sn"><span class="badge b-muted">Đã hủy</span></div>
+      <div class="sd">Chiến dịch bị hủy bỏ.</div>
+    </div>
+  </div>
+
+  <h3 id="s6-create">Tạo chiến dịch gửi mail</h3>
+  <div class="callout info">
+    <span class="callout-icon">📋</span>
+    <div>
+      <strong>Trước khi tạo chiến dịch, hãy đảm bảo:</strong>
+      <ul class="bl" style="margin-bottom:0">
+        <li>Đã import file Excel thành công (có batch ở trạng thái aggregated).</li>
+        <li>Đã có template ở trạng thái <span class="badge b-ok">Đang hoạt động</span>.</li>
+      </ul>
+    </div>
+  </div>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Nhấn "Tạo chiến dịch"</span>
+      Nhấn nút <span class="btn btn-primary">Tạo chiến dịch</span> ở card <strong>"Chiến dịch đang xem"</strong>. Hộp thoại <strong>"Tạo chiến dịch gửi mail"</strong> mở ra.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Điền thông tin chiến dịch</span>
+      <div class="field"><div class="field-label">Tên chiến dịch</div><div class="field-input">Chiết khấu tháng 02.2026</div></div>
+      <div class="field"><div class="field-label">Batch nhập liệu</div><div class="field-input">Chọn batch đã aggregate</div></div>
+      <div class="field"><div class="field-label">Template email</div><div class="field-input">Template đang hoạt động tự động được chọn</div></div>
+      <div class="field"><div class="field-label">Ghi chú (tùy chọn)</div><div class="field-input">Ghi chú nội bộ</div></div>
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Xác nhận tạo</span>
+      Nhấn <span class="btn btn-primary">Tạo chiến dịch</span> trong dialog. Chiến dịch mới xuất hiện với trạng thái <span class="badge b-muted">Nháp</span>.
+    </div></li>
+  </ol>
+
+  <h3 id="s6-sample">Gửi mail mẫu – Kiểm tra trước khi gửi đại trà</h3>
+  <p>Gửi mail thử nghiệm cho một vài khách hàng đại diện để kiểm tra nội dung và định dạng email.</p>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Chọn chiến dịch Nháp</span>
+      Nhấn vào chiến dịch ở trạng thái <span class="badge b-muted">Nháp</span> trong card "Chiến dịch đang xem".
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn "Gửi mẫu"</span>
+      Nhấn nút <span class="btn btn-outline">Gửi mẫu</span>. Hộp thoại <strong>"Gửi mail mẫu"</strong> mở ra.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Hệ thống chọn khách đại diện</span>
+      Hệ thống tự động chọn tối đa <strong>3 khách hàng đại diện</strong> (bao gồm cả khách thường và Key Account nếu có). Mail mẫu gửi đến đúng email của các khách đó.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Kiểm tra hòm thư</span>
+      Mở email nhận được: kiểm tra tiêu đề, tên khách hàng, số tiền chiết khấu, định dạng bảng.
+    </div></li>
+  </ol>
+
+  <h3 id="s6-schedule">Lên lịch gửi tự động</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Chọn chiến dịch Nháp</span>
+      Nhấn vào chiến dịch ở trạng thái <span class="badge b-muted">Nháp</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn "Lên lịch gửi"</span>
+      Nhấn nút <span class="btn btn-warn">Lên lịch gửi</span>. Chọn <strong>ngày</strong> và <strong>giờ</strong> muốn gửi. Xác nhận.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Chiến dịch chuyển sang "Đã lên lịch"</span>
+      Trạng thái chuyển thành <span class="badge b-warn">Đã lên lịch</span>. Thông tin <strong>Lịch gửi:</strong> hiển thị trong chi tiết chiến dịch. Hệ thống tự động gửi đúng thời điểm đã chọn.
+    </div></li>
+  </ol>
+  <div class="callout info">
+    <span class="callout-icon">💡</span>
+    <div><p>Để huỷ lịch: xem chi tiết chiến dịch đang <span class="badge b-warn">Đã lên lịch</span> rồi chọn hủy lịch. Chiến dịch trở về <span class="badge b-muted">Nháp</span>. Múi giờ hệ thống: <strong>Asia/Ho_Chi_Minh (GMT+7)</strong>.</p></div>
+  </div>
+
+  <h3 id="s6-dispatch">Gửi ngay</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Chọn chiến dịch Nháp</span>
+      Nhấn vào chiến dịch ở trạng thái <span class="badge b-muted">Nháp</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn "Gửi ngay"</span>
+      Nhấn nút <span class="btn btn-success">Gửi ngay</span>. Hộp thoại xác nhận hiển thị số lượng người nhận.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Xác nhận</span>
+      Nhấn xác nhận. Chiến dịch chuyển sang <span class="badge b-user">Đang gửi</span>. Mail được đưa vào hàng đợi và gửi đi. Có thể đóng tab, hệ thống tiếp tục xử lý nền.
+    </div></li>
+  </ol>
+
+  <h3 id="s6-monitor">Theo dõi kết quả – Card "Danh sách người nhận đã aggregate"</h3>
+
+  <h4>Thẻ tóm tắt tiến độ</h4>
+  <div class="card-row">
+    <div class="card-mini"><div class="cm-label">Tổng người nhận</div><div class="cm-value">500</div></div>
+    <div class="card-mini"><div class="cm-label">Chưa gửi</div><div class="cm-value" style="color:#64748b">12</div></div>
+    <div class="card-mini"><div class="cm-label">Đã vào hàng đợi</div><div class="cm-value" style="color:var(--brand)">38</div></div>
+    <div class="card-mini"><div class="cm-label">Đã gửi</div><div class="cm-value" style="color:var(--accent)">445</div></div>
+    <div class="card-mini"><div class="cm-label">Lỗi gửi</div><div class="cm-value" style="color:var(--danger)">5</div></div>
+  </div>
+  <p>Thanh tiến độ hiển thị <strong>"Hoàn thành tổng"</strong>, <strong>"Đã vào hàng đợi"</strong>, <strong>"Đã gửi thành công"</strong> realtime.</p>
+
+  <h4>Tự động làm mới</h4>
+  <p>Khi chiến dịch đang gửi, giao diện hiển thị <span class="badge b-user">Tự động làm mới mỗi 5 giây</span>. Khi gửi xong và ổn định, chuyển sang <span class="badge b-ok">Dữ liệu đã ổn định</span>.</p>
+
+  <h4>Bảng người nhận</h4>
+  <p>Hiển thị từng khách hàng:</p>
+  <table class="dtable">
+    <thead><tr><th>Mã số</th><th>Mã &amp; tên khách hàng</th><th>Email</th><th>Nguồn dữ liệu</th><th>Trạng thái gửi</th><th>Lỗi gần nhất</th><th>Thao tác</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>15001</td><td>15001 - Nguyễn Văn A</td><td>a@email.com</td><td>Tổng hợp</td>
+        <td><span class="badge b-ok">Đã gửi</span></td><td>—</td>
+        <td><span class="btn btn-outline">Xem trước email</span></td>
+      </tr>
+      <tr>
+        <td>15002</td><td>15002 - Trần Thị B</td><td>b@email.com</td><td>Key Account</td>
+        <td><span class="badge b-danger">Lỗi gửi</span></td><td>Mailbox full</td>
+        <td><span class="btn btn-warn">Chi tiết lỗi</span> <span class="btn btn-outline">Retry</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Cột "Nguồn dữ liệu"</h4>
+  <p>Cho biết dữ liệu của khách hàng lấy từ sheet nào: <code>Tổng hợp</code>, <code>Khoán NPP</code>, <code>Cám cá</code>, <code>Key Account</code>.</p>
+
+  <h4>Tìm kiếm & Lọc</h4>
+  <div class="search-mock">
+    <div class="search-input">🔍 Tìm theo mã số, khách hàng, email, nguồn dữ liệu, trạng thái</div>
+    <select style="border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:.83rem;background:white">
+      <option>Tất cả trạng thái</option>
+      <option>Chưa gửi</option><option>Đã vào hàng đợi</option>
+      <option>Đang gửi</option><option>Đã gửi</option><option>Lỗi gửi</option>
+    </select>
+    <span class="btn btn-danger">Chỉ xem lỗi (5)</span>
+    <span class="btn btn-secondary">Xóa lọc</span>
+  </div>
+  <p>Nút <span class="btn btn-danger">Chỉ xem lỗi (N)</span> lọc ngay chỉ các mail lỗi (N là số lượng). Khi đang lọc, nút đổi thành <span class="btn btn-secondary">Xem tất cả</span>.</p>
+
+  <h4>Xem trước & Chi tiết lỗi</h4>
+  <ul class="bl">
+    <li><span class="btn btn-outline">Xem trước email</span> – Mở hộp thoại <strong>"Xem trước toàn bộ email"</strong>, hiển thị email đầy đủ sẽ gửi đến khách hàng đó.</li>
+    <li><span class="btn btn-warn">Chi tiết lỗi</span> – Mở hộp thoại <strong>"Chi tiết lỗi gửi mail"</strong> với lịch sử retry và thông tin lỗi kỹ thuật (có thể mở/ẩn bằng "Xem chi tiết kỹ thuật" / "Ẩn chi tiết kỹ thuật").</li>
+  </ul>
+
+  <h3 id="s6-retry">Retry – Gửi lại mail lỗi</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Lọc mail lỗi</span>
+      Nhấn <span class="btn btn-danger">Chỉ xem lỗi (N)</span> để chỉ hiển thị các mail thất bại.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Retry từng mail</span>
+      Nhấn <span class="btn btn-outline">Retry</span> ở cột Thao tác để gửi lại một mail cụ thể.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Theo dõi kết quả</span>
+      Trạng thái sẽ cập nhật tự động (mỗi 5 giây). Lặp lại nếu cần.
+    </div></li>
+  </ol>
+  <div class="callout danger">
+    <span class="callout-icon">❗</span>
+    <div>
+      <strong>Nguyên nhân phổ biến mail thất bại:</strong>
+      <ul class="bl" style="margin-bottom:0">
+        <li>Địa chỉ email khách hàng không tồn tại hoặc bị sai.</li>
+        <li>Hòm thư người nhận đầy (<em>Mailbox full</em>).</li>
+        <li>Kết nối đến SMTP server tạm thời gián đoạn.</li>
+        <li>Mail bị chặn bởi bộ lọc spam của bên nhận.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 id="s6-export">Export lỗi – Xuất danh sách mail thất bại</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Vào chiến dịch có mail lỗi</span>
+      Mở chiến dịch ở trạng thái <span class="badge b-danger">Hoàn thành có lỗi</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Nhấn "Export lỗi"</span>
+      Nhấn nút <span class="btn btn-danger">Export lỗi</span> trong toolbar card "Danh sách người nhận đã aggregate".
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Tải file Excel</span>
+      Trình duyệt tự động tải về file <code>.xlsx</code> chứa danh sách email thất bại kèm thông tin lỗi chi tiết.
+    </div></li>
+  </ol>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════ SECTION 7 — USERS -->
+<section id="s7">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">7</div>
+    <div class="sec-meta">
+      <h2>Người dùng <span class="badge b-admin">Chỉ Admin</span></h2>
+      <p>Menu: Người dùng – Tiêu đề trang: Quản lý người dùng</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">🔒</span>
+    <div><p>Mục <strong>"Người dùng"</strong> trên menu chỉ hiển thị với tài khoản có vai trò <strong>Admin</strong>.</p></div>
+  </div>
+
+  <h3 id="s7-list">Danh sách tài khoản</h3>
+  <p>Phần trên trang có 4 thẻ thống kê nhanh:</p>
+  <div class="card-row">
+    <div class="card-mini"><div class="cm-label">Tổng tài khoản</div><div class="cm-value">8</div></div>
+    <div class="card-mini"><div class="cm-label">Admin</div><div class="cm-value" style="color:var(--purple)">2</div></div>
+    <div class="card-mini"><div class="cm-label">Người dùng</div><div class="cm-value" style="color:var(--brand)">4</div></div>
+    <div class="card-mini"><div class="cm-label">Khách</div><div class="cm-value" style="color:#64748b">2</div></div>
+  </div>
+  <p>Bảng danh sách người dùng với các cột:</p>
+  <table class="dtable">
+    <thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Nguyễn Văn A</td><td>a@email.com</td>
+        <td><span class="badge b-admin">Admin</span></td>
+        <td><span class="badge b-ok">Đã xác thực</span></td>
+        <td><span class="btn btn-outline">Sửa</span></td>
+      </tr>
+      <tr>
+        <td>Trần Thị B</td><td>b@email.com</td>
+        <td><span class="badge b-user">Người dùng</span></td>
+        <td><span class="badge b-muted">Chưa xác thực</span></td>
+        <td><span class="btn btn-outline">Sửa</span> <span class="btn btn-danger">Xóa</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="search-mock">
+    <div class="search-input">🔍 Tìm theo họ tên, email, vai trò, trạng thái</div>
+    <span class="btn btn-secondary">Xóa lọc</span>
+  </div>
+
+  <h3 id="s7-create">Tạo người dùng mới</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Nhấn "Tạo người dùng"</span>
+      Nhấn nút <span class="btn btn-primary">Tạo người dùng</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Điền thông tin</span>
+      <div class="field"><div class="field-label">Họ tên</div><div class="field-input">Nguyễn Văn A</div></div>
+      <div class="field"><div class="field-label">Email</div><div class="field-input">a@congty.com</div></div>
+      <div class="field"><div class="field-label">Vai trò</div><div class="field-input">Admin / Người dùng / Khách</div></div>
+      <div class="field"><div class="field-label">Mật khẩu</div><div class="field-input">••••••••</div></div>
+      <div class="field"><div class="field-label">Xác nhận mật khẩu</div><div class="field-input">••••••••</div></div>
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Lưu</span>
+      Nhấn <span class="btn btn-primary">Tạo người dùng</span> trong form. Tài khoản mới có thể đăng nhập ngay.
+    </div></li>
+  </ol>
+
+  <h3 id="s7-edit">Sửa & Xóa tài khoản</h3>
+  <ol class="steps">
+    <li><div class="st">
+      <span class="st-title">Nhấn "Sửa"</span>
+      Nhấn <span class="btn btn-outline">Sửa</span> ở hàng tài khoản cần thay đổi. Hộp thoại <strong>"Cập nhật người dùng"</strong> mở ra.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Cập nhật</span>
+      Chỉnh sửa <strong>Họ tên</strong>, <strong>Email</strong>, <strong>Vai trò</strong>. Để đặt lại mật khẩu: điền <strong>Mật khẩu mới</strong> và <strong>Xác nhận mật khẩu mới</strong> (để trống nếu không đổi). Nhấn <span class="btn btn-primary">Lưu thay đổi</span>.
+    </div></li>
+    <li><div class="st">
+      <span class="st-title">Xóa tài khoản (nếu cần)</span>
+      Nhấn <span class="btn btn-danger">Xóa</span>. Hộp xác nhận: <em>"Xóa tài khoản {email}?"</em>. Nhấn <span class="btn btn-danger">Xóa</span> để xác nhận hoặc <span class="btn btn-secondary">Hủy</span> để bỏ qua.
+    </div></li>
+  </ol>
+  <div class="callout danger">
+    <span class="callout-icon">❗</span>
+    <div><p>Không thể xóa tài khoản Admin cuối cùng. Hãy tạo Admin dự phòng trước khi xóa hoặc đổi vai trò Admin đang dùng.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════ SECTION 8 — FAQ -->
+<section id="s8">
+<div class="page-card">
+  <div class="sec-head">
+    <div class="sec-num">8</div>
+    <div class="sec-meta">
+      <h2>Câu hỏi thường gặp</h2>
+      <p>Xử lý các tình huống phổ biến</p>
+    </div>
+  </div>
+
+  <h3>❓ Import file thất bại, hệ thống báo lỗi?</h3>
+  <ul class="bl">
+    <li>Đảm bảo file có đúng <strong>4 sheet</strong> với tên: <em>Tổng hợp, Khoán NPP, Cám cá, Key Account</em>.</li>
+    <li>Dữ liệu bắt đầu từ <strong>dòng 1</strong> (không có dòng tiêu đề phụ).</li>
+    <li>File phải là <code>.xlsx</code> (không phải <code>.xls</code> hay <code>.csv</code>).</li>
+    <li>Tên sheet không được có ký tự đặc biệt ngoài tên quy định.</li>
+  </ul>
+
+  <h3>❓ Sau khi upload, card "Kết quả import" không hiển thị dữ liệu?</h3>
+  <ul class="bl">
+    <li>Chờ thêm vài giây để hệ thống aggregate dữ liệu. Trang tự động cập nhật.</li>
+    <li>Kiểm tra card <strong>"Cấu trúc tệp Excel"</strong> — nếu báo sheet không tìm thấy, kiểm tra lại tên sheet trong file.</li>
+  </ul>
+
+  <h3>❓ Mail khách hàng bị lỗi liên tục dù đã Retry nhiều lần?</h3>
+  <ul class="bl">
+    <li>Nhấn <span class="btn btn-warn">Chi tiết lỗi</span> để đọc nội dung lỗi và <strong>"Xem chi tiết kỹ thuật"</strong>.</li>
+    <li>Nếu lỗi <em>"invalid email"</em>: kiểm tra lại cột Email trong file Excel.</li>
+    <li>Nếu lỗi <em>"Mailbox full"</em>: yêu cầu khách hàng dọn hòm thư rồi Retry.</li>
+    <li>Dùng <span class="btn btn-danger">Export lỗi</span> để xuất danh sách rồi chuyển cho bộ phận liên quan xử lý.</li>
+  </ul>
+
+  <h3>❓ Chiến dịch "Đã lên lịch" nhưng không tự động gửi?</h3>
+  <ul class="bl">
+    <li>Kiểm tra múi giờ — hệ thống dùng <strong>Asia/Ho_Chi_Minh (GMT+7)</strong>.</li>
+    <li>Liên hệ quản trị hệ thống để kiểm tra dịch vụ Scheduler có đang chạy không.</li>
+  </ul>
+
+  <h3>❓ Nội dung email sai (số tiền, tên sai)?</h3>
+  <ul class="bl">
+    <li>Dùng <span class="btn btn-outline">Xem trước email</span> để kiểm tra nội dung trước khi gửi đại trà.</li>
+    <li>Nếu sai dữ liệu gốc: import lại file Excel đúng → tạo chiến dịch mới từ batch mới.</li>
+    <li>Không thể chỉnh sửa nội dung mail sau khi đã gửi.</li>
+  </ul>
+
+  <h3>❓ Quên mật khẩu đăng nhập?</h3>
+  <ul class="bl">
+    <li>Liên hệ Admin để đặt lại: vào <strong>Người dùng</strong> → <span class="btn btn-outline">Sửa</span> tài khoản → điền Mật khẩu mới → <span class="btn btn-primary">Lưu thay đổi</span>.</li>
+  </ul>
+
+  <h3>❓ Mail hay vào thư mục spam của khách hàng?</h3>
+  <ul class="bl">
+    <li>Gửi mail mẫu <span class="btn btn-outline">Gửi mẫu</span> và kiểm tra trong hòm thư spam/junk trước khi gửi đại trà.</li>
+    <li>Liên hệ quản trị hệ thống để cấu hình SPF/DKIM/DMARC nếu mail thường xuyên vào spam.</li>
+  </ul>
+</div>
+</section>
+
+<div class="doc-footer">
+  <strong>RebateMailer v3</strong> &nbsp;·&nbsp; Tài liệu hướng dẫn người dùng &nbsp;·&nbsp; Tháng 5/2026<br/>
+  Hệ thống điều phối import rebate, mẫu email và chiến dịch gửi mail nội bộ<br/>
+  Mọi thắc mắc vui lòng liên hệ quản trị hệ thống.
+</div>
+
+</div><!-- /wrapper -->
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ In / Lưu PDF</button>
+
+</body>
+</html>
