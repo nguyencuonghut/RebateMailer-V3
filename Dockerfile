@@ -7,11 +7,12 @@ FROM composer:2 AS composer-deps
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN composer install \
+RUN COMPOSER_NO_PLATFORM_CHECK=1 composer install \
         --no-dev \
         --no-interaction \
         --no-scripts \
-        --prefer-dist
+        --prefer-dist \
+        --ignore-platform-reqs
 
 ###############################################################################
 # Stage 2 — Build frontend assets (Node 20)
@@ -81,7 +82,7 @@ COPY --from=frontend /build/public/build ./public/build
 
 # ── Finalise Composer autoloader + framework discovery ───────────────────
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-RUN composer dump-autoload --classmap-authoritative --no-dev \
+RUN COMPOSER_NO_PLATFORM_CHECK=1 composer dump-autoload --classmap-authoritative --no-dev \
     && php artisan package:discover --ansi
 
 # ── Writable storage directories + permissions ────────────────────────────
