@@ -82,8 +82,7 @@ COPY --from=frontend /build/public/build ./public/build
 
 # ── Finalise Composer autoloader + framework discovery ───────────────────
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-RUN COMPOSER_NO_PLATFORM_CHECK=1 composer dump-autoload --classmap-authoritative --no-dev \
-    && php artisan package:discover --ansi
+RUN COMPOSER_NO_PLATFORM_CHECK=1 composer dump-autoload --classmap-authoritative --no-dev
 
 # ── Writable storage directories + permissions ────────────────────────────
 RUN mkdir -p \
