@@ -129,7 +129,6 @@ services:
       - queue:work
       - "--queue=default"
       - "--sleep=3"
-      - "--tries=5"
       - "--max-time=3600"
       - "--no-ansi"
     depends_on:

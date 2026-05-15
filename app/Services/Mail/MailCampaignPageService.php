@@ -426,6 +426,11 @@ class MailCampaignPageService
             return 'Hộp thư của người nhận đã đầy. Không thể gửi email vào thời điểm này.';
         }
 
+        // Queue max attempts exhausted (internal, not a mail server error)
+        if (str_contains($lower, 'has been attempted too many times') || str_contains($lower, 'maxattemptsexceededexception')) {
+            return 'Hệ thống đã thử gửi mail nhiều lần nhưng đều thất bại. Vui lòng kiểm tra cấu hình mail và thử lại thủ công.';
+        }
+
         // Rate limiting / temporary deferral
         if (
             str_contains($lower, 'too many')

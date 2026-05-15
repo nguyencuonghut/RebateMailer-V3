@@ -50,7 +50,12 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
 
     public function tries(): int
     {
-        return (int) config('mail_campaigns.dispatch.tries', 5);
+        return (int) config('mail_campaigns.dispatch.tries', 50);
+    }
+
+    public function maxExceptions(): int
+    {
+        return (int) config('mail_campaigns.dispatch.max_exceptions', 5);
     }
 
     public function handle(
