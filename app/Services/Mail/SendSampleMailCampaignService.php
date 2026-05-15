@@ -12,6 +12,7 @@ class SendSampleMailCampaignService
 {
     public function __construct(
         private readonly BuildMailCampaignRecipientPreviewService $buildMailCampaignRecipientPreviewService,
+        private readonly BuildMailCampaignRecipientEmailHtmlService $buildMailCampaignRecipientEmailHtmlService,
     ) {
     }
 
@@ -58,7 +59,7 @@ class SendSampleMailCampaignService
             ], static fn ($v): bool => is_string($v) && $v !== ''));
 
             $subjectLine = $preview['subject']['renderedText'] ?? $campaign->name;
-            $html = (string) ($preview['html'] ?? '');
+            $html = $this->buildMailCampaignRecipientEmailHtmlService->build($preview, isPreview: false);
 
             try {
                 Mail::to($targetEmail)->send(new MailCampaignRecipientMail($subjectLine, $html));

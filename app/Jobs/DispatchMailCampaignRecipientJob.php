@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Mail\MailCampaignRecipientMail;
 use App\Models\MailCampaign;
 use App\Models\MailCampaignRecipient;
+use App\Services\Mail\BuildMailCampaignRecipientEmailHtmlService;
 use App\Services\Mail\BuildMailCampaignRecipientPreviewService;
 use App\Services\Mail\LogMailCampaignRecipientAttemptService;
 use App\Services\Mail\UpdateMailCampaignDispatchStatusService;
@@ -54,6 +55,7 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
 
     public function handle(
         BuildMailCampaignRecipientPreviewService $buildMailCampaignRecipientPreviewService,
+        BuildMailCampaignRecipientEmailHtmlService $buildMailCampaignRecipientEmailHtmlService,
         LogMailCampaignRecipientAttemptService $logMailCampaignRecipientAttemptService,
         UpdateMailCampaignDispatchStatusService $updateMailCampaignDispatchStatusService,
     ): void
@@ -132,10 +134,11 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
         }
 
         $subjectLine = $preview['subject']['renderedText'] ?? $campaign->name;
+        $emailHtml = $buildMailCampaignRecipientEmailHtmlService->build($preview, isPreview: false);
 
         try {
             Mail::to((string) $recipient->recipient_email)->send(
-                new MailCampaignRecipientMail((string) $subjectLine, (string) ($preview['html'] ?? ''))
+                new MailCampaignRecipientMail((string) $subjectLine, $emailHtml)
             );
 
             $recipient->forceFill([

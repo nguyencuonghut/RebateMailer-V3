@@ -14,6 +14,7 @@
                             <tr>
                                 <td style="padding:0 0 16px 0;">
                                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff; border:1px solid #dbe4ef; border-radius:20px;">
+                                        @if ($isPreview ?? true)
                                         <tr>
                                             <td style="padding:24px 28px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
                                                 <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.18em; color:#0284c7;">Chiến dịch gửi mail</div>
@@ -24,6 +25,7 @@
                                                 </div>
                                             </td>
                                         </tr>
+                                        @endif
                                         <tr>
                                             <td style="padding:32px 32px 16px 32px; background:linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);">
                                                 <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.18em; color:#0284c7;">Rebate Mailer</div>
