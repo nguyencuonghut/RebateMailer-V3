@@ -203,6 +203,11 @@ const exportFailedUrl = computed(() =>
         ? route('mail.campaigns.recipients.export-failed', { mailCampaign: props.selectedCampaignId })
         : null,
 );
+const exportAggregatedUrl = computed(() =>
+    props.selectedCampaignId
+        ? route('mail.campaigns.recipients.export-aggregated', { mailCampaign: props.selectedCampaignId })
+        : null,
+);
 
 const toggleFailedFilter = (): void => {
     selectedRecipientDeliveryStatus.value = isFilteringFailed.value ? null : 'failed';
@@ -881,6 +886,18 @@ onBeforeUnmount(() => {
                                                 type="button"
                                                 label="Export lỗi"
                                                 severity="danger"
+                                                icon="pi pi-download"
+                                            />
+                                        </a>
+                                        <a
+                                            v-if="exportAggregatedUrl"
+                                            :href="exportAggregatedUrl"
+                                            download
+                                        >
+                                            <Button
+                                                type="button"
+                                                label="Export dữ liệu aggregate"
+                                                severity="secondary"
                                                 icon="pi pi-download"
                                             />
                                         </a>
