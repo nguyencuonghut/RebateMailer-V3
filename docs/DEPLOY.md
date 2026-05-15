@@ -642,9 +642,10 @@ docker compose exec app php artisan db:seed --class=RoleAndPermissionSeeder
 docker compose exec app php artisan tinker  # tạo user admin (xem Phần 5.4)
 
 # ── Update code mới ─────────────────────────────────────────────────────────
-git pull && docker compose build --no-cache
-docker compose run --rm migrator
-docker compose up -d --no-deps app nginx worker scheduler
+git pull
+docker compose build --no-cache
+docker compose run --rm migrator                                  # nếu có migration mới
+docker compose up -d --no-deps app nginx worker scheduler         # ← BẮT BUỘC: restart containers với image mới
 
 # ── Monitoring ──────────────────────────────────────────────────────────────
 docker compose ps
