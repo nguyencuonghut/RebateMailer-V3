@@ -64,24 +64,16 @@ class MailCampaignAggregatedDataExportController extends Controller
                 $cc  = is_array($payload['camCa'] ?? null)      ? $payload['camCa']      : [];
                 $ka  = is_array($payload['keyAccount'] ?? null) ? $payload['keyAccount'] : [];
 
-                // Key Account: "Chiết khấu khác" = sum of discreteItems values
+                // Key Account: "Chiết khấu khác" = discreteItem with matching label
                 $kaOtherDiscount = '';
-                if ($ka !== []) {
-                    $sum = 0.0;
-                    $hasValue = false;
-                    foreach (($ka['discreteItems'] ?? []) as $item) {
-                        if (! is_array($item)) {
-                            continue;
-                        }
-                        $raw = trim((string) ($item['value'] ?? ''));
-                        if ($raw === '') {
-                            continue;
-                        }
-                        $numeric = (float) str_replace([',', ' '], '', $raw);
-                        $sum += $numeric;
-                        $hasValue = true;
+                foreach (($ka['discreteItems'] ?? []) as $item) {
+                    if (! is_array($item)) {
+                        continue;
                     }
-                    $kaOtherDiscount = $hasValue ? number_format($sum, 0, '.', ',') : '';
+                    if (trim((string) ($item['label'] ?? '')) === 'Chiết khấu khác ( Không thể hiện trên hóa đơn)') {
+                        $kaOtherDiscount = (string) ($item['value'] ?? '');
+                        break;
+                    }
                 }
 
                 fputcsv($handle, [
