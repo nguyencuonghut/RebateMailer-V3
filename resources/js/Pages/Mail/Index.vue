@@ -22,6 +22,8 @@ type BatchOption = {
     batchId: number;
     batchCode: string;
     batchName: string;
+    errorCount: number;
+    hasErrors: boolean;
     label: string;
 };
 
@@ -1057,12 +1059,29 @@ onBeforeUnmount(() => {
                         :options="batchOptions"
                         option-label="label"
                         option-value="batchId"
+                        option-disabled="hasErrors"
                         filter
                         fluid
                         :disabled="!canManageCampaigns"
                         placeholder="Chọn batch đã aggregate"
-                    />
+                    >
+                        <template #option="{ option }: { option: BatchOption }">
+                            <div class="flex w-full items-center justify-between gap-3">
+                                <span>{{ option.label }}</span>
+                                <span
+                                    v-if="option.hasErrors"
+                                    class="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+                                    style="background: rgba(239,68,68,0.12); color: var(--p-red-500);"
+                                >
+                                    {{ option.errorCount }} lỗi
+                                </span>
+                            </div>
+                        </template>
+                    </Select>
                     <small v-if="createForm.errors.import_batch_id" class="text-red-500">{{ createForm.errors.import_batch_id }}</small>
+                    <small v-if="batchOptions.some((b) => b.hasErrors)" :style="{ color: 'var(--dashboard-muted-text)' }">
+                        Một số batch bị vô hiệu hóa do có lỗi dữ liệu ở cột Email, Tổng cộng hoặc Bằng chữ.
+                    </small>
                 </div>
 
                 <div class="space-y-2">

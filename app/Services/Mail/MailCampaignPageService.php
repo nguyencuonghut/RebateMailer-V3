@@ -68,12 +68,18 @@ class MailCampaignPageService
             ->orderByDesc('id')
             ->get()
             ->filter(fn (ImportBatch $batch): bool => $batch->aggregated_records_count > 0)
-            ->map(fn (ImportBatch $batch): array => [
-                'batchId' => $batch->id,
-                'batchCode' => $batch->batch_code,
-                'batchName' => $batch->name,
-                'label' => trim(sprintf('%s - %s (%d khách)', $batch->batch_code, $batch->name ?: 'Chưa đặt tên', $batch->aggregated_records_count)),
-            ])
+            ->map(function (ImportBatch $batch): array {
+                $errorCount = (int) ($batch->workbook_summary['aggregatePreview']['summary']['errorCount'] ?? 0);
+
+                return [
+                    'batchId' => $batch->id,
+                    'batchCode' => $batch->batch_code,
+                    'batchName' => $batch->name,
+                    'errorCount' => $errorCount,
+                    'hasErrors' => $errorCount > 0,
+                    'label' => trim(sprintf('%s - %s (%d khách)', $batch->batch_code, $batch->name ?: 'Chưa đặt tên', $batch->aggregated_records_count)),
+                ];
+            })
             ->values()
             ->all();
     }
