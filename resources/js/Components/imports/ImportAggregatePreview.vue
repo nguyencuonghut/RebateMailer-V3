@@ -50,7 +50,6 @@ const {
 } = useDataTableGlobalFilter<AggregatePreview['records'][number]>([
     'customerCode',
     'customerFullName',
-    'customerType',
     (record) => record.sourceSheets.join(' '),
     (record) => [
         record.tongHop ? 'Tổng hợp' : null,
@@ -148,15 +147,6 @@ const {
                     />
                 </template>
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
-                <Column field="customerType" header="Loại khách">
-                    <template #body="{ data }">
-                        <Tag
-                            :value="data.customerType"
-                            :severity="data.customerType === 'Key Account' ? 'warn' : 'success'"
-                            rounded
-                        />
-                    </template>
-                </Column>
                 <Column header="Nguồn dữ liệu">
                     <template #body="{ data }">
                         <div class="flex flex-wrap gap-2">
