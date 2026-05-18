@@ -10,6 +10,7 @@ use App\Models\MailCampaign;
 use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
 use App\Models\User;
+use App\Services\Mail\BuildMailCampaignRecipientEmailHtmlService;
 use App\Services\Mail\BuildMailCampaignRecipientPreviewService;
 use App\Services\Mail\LogMailCampaignRecipientAttemptService;
 use App\Services\Mail\UpdateMailCampaignDispatchStatusService;
@@ -66,6 +67,7 @@ class MailCampaignRecipientSendTest extends TestCase
         $job = new DispatchMailCampaignRecipientJob($recipient->id);
         $job->handle(
             app(BuildMailCampaignRecipientPreviewService::class),
+            app(BuildMailCampaignRecipientEmailHtmlService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
         );
@@ -155,6 +157,7 @@ class MailCampaignRecipientSendTest extends TestCase
         $job = new DispatchMailCampaignRecipientJob($recipient->id);
         $job->handle(
             app(BuildMailCampaignRecipientPreviewService::class),
+            app(BuildMailCampaignRecipientEmailHtmlService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
         );

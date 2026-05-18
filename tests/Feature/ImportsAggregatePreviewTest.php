@@ -57,6 +57,9 @@ class ImportsAggregatePreviewTest extends TestCase
             ->assertJsonPath('data.summary.normalCustomerCount', 12)
             ->assertJsonPath('data.summary.keyAccountCustomerCount', 3);
 
+        $this->assertArrayHasKey('errorCount', $previewResponse->json('data.summary'));
+        $this->assertIsInt($previewResponse->json('data.summary.errorCount'));
+
         $records = collect($previewResponse->json('data.records'))->keyBy('customerCode');
 
         $this->assertAggregatedRecord90300($records);
@@ -178,6 +181,7 @@ class ImportsAggregatePreviewTest extends TestCase
         $this->assertNotNull($record['khoanNpp']);
         $this->assertNull($record['camCa']);
         $this->assertNull($record['keyAccount']);
+        $this->assertIsArray($record['validationErrors']);
     }
 
     /**

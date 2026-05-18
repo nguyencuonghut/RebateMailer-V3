@@ -144,7 +144,7 @@ const effectivePreviewRows = computed(() => {
             return [{
                 rowType: 'total',
                 numbering: '',
-                content: row.content.trim() || 'Cộng',
+                content: (row.content ?? '').trim() || 'Cộng',
                 quantity: '',
                 supportRate: '',
                 amount: preview.sampleData.grandTotal ?? '',
@@ -157,7 +157,7 @@ const effectivePreviewRows = computed(() => {
             return [{
                 rowType: 'in-words',
                 numbering: '',
-                content: row.content.trim() || 'Bằng chữ:',
+                content: (row.content ?? '').trim() || 'Bằng chữ:',
                 quantity: '',
                 supportRate: '',
                 amount: preview.sampleData.totalInWords ?? '',

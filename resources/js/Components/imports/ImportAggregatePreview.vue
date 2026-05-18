@@ -50,7 +50,8 @@ const {
 } = useDataTableGlobalFilter<AggregatePreview['records'][number]>([
     'customerCode',
     'customerFullName',
-    (record) => record.sourceSheets.join(' '),
+    (record) => record.sourceSheets?.join(' ') ?? '',
+    (record) => record.validationErrors?.join(' ') ?? '',
     (record) => [
         record.tongHop ? 'Tổng hợp' : null,
         record.khoanNpp ? 'Khoán NPP' : null,
@@ -90,7 +91,7 @@ const {
             class="space-y-4 rounded-[1.2rem] border border-dashed p-4"
             :style="{ borderColor: 'var(--dashboard-panel-border)', color: 'var(--dashboard-muted-text)' }"
         >
-            <div class="grid gap-4 md:grid-cols-3">
+            <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <div class="rounded-[1rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)' }">
                     <p class="text-sm font-medium">Tổng số khách</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
@@ -109,6 +110,24 @@ const {
                     <p class="text-sm font-medium">Key Account</p>
                     <p class="mt-2 text-xl font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
                         {{ formatImportNumber(preview.summary.keyAccountCustomerCount) }}
+                    </p>
+                </div>
+
+                <div
+                    class="rounded-[1rem] border p-4"
+                    :style="{
+                        borderColor: preview.summary.errorCount > 0 ? 'var(--p-red-400)' : 'var(--dashboard-panel-border)',
+                        background: preview.summary.errorCount > 0 ? 'var(--p-red-50)' : undefined,
+                    }"
+                >
+                    <p class="text-sm font-medium" :style="{ color: preview.summary.errorCount > 0 ? 'var(--p-red-600)' : undefined }">
+                        Lỗi dữ liệu
+                    </p>
+                    <p
+                        class="mt-2 text-xl font-semibold"
+                        :style="{ color: preview.summary.errorCount > 0 ? 'var(--p-red-600)' : 'var(--dashboard-strong-text)' }"
+                    >
+                        {{ formatImportNumber(preview.summary.errorCount) }}
                     </p>
                 </div>
             </div>
@@ -168,6 +187,21 @@ const {
                             <Tag v-if="data.camCa" value="Cám cá" :severity="resolveSourceSheetSeverity('Cám cá')" rounded />
                             <Tag v-if="data.keyAccount" value="Key Account" :severity="resolveSourceSheetSeverity('Key Account')" rounded />
                         </div>
+                    </template>
+                </Column>
+                <Column header="Lỗi dữ liệu">
+                    <template #body="{ data }">
+                        <div v-if="data.validationErrors && data.validationErrors.length > 0" class="space-y-1">
+                            <p
+                                v-for="(err, i) in data.validationErrors"
+                                :key="i"
+                                class="text-xs"
+                                style="color: var(--p-red-600)"
+                            >
+                                {{ err }}
+                            </p>
+                        </div>
+                        <span v-else class="text-xs" style="color: var(--p-green-600)">Hợp lệ</span>
                     </template>
                 </Column>
             </DataTable>

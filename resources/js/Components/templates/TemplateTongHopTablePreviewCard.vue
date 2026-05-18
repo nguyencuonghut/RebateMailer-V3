@@ -71,7 +71,7 @@ const previewCustomerLabel = computed(() => {
 
 const isInWordsRow = (row: { content: string; rowType?: string; columnKey?: string | null }): boolean => {
     const rowType = row.rowType?.trim() ?? '';
-    const content = row.content.trim();
+    const content = (row.content ?? '').trim();
     const columnKey = row.columnKey?.trim() ?? '';
 
     return rowType === 'in-words'
@@ -184,7 +184,7 @@ const effectivePreviewRows = computed(() => {
     const valueMap = new Map((props.bindingOptions ?? []).map((option) => [option.key, option.valuePreview]));
 
     const visibleRows = props.draftSection.rows.flatMap((row) => {
-        const columnKey = row.columnKey?.trim() || row.content.trim();
+        const columnKey = row.columnKey?.trim() || (row.content ?? '').trim();
         const value = valueMap.get(columnKey) ?? '';
 
         if (row.hideWhenValueZero && shouldHideWhenValueZero(value)) {

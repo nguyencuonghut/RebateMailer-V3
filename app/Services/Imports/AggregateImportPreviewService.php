@@ -61,6 +61,21 @@ class AggregateImportPreviewService
         $records = array_values(array_map(function (array $record): array {
             $record['sourceSheets'] = array_values(array_unique($record['sourceSheets']));
 
+            $validationErrors = [];
+            if ($record['tongHop'] !== null) {
+                $validationErrors = array_merge($validationErrors, $this->validateSheetRecord('Tổng hợp', $record['tongHop']));
+            }
+            if ($record['khoanNpp'] !== null) {
+                $validationErrors = array_merge($validationErrors, $this->validateSheetRecord('Khoán NPP', $record['khoanNpp']));
+            }
+            if ($record['camCa'] !== null) {
+                $validationErrors = array_merge($validationErrors, $this->validateSheetRecord('Cám cá', $record['camCa']));
+            }
+            if ($record['keyAccount'] !== null) {
+                $validationErrors = array_merge($validationErrors, $this->validateSheetRecord('Key Account', $record['keyAccount']));
+            }
+            $record['validationErrors'] = $validationErrors;
+
             return $record;
         }, $recordsByCustomerCode));
 
@@ -74,12 +89,17 @@ class AggregateImportPreviewService
             $records,
             static fn (array $record): bool => $record['customerType'] === 'Key Account',
         ));
+        $errorCount = count(array_filter(
+            $records,
+            static fn (array $record): bool => ! empty($record['validationErrors']),
+        ));
 
         return [
             'summary' => [
                 'totalCustomerCount' => count($records),
                 'normalCustomerCount' => $normalCustomerCount,
                 'keyAccountCustomerCount' => $keyAccountCustomerCount,
+                'errorCount' => $errorCount,
             ],
             'records' => $records,
             'nextStep' => 'Dữ liệu đã được gom theo Mã số. Bước kế tiếp sẽ thêm validation để đánh dấu thiếu email, xung đột phân loại và các bất thường dữ liệu.',
@@ -125,5 +145,33 @@ class AggregateImportPreviewService
         }
 
         return trim((string) $candidateValue);
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return list<string>
+     */
+    private function validateSheetRecord(string $sheetName, array $record): array
+    {
+        $errors = [];
+
+        $email = trim((string) ($record['email'] ?? ''));
+        if ($email === '') {
+            $errors[] = "[{$sheetName}] Email: không được để trống";
+        } elseif (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            $errors[] = "[{$sheetName}] Email: không đúng định dạng";
+        }
+
+        $grandTotal = trim((string) ($record['grandTotal'] ?? ''));
+        if ($grandTotal === '') {
+            $errors[] = "[{$sheetName}] Tổng cộng: thiếu dữ liệu";
+        }
+
+        $totalInWords = trim((string) ($record['totalInWords'] ?? ''));
+        if ($totalInWords === '') {
+            $errors[] = "[{$sheetName}] Bằng chữ: thiếu dữ liệu";
+        }
+
+        return $errors;
     }
 }

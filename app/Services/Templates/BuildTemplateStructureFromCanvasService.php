@@ -12,6 +12,19 @@ class BuildTemplateStructureFromCanvasService
     }
 
     /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeRows(array $rows): array
+    {
+        return array_map(static function (array $row): array {
+            $row['content'] = (string) ($row['content'] ?? '');
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function build(MailTemplateCanvas $canvas): array
@@ -39,7 +52,7 @@ class BuildTemplateStructureFromCanvasService
                     'kind' => $definition['kind'],
                     'sourceSheet' => $definition['sourceSheet'],
                     'content' => $part->kind === 'text' ? $version->text_template : null,
-                    'rows' => $part->kind === 'table' ? ($version->structure_json['rows'] ?? []) : null,
+                    'rows' => $part->kind === 'table' ? $this->normalizeRows($version->structure_json['rows'] ?? []) : null,
                 ], static fn (mixed $value): bool => $value !== null);
             })
             ->filter()

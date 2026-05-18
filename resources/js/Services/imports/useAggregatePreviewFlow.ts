@@ -16,6 +16,7 @@ export type AggregatedImportRecord = {
     khoanNpp: Record<string, unknown> | null;
     camCa: Record<string, unknown> | null;
     keyAccount: Record<string, unknown> | null;
+    validationErrors: string[];
 };
 
 export type AggregatePreview = {
@@ -23,6 +24,7 @@ export type AggregatePreview = {
         totalCustomerCount: number;
         normalCustomerCount: number;
         keyAccountCustomerCount: number;
+        errorCount: number;
     };
     records: AggregatedImportRecord[];
     nextStep: string;

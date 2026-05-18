@@ -31,7 +31,7 @@ class MailCampaignDispatchTest extends TestCase
     {
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
         [$campaign] = $this->makeCampaignFixture($user);
-        $scheduledAt = CarbonImmutable::parse('2026-05-10 09:30:00', 'Asia/Ho_Chi_Minh');
+        $scheduledAt = CarbonImmutable::now('Asia/Ho_Chi_Minh')->addWeek()->setTime(9, 30, 0);
 
         $response = $this->actingAs($user)->post(route('mail.campaigns.schedule', $campaign), [
             'scheduled_at' => $scheduledAt->toIso8601String(),

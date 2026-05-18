@@ -82,7 +82,7 @@ class ImportPageService
             'initialKhoanNppPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Khoán NPP') : null,
             'initialCamCaPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Cám cá') : null,
             'initialKeyAccountPreview' => $selectedBatch ? $this->readPersistedSheetPreviewService->read($selectedBatch, 'Key Account') : null,
-            'initialAggregatePreview' => $selectedBatch ? $this->readPersistedAggregatePreviewService->read($selectedBatch) : null,
+            'initialAggregatePreview' => $selectedBatch ? $this->readValidAggregatePreview($selectedBatch) : null,
             'importHistory' => $this->buildImportHistory(),
         ];
     }
@@ -183,5 +183,19 @@ class ImportPageService
         return is_string($message) && $message !== ''
             ? $this->presentImportProcessingErrorService->presentMessage($message)
             : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function readValidAggregatePreview(ImportBatch $importBatch): ?array
+    {
+        $preview = $this->readPersistedAggregatePreviewService->read($importBatch);
+
+        if ($preview === null || ! array_key_exists('errorCount', $preview['summary'] ?? [])) {
+            return null;
+        }
+
+        return $preview;
     }
 }

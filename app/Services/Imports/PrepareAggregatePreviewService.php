@@ -24,7 +24,7 @@ class PrepareAggregatePreviewService
     {
         $persistedPreview = $this->readPersistedAggregatePreviewService->read($importBatch);
 
-        if ($persistedPreview !== null) {
+        if ($persistedPreview !== null && array_key_exists('errorCount', $persistedPreview['summary'] ?? [])) {
             return $persistedPreview;
         }
 
