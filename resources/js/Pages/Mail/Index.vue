@@ -370,6 +370,35 @@ const closeRecipientPreview = (): void => {
     );
 };
 
+type PreviewErrorEntry = { section: string; error: string };
+
+const collectPreviewErrors = (preview: typeof props.selectedRecipientPreview): PreviewErrorEntry[] => {
+    if (!preview) return [];
+    const result: PreviewErrorEntry[] = [];
+    for (const err of preview.errors) result.push({ section: 'Chung', error: err });
+    for (const err of preview.subject?.errors ?? []) result.push({ section: 'Tiêu đề', error: err });
+    for (const err of preview.greeting?.errors ?? []) result.push({ section: 'Lời chào', error: err });
+    for (const table of preview.tables) {
+        for (const err of table.errors) result.push({ section: table.label, error: err });
+    }
+    return result;
+};
+
+const previewErrorsCache = ref<Map<number, PreviewErrorEntry[]>>(new Map());
+
+const currentPreviewErrors = computed(() => collectPreviewErrors(props.selectedRecipientPreview));
+
+watch(
+    () => props.selectedRecipientPreview,
+    (preview) => {
+        if (preview) {
+            const errors = collectPreviewErrors(preview);
+            previewErrorsCache.value = new Map(previewErrorsCache.value).set(preview.recipient.id, errors);
+        }
+    },
+    { immediate: true },
+);
+
 const expandedTechnicalIds = ref<number[]>([]);
 const isTechnicalExpanded = (id: number): boolean => expandedTechnicalIds.value.includes(id);
 const toggleTechnicalDetail = (id: number): void => {
@@ -970,6 +999,8 @@ onBeforeUnmount(() => {
                                                 type="button"
                                                 label="Xem trước email"
                                                 size="small"
+                                                :severity="previewErrorsCache.get(data.id)?.length ? 'danger' : undefined"
+                                                :icon="previewErrorsCache.get(data.id)?.length ? 'pi pi-exclamation-circle' : undefined"
                                                 outlined
                                                 @click="openRecipientPreview(data.id)"
                                             />
@@ -1125,6 +1156,21 @@ onBeforeUnmount(() => {
             header="Xem trước toàn bộ email"
             @update:visible="(visible) => { if (!visible) closeRecipientPreview() }"
         >
+            <div v-if="currentPreviewErrors.length > 0" class="mb-4 rounded-[1.2rem] border p-4" :style="{ borderColor: 'rgba(239,68,68,0.28)', background: 'rgba(239,68,68,0.08)' }">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-500">
+                    Lỗi preview — {{ currentPreviewErrors.length }} vấn đề cần xử lý
+                </p>
+                <ul class="mt-2 space-y-1.5">
+                    <li
+                        v-for="(entry, i) in currentPreviewErrors"
+                        :key="i"
+                        class="text-sm leading-6"
+                    >
+                        <span class="font-medium" :style="{ color: 'var(--dashboard-muted-text)' }">{{ entry.section }}:</span>
+                        <span :style="{ color: 'var(--dashboard-strong-text)' }"> {{ entry.error }}</span>
+                    </li>
+                </ul>
+            </div>
             <MailRecipientEmailPreview
                 v-if="selectedRecipientPreview"
                 :preview="selectedRecipientPreview"
