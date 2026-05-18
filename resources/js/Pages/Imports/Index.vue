@@ -267,6 +267,7 @@ const loadAggregateTab = async (): Promise<void> => {
                         :history="importHistory"
                         :active-batch-id="activeBatchId"
                         :can-open-templates="canOpenTemplates"
+                        :can-manage-imports="canManageImports"
                     />
                 </template>
             </Card>

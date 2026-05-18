@@ -64,6 +64,7 @@ export type ImportHistoryItem = {
     uploadedAt: string | null;
     parsedRecordCount: number;
     aggregatedRecordCount: number;
+    canDelete: boolean;
 };
 
 export const useImportsIndexPage = (props: ImportPageProps) => {

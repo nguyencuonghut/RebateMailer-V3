@@ -13,9 +13,10 @@ const props = defineProps<{
     history: ImportHistoryItem[];
     activeBatchId: number | null;
     canOpenTemplates: boolean;
+    canManageImports: boolean;
 }>();
 
-const { historyRows, openBatch, openTemplates, isActiveBatch } = useImportBatchHistory(props.history, props.activeBatchId);
+const { historyRows, openBatch, openTemplates, isActiveBatch, deleteBatch, deletingBatchId } = useImportBatchHistory(props.history, props.activeBatchId);
 const {
     filters,
     globalFilterFields,
@@ -79,7 +80,7 @@ const {
             <Column field="uploadedAtLabel" header="Thời điểm" />
             <Column field="parsedRecordCountLabel" header="Parsed" />
             <Column field="aggregatedRecordCountLabel" header="Aggregated" />
-            <Column header="Mở lại">
+            <Column header="Thao tác">
                 <template #body="{ data }">
                     <div class="flex flex-wrap gap-2">
                         <Button
@@ -97,6 +98,16 @@ const {
                             size="small"
                             outlined
                             @click="openTemplates(data.id)"
+                        />
+                        <Button
+                            v-if="canManageImports && data.canDelete"
+                            icon="pi pi-trash"
+                            severity="danger"
+                            size="small"
+                            outlined
+                            :loading="deletingBatchId === data.id"
+                            :disabled="deletingBatchId !== null"
+                            @click="deleteBatch(data.id, data.batchName || data.batchCode)"
                         />
                     </div>
                 </template>

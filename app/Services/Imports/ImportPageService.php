@@ -94,7 +94,7 @@ class ImportPageService
     {
         return ImportBatch::query()
             ->with(['uploader'])
-            ->withCount(['sheetRecords', 'aggregatedRecords'])
+            ->withCount(['sheetRecords', 'aggregatedRecords', 'campaigns'])
             ->orderByDesc('started_at')
             ->orderByDesc('id')
             ->limit(20)
@@ -109,6 +109,7 @@ class ImportPageService
                 'uploadedAt' => $this->formatBatchTimestamp($importBatch),
                 'parsedRecordCount' => $importBatch->sheet_records_count,
                 'aggregatedRecordCount' => $importBatch->aggregated_records_count,
+                'canDelete' => $importBatch->campaigns_count === 0,
             ])
             ->values()
             ->all();

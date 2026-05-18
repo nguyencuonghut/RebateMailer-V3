@@ -1,4 +1,4 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import type { ImportHistoryItem } from './useImportsIndexPage';
 import { formatImportNumber } from './useImportNumberFormatter';
@@ -68,10 +68,29 @@ export const useImportBatchHistory = (
         );
     };
 
+    const deletingBatchId = ref<number | null>(null);
+
+    const deleteBatch = (batchId: number, batchName: string): void => {
+        if (!window.confirm(`Xóa đợt nhập "${batchName}"?\n\nToàn bộ dữ liệu của đợt nhập này sẽ bị xóa vĩnh viễn.`)) {
+            return;
+        }
+
+        deletingBatchId.value = batchId;
+
+        router.delete(route('imports.batches.destroy', { importBatch: batchId }), {
+            preserveScroll: true,
+            onFinish: () => {
+                deletingBatchId.value = null;
+            },
+        });
+    };
+
     return {
         historyRows,
         openBatch,
         openTemplates,
         isActiveBatch,
+        deleteBatch,
+        deletingBatchId,
     };
 };

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ImportAggregatePreviewController;
+use App\Http\Controllers\ImportBatchDeleteController;
 use App\Http\Controllers\ImportBatchStatusController;
 use App\Http\Controllers\ImportCamCaPreviewController;
 use App\Http\Controllers\ImportKeyAccountPreviewController;
@@ -54,6 +55,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/imports/batches/{importBatch}/status', [ImportBatchStatusController::class, 'show'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.batch-status');
+    Route::delete('/imports/batches/{importBatch}', ImportBatchDeleteController::class)
+        ->middleware('permission:'.PermissionName::ImportsManage->value)
+        ->name('imports.batches.destroy');
     Route::post('/imports/analyze-workbook', [ImportWorkbookAnalysisController::class, 'store'])
         ->middleware('permission:'.PermissionName::ImportsManage->value)
         ->name('imports.analyze-workbook');

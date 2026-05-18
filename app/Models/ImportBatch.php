@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'batch_code',
@@ -48,5 +49,19 @@ class ImportBatch extends Model
     public function aggregatedRecords(): HasMany
     {
         return $this->hasMany(ImportBatchAggregatedRecord::class);
+    }
+
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(MailCampaign::class);
+    }
+
+    public function deleteWithFile(): void
+    {
+        if ($this->stored_path && Storage::disk('local')->exists($this->stored_path)) {
+            Storage::disk('local')->delete($this->stored_path);
+        }
+
+        $this->delete();
     }
 }
