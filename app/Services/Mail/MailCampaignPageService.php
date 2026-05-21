@@ -273,6 +273,10 @@ class MailCampaignPageService
                 'attemptsCount' => $recipient->attempts_count,
                 'canRetry' => $recipient->delivery_status === 'failed',
                 'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
+                'canDownloadSentPdf' => $recipient->delivery_status === 'sent'
+                    && filled($recipient->sent_subject_snapshot)
+                    && filled($recipient->sent_html_snapshot)
+                    && is_array($recipient->sent_signature_snapshot),
                 'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
                     'id' => $attempt->id,
                     'eventType' => $attempt->event_type,

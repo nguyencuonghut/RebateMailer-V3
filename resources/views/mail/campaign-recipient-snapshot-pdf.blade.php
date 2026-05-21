@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ $campaign->name ?? 'Export PDF mail chiến dịch' }}</title>
+        <title>{{ $campaignName ?: ($page['subjectLine'] ?? 'Export PDF mail') }}</title>
         <style>
             @page {
                 margin: 16mm 12mm;
@@ -15,19 +15,9 @@
                 font-family: 'DejaVu Sans', sans-serif;
                 color: #0f172a;
             }
-
-            .pdf-page {
-                page-break-after: always;
-            }
-
-            .pdf-page:last-child {
-                page-break-after: auto;
-            }
         </style>
     </head>
     <body>
-        @foreach ($pages as $page)
-            @include('mail.partials.campaign-export-pdf-page', ['page' => $page])
-        @endforeach
+        @include('mail.partials.campaign-export-pdf-page', ['page' => $page])
     </body>
 </html>

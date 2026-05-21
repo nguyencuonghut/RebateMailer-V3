@@ -229,6 +229,9 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.latestPdfExport.status', 'queued')
                 ->where('selectedCampaign.latestPdfExport.statusLabel', 'Đang chờ tạo file')
                 ->where('selectedCampaign.latestPdfExport.totalRecipients', 1)
+                ->where('recipientList.0.canDownloadSentPdf', false)
+                ->where('recipientList.1.canDownloadSentPdf', false)
+                ->where('recipientList.2.canDownloadSentPdf', false)
                 ->where('recipientList.0.sourceSheetsLabel', 'Tổng hợp')
                 ->where('recipientList.1.sourceSheetsLabel', 'Tổng hợp')
                 ->where('recipientList.2.sourceSheetsLabel', 'Tổng hợp')
@@ -288,6 +291,17 @@ class MailPageTest extends TestCase
             'delivery_status' => 'sent',
             'attempts_count' => 1,
             'sent_at' => now(),
+            'sent_subject_snapshot' => 'Thư chiết khấu tháng 9',
+            'sent_html_snapshot' => '<!DOCTYPE html><html lang="vi"><body><p>Nội dung đã gửi</p></body></html>',
+            'sent_signature_snapshot' => [
+                'partType' => 'representative-signature',
+                'customerType' => 'Khách thường',
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFsLXNpZw==',
+                'representativeRole' => 'Giám đốc kinh doanh',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+            'snapshot_version' => 1,
         ]);
 
         \DB::table('mail_campaign_exports')->insert([
@@ -316,6 +330,7 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.latestPdfExport.statusLabel', 'Tạo file thất bại')
                 ->where('selectedCampaign.latestPdfExport.canDownload', false)
                 ->where('selectedCampaign.latestPdfExport.errorMessage', 'Recipient 90300 thiếu snapshot cần thiết để export PDF.')
+                ->where('recipientList.0.canDownloadSentPdf', true)
             );
     }
 }

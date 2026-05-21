@@ -37,7 +37,6 @@ class MailCampaignPdfExportJobTest extends TestCase
         $job->handle(app(\App\Services\Mail\GenerateMailCampaignPdfExportService::class));
 
         $export->refresh();
-
         $this->assertSame('completed', $export->status);
         $this->assertSame(2, $export->total_recipients);
         $this->assertSame(2, $export->exported_recipients);
@@ -56,6 +55,27 @@ class MailCampaignPdfExportJobTest extends TestCase
 
         $campaign->refresh();
         $this->assertTrue($campaign->exports()->whereKey($export->id)->exists());
+    }
+
+    public function test_generate_pdf_export_job_handles_hundreds_of_sent_mails_without_loading_fixture_size_into_export_counts(): void
+    {
+        Storage::fake('local');
+
+        config()->set('mail_campaigns.exports.chunk_size', 25);
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$export] = $this->makeQueuedPdfExportFixture($user, withValidSnapshots: true, recipientCount: 250);
+
+        $job = new GenerateMailCampaignPdfExportJob($export->id);
+        $job->handle(app(\App\Services\Mail\GenerateMailCampaignPdfExportService::class));
+
+        $export->refresh();
+
+        $this->assertSame('completed', $export->status);
+        $this->assertSame(250, $export->total_recipients);
+        $this->assertSame(250, $export->exported_recipients);
+        $this->assertNotNull($export->file_path);
+        Storage::disk('local')->assertExists((string) $export->file_path);
     }
 
     public function test_generate_pdf_export_job_marks_export_failed_when_snapshot_is_missing(): void
@@ -101,7 +121,7 @@ class MailCampaignPdfExportJobTest extends TestCase
     /**
      * @return array{0: MailCampaignExport, 1: MailCampaign}
      */
-    private function makeQueuedPdfExportFixture(User $user, bool $withValidSnapshots): array
+    private function makeQueuedPdfExportFixture(User $user, bool $withValidSnapshots, int $recipientCount = 2): array
     {
         $batch = ImportBatch::query()->create([
             'batch_code' => 'IMP-2026-07',
@@ -129,7 +149,7 @@ class MailCampaignPdfExportJobTest extends TestCase
             'updated_by' => $user->id,
         ]);
 
-        foreach ([['90300', 'Nguyễn Văn A'], ['90301', 'Trần Thị B']] as [$customerCode, $representativeName]) {
+        foreach ($this->makeRecipientSeeds($recipientCount) as [$customerCode, $representativeName]) {
             $record = ImportBatchAggregatedRecord::query()->create([
                 'import_batch_id' => $batch->id,
                 'customer_code' => $customerCode,
@@ -175,10 +195,28 @@ class MailCampaignPdfExportJobTest extends TestCase
             'status' => 'queued',
             'requested_by' => $user->id,
             'requested_at' => now(),
-            'total_recipients' => 2,
+            'total_recipients' => $recipientCount,
             'exported_recipients' => 0,
         ]);
 
         return [$export, $campaign];
+    }
+
+    /**
+     * @return list<array{0: string, 1: string}>
+     */
+    private function makeRecipientSeeds(int $count): array
+    {
+        $seeds = [];
+
+        for ($index = 0; $index < $count; $index++) {
+            $customerCode = str_pad((string) (90300 + $index), 5, '0', STR_PAD_LEFT);
+            $seeds[] = [
+                $customerCode,
+                'Đại diện '.$customerCode,
+            ];
+        }
+
+        return $seeds;
     }
 }

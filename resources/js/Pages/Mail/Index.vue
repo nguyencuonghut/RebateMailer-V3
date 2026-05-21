@@ -1100,6 +1100,19 @@ onBeforeUnmount(() => {
                                                 outlined
                                                 @click="openRecipientPreview(data.id)"
                                             />
+                                            <a
+                                                v-if="data.canDownloadSentPdf && selectedCampaign"
+                                                :href="route('mail.campaigns.recipients.download-pdf', { mailCampaign: selectedCampaign.id, mailCampaignRecipient: data.id })"
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    label="Trích xuất PDF"
+                                                    size="small"
+                                                    severity="contrast"
+                                                    icon="pi pi-file-pdf"
+                                                    outlined
+                                                />
+                                            </a>
                                             <Button
                                                 type="button"
                                                 label="Chi tiết lỗi"

@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ data_get($preview, 'subject.renderedText', 'Export PDF mail') }}</title>
     </head>
-    <body style="margin:0; padding:0; background:#ffffff; font-family: Arial, Helvetica, sans-serif; color:#0f172a; line-height:1.6;">
+    <body style="margin:0; padding:0; background:#ffffff; font-family:'DejaVu Sans', sans-serif; color:#0f172a; line-height:1.6;">
         <div style="padding:24px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
