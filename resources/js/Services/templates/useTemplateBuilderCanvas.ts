@@ -5,7 +5,7 @@ export type TemplateSectionDefinition = {
     type: string;
     label: string;
     description: string;
-    kind: 'text' | 'table';
+    kind: 'text' | 'table' | 'composite';
     sourceSheet: string | null;
 };
 
@@ -39,10 +39,11 @@ export type BuilderSection = {
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table';
+    kind?: 'text' | 'table' | 'composite';
     sourceSheet?: string | null;
     content?: string;
     rows?: BuilderRow[];
+    blocks?: Record<string, unknown>;
 };
 
 export type BuilderTemplate = {

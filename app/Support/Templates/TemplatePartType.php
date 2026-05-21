@@ -10,6 +10,7 @@ enum TemplatePartType: string
     case KhoanNppTable = 'khoan-npp-table';
     case CamCaTable = 'cam-ca-table';
     case KeyAccountTable = 'key-account-table';
+    case RepresentativeSignature = 'representative-signature';
 
     public function code(): string
     {
@@ -20,6 +21,7 @@ enum TemplatePartType: string
             self::KhoanNppTable => 'khoan-npp',
             self::CamCaTable => 'cam-ca',
             self::KeyAccountTable => 'key-account',
+            self::RepresentativeSignature => 'representative-signature',
         };
     }
 
@@ -32,6 +34,7 @@ enum TemplatePartType: string
             self::KhoanNppTable => 'Table Chương trình khoán đặc biệt',
             self::CamCaTable => 'Table Chiết khấu cám cá',
             self::KeyAccountTable => 'Table Chiết khấu Key Account',
+            self::RepresentativeSignature => 'Khối chữ ký đại diện',
         };
     }
 
@@ -44,6 +47,7 @@ enum TemplatePartType: string
             self::KhoanNppTable => 'Lấy dữ liệu từ sheet Khoán NPP.',
             self::CamCaTable => 'Lấy dữ liệu từ sheet Cám cá.',
             self::KeyAccountTable => 'Lấy dữ liệu từ sheet Key Account.',
+            self::RepresentativeSignature => 'Khối chữ ký cuối mail, gồm cấu hình riêng cho Khách thường và Key Account.',
         };
     }
 
@@ -52,13 +56,14 @@ enum TemplatePartType: string
         return match ($this) {
             self::Subject, self::Greeting => 'text',
             self::TongHopTable, self::KhoanNppTable, self::CamCaTable, self::KeyAccountTable => 'table',
+            self::RepresentativeSignature => 'composite',
         };
     }
 
     public function sourceSheet(): ?string
     {
         return match ($this) {
-            self::Subject, self::Greeting => null,
+            self::Subject, self::Greeting, self::RepresentativeSignature => null,
             self::TongHopTable => 'Tổng hợp',
             self::KhoanNppTable => 'Khoán NPP',
             self::CamCaTable => 'Cám cá',
@@ -71,7 +76,7 @@ enum TemplatePartType: string
         return match ($this) {
             self::Subject => 1,
             self::Greeting => 2,
-            self::TongHopTable, self::KhoanNppTable, self::CamCaTable, self::KeyAccountTable => 1,
+            self::TongHopTable, self::KhoanNppTable, self::CamCaTable, self::KeyAccountTable, self::RepresentativeSignature => 1,
         };
     }
 }

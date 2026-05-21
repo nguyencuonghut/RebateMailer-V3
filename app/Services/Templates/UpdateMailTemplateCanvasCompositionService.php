@@ -86,7 +86,7 @@ class UpdateMailTemplateCanvasCompositionService
             'version_no' => $nextVersionNo,
             'version_label' => sprintf('Draft %s', $mailTemplate->name),
             'text_template' => $templatePart->kind === 'text' ? (string) ($section['content'] ?? '') : null,
-            'structure_json' => $templatePart->kind === 'table' ? $section : null,
+            'structure_json' => $templatePart->kind !== 'text' ? $section : null,
             'legacy_mail_template_id' => $mailTemplate->getKey(),
             'created_by' => $mailTemplate->created_by,
             'updated_by' => $mailTemplate->updated_by,

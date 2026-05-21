@@ -30,7 +30,7 @@ const emit = defineEmits<{
         type: string;
         label?: string;
         description?: string;
-        kind?: 'text' | 'table';
+        kind?: 'text' | 'table' | 'composite';
         sourceSheet?: string | null;
         content?: string;
         rows?: Array<{
@@ -45,6 +45,7 @@ const emit = defineEmits<{
             styleRole: 'parent' | 'child' | 'neutral';
             fontWeight: 'bold' | 'regular';
         }>;
+        blocks?: Record<string, unknown>;
     }>]
 }>();
 

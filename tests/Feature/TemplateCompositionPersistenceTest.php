@@ -29,10 +29,11 @@ class TemplateCompositionPersistenceTest extends TestCase
     {
         $parts = app(EnsureTemplatePartCatalogPersistedService::class)->ensure();
 
-        $this->assertCount(6, $parts);
+        $this->assertCount(7, $parts);
         $this->assertSame(1, $parts['subject']->max_active_versions);
         $this->assertSame(2, $parts['greeting']->max_active_versions);
         $this->assertSame('Tổng hợp', $parts['tong-hop-table']->source_sheet);
+        $this->assertSame('composite', $parts['representative-signature']->kind);
 
         $this->assertDatabaseHas('template_parts', [
             'type' => 'subject',
@@ -44,6 +45,13 @@ class TemplateCompositionPersistenceTest extends TestCase
             'type' => 'greeting',
             'code' => 'greeting',
             'max_active_versions' => 2,
+        ]);
+
+        $this->assertDatabaseHas('template_parts', [
+            'type' => 'representative-signature',
+            'code' => 'representative-signature',
+            'kind' => 'composite',
+            'max_active_versions' => 1,
         ]);
     }
 

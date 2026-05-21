@@ -310,4 +310,67 @@ class TemplatesPartUpdateTest extends TestCase
         $this->assertTrue($mailTemplate->structure_json['sections'][2]['rows'][1]['hideWhenValueZero']);
         $this->assertSame('child-program-loop', $mailTemplate->structure_json['sections'][2]['rows'][3]['rowType']);
     }
+
+    public function test_user_with_manage_permission_can_persist_representative_signature_composite_part_through_part_route(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template chữ ký đại diện',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.4-A',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                ],
+            ],
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncMailTemplate($mailTemplate);
+
+        $this->actingAs($user)
+            ->put(route('templates.parts.update', $mailTemplate), [
+                'partType' => 'representative-signature',
+                'section' => [
+                    'type' => 'representative-signature',
+                    'label' => 'Khối chữ ký đại diện',
+                    'description' => 'Khối chữ ký cuối mail cho Khách thường và Key Account.',
+                    'kind' => 'composite',
+                    'blocks' => [
+                        'normalCustomer' => [
+                            'title' => 'Đại diện công ty',
+                            'signatureImageDataUrl' => 'data:image/png;base64,ZmFrZS1ub3JtYWwtc2lnbmF0dXJl',
+                            'representativeRole' => 'Giám đốc kinh doanh',
+                            'representativeName' => 'Nguyễn Văn A',
+                        ],
+                        'keyAccountCustomer' => [
+                            'title' => 'Đại diện công ty',
+                            'signatureImageDataUrl' => 'data:image/png;base64,ZmFrZS1rZXktYWNjb3VudC1zaWduYXR1cmU=',
+                            'representativeRole' => 'Giám đốc Key Account',
+                            'representativeName' => 'Trần Thị B',
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('templates.index'));
+
+        $signaturePart = TemplatePart::query()->where('type', 'representative-signature')->firstOrFail();
+        $signatureVersion = TemplatePartVersion::query()
+            ->where('template_part_id', $signaturePart->id)
+            ->where('legacy_mail_template_id', $mailTemplate->id)
+            ->firstOrFail();
+
+        $mailTemplate->refresh();
+        $signatureSection = collect($mailTemplate->structure_json['sections'])->firstWhere('type', 'representative-signature');
+
+        $this->assertSame('representative-signature', $signatureVersion->structure_json['type']);
+        $this->assertSame('Nguyễn Văn A', $signatureVersion->structure_json['blocks']['normalCustomer']['representativeName']);
+        $this->assertSame('Giám đốc Key Account', $signatureVersion->structure_json['blocks']['keyAccountCustomer']['representativeRole']);
+        $this->assertIsArray($signatureSection);
+        $this->assertSame('composite', $signatureSection['kind']);
+        $this->assertSame('Trần Thị B', $signatureSection['blocks']['keyAccountCustomer']['representativeName']);
+    }
 }
