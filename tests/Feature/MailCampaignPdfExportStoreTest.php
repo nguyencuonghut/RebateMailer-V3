@@ -8,8 +8,10 @@ use App\Models\MailCampaign;
 use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
 use App\Models\User;
+use App\Jobs\GenerateMailCampaignPdfExportJob;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class MailCampaignPdfExportStoreTest extends TestCase
@@ -25,6 +27,7 @@ class MailCampaignPdfExportStoreTest extends TestCase
 
     public function test_user_with_mail_view_permission_can_queue_pdf_export_for_campaign_with_sent_recipients(): void
     {
+        Queue::fake();
         $user = User::query()->where('email', 'guest@rebatemailer.test')->firstOrFail();
         $campaign = $this->makeCampaignFixture($user, sentRecipients: 2, failedRecipients: 1);
 
@@ -42,6 +45,8 @@ class MailCampaignPdfExportStoreTest extends TestCase
             'total_recipients' => 2,
             'exported_recipients' => 0,
         ]);
+
+        Queue::assertPushed(GenerateMailCampaignPdfExportJob::class, 1);
     }
 
     public function test_pdf_export_request_is_rejected_when_campaign_has_no_sent_recipients(): void

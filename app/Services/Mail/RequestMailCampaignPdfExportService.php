@@ -2,6 +2,7 @@
 
 namespace App\Services\Mail;
 
+use App\Jobs\GenerateMailCampaignPdfExportJob;
 use App\Models\MailCampaign;
 use App\Models\MailCampaignExport;
 use App\Models\User;
@@ -34,7 +35,7 @@ class RequestMailCampaignPdfExportService
             ]);
         }
 
-        return DB::transaction(fn (): MailCampaignExport => MailCampaignExport::query()->create([
+        $export = DB::transaction(fn (): MailCampaignExport => MailCampaignExport::query()->create([
             'mail_campaign_id' => $campaign->id,
             'export_type' => 'sent-mails-pdf',
             'status' => 'queued',
@@ -43,5 +44,9 @@ class RequestMailCampaignPdfExportService
             'total_recipients' => $sentRecipientsCount,
             'exported_recipients' => 0,
         ]));
+
+        GenerateMailCampaignPdfExportJob::dispatch($export->id);
+
+        return $export;
     }
 }

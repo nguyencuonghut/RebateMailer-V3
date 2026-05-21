@@ -228,6 +228,14 @@ const exportAggregatedUrl = computed(() =>
         ? route('mail.campaigns.recipients.export-aggregated', { mailCampaign: props.selectedCampaignId })
         : null,
 );
+const latestPdfExportDownloadUrl = computed(() =>
+    props.selectedCampaignId && props.selectedCampaign?.latestPdfExport?.canDownload
+        ? route('mail.campaigns.pdf-exports.download', {
+            mailCampaign: props.selectedCampaignId,
+            mailCampaignExport: props.selectedCampaign.latestPdfExport.id,
+        })
+        : null,
+);
 const isRequestingPdfExport = ref(false);
 
 const toggleFailedFilter = (): void => {
@@ -1009,6 +1017,18 @@ onBeforeUnmount(() => {
                                     </div>
 
                                     <Tag :value="selectedCampaign.latestPdfExport.statusLabel" :severity="selectedCampaign.latestPdfExport.status === 'failed' ? 'danger' : selectedCampaign.latestPdfExport.status === 'completed' ? 'success' : 'info'" rounded />
+                                </div>
+
+                                <div v-if="latestPdfExportDownloadUrl" class="mt-3">
+                                    <a :href="latestPdfExportDownloadUrl">
+                                        <Button
+                                            type="button"
+                                            label="Tải file PDF"
+                                            icon="pi pi-download"
+                                            severity="success"
+                                            size="small"
+                                        />
+                                    </a>
                                 </div>
                             </div>
 

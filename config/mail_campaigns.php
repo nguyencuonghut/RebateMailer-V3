@@ -14,4 +14,11 @@ return [
             900,
         ],
     ],
+    'exports' => [
+        'disk' => env('MAIL_CAMPAIGN_EXPORT_DISK', 'local'),
+        'storage_path' => env('MAIL_CAMPAIGN_EXPORT_PATH', 'mail-exports/pdf'),
+        'queue' => env('MAIL_CAMPAIGN_EXPORT_QUEUE', 'mail-export-pdf'),
+        'lock_seconds' => (int) env('MAIL_CAMPAIGN_EXPORT_LOCK_SECONDS', 300),
+        'tries' => (int) env('MAIL_CAMPAIGN_EXPORT_TRIES', 5),
+    ],
 ];
