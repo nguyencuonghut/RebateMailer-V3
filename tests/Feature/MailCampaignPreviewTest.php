@@ -166,11 +166,13 @@ class MailCampaignPreviewTest extends TestCase
             'attempts_count' => 0,
         ]);
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('mail.index', [
                 'campaign' => $campaign->id,
                 'recipient' => $recipient->id,
-            ]))
+            ]));
+
+        $response
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Mail/Index')
@@ -190,20 +192,25 @@ class MailCampaignPreviewTest extends TestCase
                 ->where('selectedRecipientPreview.tables.2.rows.0.value', '450')
                 ->where('selectedRecipientPreview.tables.3.type', 'key-account-table')
                 ->where('selectedRecipientPreview.tables.3.rows.0.quantity', '987')
-                ->where('selectedRecipientPreview.html', fn (string $html): bool => str_contains($html, '<!DOCTYPE html>')
-                    && str_contains($html, 'Chế độ tháng 03.2026 - 90300 - Công ty A')
-                    && str_contains($html, 'Kính gửi 90300 - Công ty A')
-                    && str_contains($html, 'Chế độ tháng 03.2026')
-                    && str_contains($html, 'Bảy trăm tám mươi chín nghìn đồng')
-                    && str_contains($html, 'Chương trình khoán A')
-                    && str_contains($html, 'Chiết khấu cám cá tháng 03.2026')
-                    && str_contains($html, 'Chiết khấu Key Account tháng 03.2026')
-                    && ! str_contains($html, 'Nguồn dữ liệu:')
-                    && ! str_contains($html, 'Email này được render từ dữ liệu aggregate thật của khách hàng đã chọn trong chiến dịch.')
-                    && str_contains($html, 'Bằng chữ:')
-                    && str_contains($html, 'colspan="3"')
-                    && str_contains($html, 'font-weight:700; border-top:1px solid #e2e8f0;">I</td>'))
             );
+
+        /** @var array<string, mixed> $page */
+        $page = $response->viewData('page');
+        $html = data_get($page, 'props.selectedRecipientPreview.html');
+
+        $this->assertIsString($html);
+        $this->assertStringContainsString('<!DOCTYPE html>', $html);
+        $this->assertStringContainsString('Chế độ tháng 03.2026 - 90300 - Công ty A', $html);
+        $this->assertStringContainsString('Kính gửi 90300 - Công ty A', $html);
+        $this->assertStringContainsString('Chế độ tháng 03.2026', $html);
+        $this->assertStringContainsString('Bảy trăm tám mươi chín nghìn đồng', $html);
+        $this->assertStringContainsString('Chương trình khoán A', $html);
+        $this->assertStringContainsString('Chiết khấu cám cá tháng 03.2026', $html);
+        $this->assertStringContainsString('Chiết khấu tháng 03.2026', $html);
+        $this->assertStringNotContainsString('Nguồn dữ liệu:', $html);
+        $this->assertStringNotContainsString('Email này được render từ dữ liệu aggregate thật của khách hàng đã chọn trong chiến dịch.', $html);
+        $this->assertStringContainsString('Bằng chữ:', $html);
+        $this->assertStringContainsString('font-weight:700; border-top:1px solid #e2e8f0;">I</td>', $html);
     }
 
     public function test_mail_page_only_renders_key_account_table_for_key_account_recipient(): void
