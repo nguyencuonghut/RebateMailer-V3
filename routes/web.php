@@ -10,6 +10,7 @@ use App\Http\Controllers\MailCampaignPageController;
 use App\Http\Controllers\MailCampaignDispatchController;
 use App\Http\Controllers\MailCampaignAggregatedDataExportController;
 use App\Http\Controllers\MailCampaignFailedRecipientsExportController;
+use App\Http\Controllers\MailCampaignPdfExportStoreController;
 use App\Http\Controllers\MailCampaignRecipientRetryController;
 use App\Http\Controllers\MailCampaignSampleSendController;
 use App\Http\Controllers\MailCampaignScheduleController;
@@ -123,6 +124,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/mail/campaigns/{mailCampaign}/recipients/export-aggregated', MailCampaignAggregatedDataExportController::class)
         ->middleware(['permission:'.PermissionName::MailView->value, 'throttle:10,1'])
         ->name('mail.campaigns.recipients.export-aggregated');
+    Route::post('/mail/campaigns/{mailCampaign}/exports/pdf', MailCampaignPdfExportStoreController::class)
+        ->middleware(['permission:'.PermissionName::MailView->value, 'throttle:10,1'])
+        ->name('mail.campaigns.pdf-exports.store');
     Route::post('/mail/campaigns/{mailCampaign}/send-sample', MailCampaignSampleSendController::class)
         ->middleware(['permission:'.PermissionName::MailSend->value, 'throttle:5,1'])
         ->name('mail.campaigns.send-sample');

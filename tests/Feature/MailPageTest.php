@@ -186,6 +186,18 @@ class MailPageTest extends TestCase
             'latest_error_message' => 'SMTP timeout',
         ]);
 
+        \DB::table('mail_campaign_exports')->insert([
+            'mail_campaign_id' => $campaign->id,
+            'export_type' => 'sent-mails-pdf',
+            'status' => 'queued',
+            'requested_by' => $user->id,
+            'requested_at' => now(),
+            'total_recipients' => 1,
+            'exported_recipients' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $this->actingAs($user)
             ->get(route('mail.index', ['campaign' => $campaign->id]))
             ->assertOk()
@@ -212,6 +224,11 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.progress.queuedPercent', 33)
                 ->where('selectedCampaign.progress.sentPercent', 33)
                 ->where('selectedCampaign.progress.failedPercent', 33)
+                ->where('selectedCampaign.canRequestPdfExport', false)
+                ->where('selectedCampaign.pdfExportDisabledReason', 'Đang có một yêu cầu export PDF mail đã gửi chưa hoàn tất.')
+                ->where('selectedCampaign.latestPdfExport.status', 'queued')
+                ->where('selectedCampaign.latestPdfExport.statusLabel', 'Đang chờ tạo file')
+                ->where('selectedCampaign.latestPdfExport.totalRecipients', 1)
                 ->where('recipientList.0.sourceSheetsLabel', 'Tổng hợp')
                 ->where('recipientList.1.sourceSheetsLabel', 'Tổng hợp')
                 ->where('recipientList.2.sourceSheetsLabel', 'Tổng hợp')
