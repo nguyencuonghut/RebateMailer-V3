@@ -57,10 +57,27 @@ class MailCampaignPdfExportDownloadTest extends TestCase
         $response->assertSessionHasErrors(['download']);
     }
 
+    public function test_download_is_rejected_when_completed_export_file_is_missing_from_storage(): void
+    {
+        Storage::fake('local');
+
+        $user = User::query()->where('email', 'guest@rebatemailer.test')->firstOrFail();
+        [$campaign, $export] = $this->makeCompletedExportFixture($user, status: 'completed', writeFile: false);
+
+        $response = $this->actingAs($user)
+            ->get(route('mail.campaigns.pdf-exports.download', [
+                'mailCampaign' => $campaign->id,
+                'mailCampaignExport' => $export->id,
+            ]));
+
+        $response->assertRedirect(route('mail.index', ['campaign' => $campaign->id]));
+        $response->assertSessionHasErrors(['download']);
+    }
+
     /**
      * @return array{0: MailCampaign, 1: MailCampaignExport}
      */
-    private function makeCompletedExportFixture(User $user, string $status = 'completed'): array
+    private function makeCompletedExportFixture(User $user, string $status = 'completed', bool $writeFile = true): array
     {
         $batch = ImportBatch::query()->create([
             'batch_code' => 'IMP-2026-08',
@@ -88,7 +105,9 @@ class MailCampaignPdfExportDownloadTest extends TestCase
             'updated_by' => $user->id,
         ]);
 
-        Storage::disk('local')->put('mail-exports/pdf/mail-campaign-'.$campaign->id.'.pdf', '%PDF-1.7 fake');
+        if ($writeFile) {
+            Storage::disk('local')->put('mail-exports/pdf/mail-campaign-'.$campaign->id.'.pdf', '%PDF-1.7 fake');
+        }
 
         $export = MailCampaignExport::query()->create([
             'mail_campaign_id' => $campaign->id,

@@ -79,6 +79,25 @@ class MailCampaignPdfExportJobTest extends TestCase
         $this->assertNull($export->file_path);
     }
 
+    public function test_generate_pdf_export_job_marks_export_failed_when_campaign_has_no_sent_recipients(): void
+    {
+        Storage::fake('local');
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$export] = $this->makeQueuedPdfExportFixture($user, withValidSnapshots: true);
+
+        MailCampaignRecipient::query()->where('mail_campaign_id', $export->mail_campaign_id)->delete();
+
+        $job = new GenerateMailCampaignPdfExportJob($export->id);
+        $job->handle(app(\App\Services\Mail\GenerateMailCampaignPdfExportService::class));
+
+        $export->refresh();
+
+        $this->assertSame('failed', $export->status);
+        $this->assertNotNull($export->error_message);
+        $this->assertStringContainsString('không tìm thấy mail đã gửi', mb_strtolower((string) $export->error_message));
+    }
+
     /**
      * @return array{0: MailCampaignExport, 1: MailCampaign}
      */
