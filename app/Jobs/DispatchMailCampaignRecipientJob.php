@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Mail\MailCampaignRecipientMail;
 use App\Models\MailCampaign;
 use App\Models\MailCampaignRecipient;
+use App\Services\Mail\BuildRepresentativeSignatureSnapshotService;
 use App\Services\Mail\BuildMailCampaignRecipientEmailHtmlService;
 use App\Services\Mail\BuildMailCampaignRecipientPreviewService;
 use App\Services\Mail\LogMailCampaignRecipientAttemptService;
@@ -61,6 +62,7 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
     public function handle(
         BuildMailCampaignRecipientPreviewService $buildMailCampaignRecipientPreviewService,
         BuildMailCampaignRecipientEmailHtmlService $buildMailCampaignRecipientEmailHtmlService,
+        BuildRepresentativeSignatureSnapshotService $buildRepresentativeSignatureSnapshotService,
         LogMailCampaignRecipientAttemptService $logMailCampaignRecipientAttemptService,
         UpdateMailCampaignDispatchStatusService $updateMailCampaignDispatchStatusService,
     ): void
@@ -142,6 +144,31 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
         $emailHtml = $buildMailCampaignRecipientEmailHtmlService->build($preview, isPreview: false);
 
         try {
+            $signatureSnapshot = $buildRepresentativeSignatureSnapshotService->build($campaign, $recipient);
+        } catch (Throwable $throwable) {
+            $recipient->forceFill([
+                'delivery_status' => 'failed',
+                'attempts_count' => $recipient->attempts_count + 1,
+                'latest_error_message' => $throwable->getMessage(),
+                'failed_at' => now(),
+            ])->save();
+
+            $logMailCampaignRecipientAttemptService->log(
+                $recipient,
+                'render_failed',
+                'failed',
+                $throwable->getMessage(),
+                [
+                    'exception' => $throwable::class,
+                ],
+            );
+
+            $updateMailCampaignDispatchStatusService->refresh($campaign);
+
+            return;
+        }
+
+        try {
             Mail::to((string) $recipient->recipient_email)->send(
                 new MailCampaignRecipientMail((string) $subjectLine, $emailHtml)
             );
@@ -154,7 +181,7 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
                 'failed_at' => null,
                 'sent_subject_snapshot' => (string) $subjectLine,
                 'sent_html_snapshot' => $emailHtml,
-                'sent_signature_snapshot' => null,
+                'sent_signature_snapshot' => $signatureSnapshot,
                 'snapshot_version' => 1,
             ])->save();
 

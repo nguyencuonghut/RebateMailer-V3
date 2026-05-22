@@ -8,12 +8,16 @@ use App\Models\ImportBatch;
 use App\Models\ImportBatchAggregatedRecord;
 use App\Models\MailCampaign;
 use App\Models\MailCampaignRecipient;
+use App\Models\MailTemplateCanvasPart;
 use App\Models\MailTemplateCanvas;
+use App\Models\TemplatePartVersion;
 use App\Models\User;
 use App\Services\Mail\BuildMailCampaignRecipientEmailHtmlService;
 use App\Services\Mail\BuildMailCampaignRecipientPreviewService;
+use App\Services\Mail\BuildRepresentativeSignatureSnapshotService;
 use App\Services\Mail\LogMailCampaignRecipientAttemptService;
 use App\Services\Mail\UpdateMailCampaignDispatchStatusService;
+use App\Services\Templates\EnsureTemplatePartCatalogPersistedService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -37,6 +41,20 @@ class MailCampaignRecipientSendTest extends TestCase
 
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
         [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
+        $this->attachRepresentativeSignatureToCampaignCanvas($campaign, [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFs',
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+            'keyAccountCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,a2V5',
+                'representativeRole' => 'Giám đốc kinh doanh KA',
+                'representativeName' => 'Trần Thị B',
+            ],
+        ]);
 
         $previewService = Mockery::mock(BuildMailCampaignRecipientPreviewService::class);
         $capturedHtmlBody = null;
@@ -71,6 +89,7 @@ class MailCampaignRecipientSendTest extends TestCase
         $job->handle(
             app(BuildMailCampaignRecipientPreviewService::class),
             app(BuildMailCampaignRecipientEmailHtmlService::class),
+            app(BuildRepresentativeSignatureSnapshotService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
         );
@@ -97,7 +116,9 @@ class MailCampaignRecipientSendTest extends TestCase
         $recipient->refresh();
 
         $this->assertSame($capturedHtmlBody, $recipient->sent_html_snapshot);
-        $this->assertNull($recipient->sent_signature_snapshot);
+        $this->assertSame('Trưởng ban tài chính', $recipient->sent_signature_snapshot['representativeRole']);
+        $this->assertSame('Nguyễn Văn A', $recipient->sent_signature_snapshot['representativeName']);
+        $this->assertSame('Đại diện công ty', $recipient->sent_signature_snapshot['title']);
 
         $this->assertDatabaseHas('mail_campaign_recipient_attempts', [
             'mail_campaign_recipient_id' => $recipient->id,
@@ -109,6 +130,130 @@ class MailCampaignRecipientSendTest extends TestCase
             'id' => $campaign->id,
             'status' => 'completed',
         ]);
+    }
+
+    public function test_dispatch_job_snapshots_key_account_signature_block_for_key_account_customer(): void
+    {
+        Mail::fake();
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user, customerType: 'Key Account');
+        $this->attachRepresentativeSignatureToCampaignCanvas($campaign, [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFs',
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+            'keyAccountCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,a2V5',
+                'representativeRole' => 'Giám đốc kinh doanh KA',
+                'representativeName' => 'Trần Thị B',
+            ],
+        ]);
+
+        $previewService = Mockery::mock(BuildMailCampaignRecipientPreviewService::class);
+        $previewService->shouldReceive('build')
+            ->once()
+            ->andReturn([
+                'recipient' => [
+                    'id' => $recipient->id,
+                    'customerCode' => $recipient->customer_code,
+                    'customerFullName' => $recipient->customer_full_name,
+                    'recipientEmail' => $recipient->recipient_email,
+                    'customerType' => $recipient->customer_type,
+                ],
+                'subject' => [
+                    'renderedText' => 'Thư chiết khấu tháng 6',
+                    'errors' => [],
+                ],
+                'greeting' => [
+                    'renderedText' => 'Kính gửi Quý khách',
+                    'errors' => [],
+                ],
+                'tables' => [],
+                'errors' => [],
+                'html' => '<html><body><h1>Preview mail</h1></body></html>',
+            ]);
+        app()->instance(BuildMailCampaignRecipientPreviewService::class, $previewService);
+
+        $job = new DispatchMailCampaignRecipientJob($recipient->id);
+        $job->handle(
+            app(BuildMailCampaignRecipientPreviewService::class),
+            app(BuildMailCampaignRecipientEmailHtmlService::class),
+            app(BuildRepresentativeSignatureSnapshotService::class),
+            app(LogMailCampaignRecipientAttemptService::class),
+            app(UpdateMailCampaignDispatchStatusService::class),
+        );
+
+        $recipient->refresh();
+
+        $this->assertSame('Giám đốc kinh doanh KA', $recipient->sent_signature_snapshot['representativeRole']);
+        $this->assertSame('Trần Thị B', $recipient->sent_signature_snapshot['representativeName']);
+    }
+
+    public function test_dispatch_job_fails_before_sending_when_matching_signature_block_is_missing(): void
+    {
+        Mail::fake();
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user, customerType: 'Key Account');
+        $this->attachRepresentativeSignatureToCampaignCanvas($campaign, [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFs',
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+        ]);
+
+        $previewService = Mockery::mock(BuildMailCampaignRecipientPreviewService::class);
+        $previewService->shouldReceive('build')
+            ->once()
+            ->andReturn([
+                'recipient' => [
+                    'id' => $recipient->id,
+                    'customerCode' => $recipient->customer_code,
+                    'customerFullName' => $recipient->customer_full_name,
+                    'recipientEmail' => $recipient->recipient_email,
+                    'customerType' => $recipient->customer_type,
+                ],
+                'subject' => [
+                    'renderedText' => 'Thư chiết khấu tháng 6',
+                    'errors' => [],
+                ],
+                'greeting' => [
+                    'renderedText' => 'Kính gửi Quý khách',
+                    'errors' => [],
+                ],
+                'tables' => [],
+                'errors' => [],
+                'html' => '<html><body><h1>Preview mail</h1></body></html>',
+            ]);
+        app()->instance(BuildMailCampaignRecipientPreviewService::class, $previewService);
+
+        $job = new DispatchMailCampaignRecipientJob($recipient->id);
+
+        $job->handle(
+            app(BuildMailCampaignRecipientPreviewService::class),
+            app(BuildMailCampaignRecipientEmailHtmlService::class),
+            app(BuildRepresentativeSignatureSnapshotService::class),
+            app(LogMailCampaignRecipientAttemptService::class),
+            app(UpdateMailCampaignDispatchStatusService::class),
+        );
+
+        Mail::assertNothingSent();
+
+        $this->assertDatabaseHas('mail_campaign_recipients', [
+            'id' => $recipient->id,
+            'delivery_status' => 'failed',
+            'attempts_count' => 1,
+            'latest_error_message' => 'Thiếu cấu hình chữ ký đại diện cho loại khách hàng "Key Account".',
+        ]);
+
+        $recipient->refresh();
+        $this->assertNull($recipient->sent_signature_snapshot);
     }
 
     public function test_dispatch_job_marks_campaign_completed_with_failures_when_other_recipient_failed(): void
@@ -173,6 +318,7 @@ class MailCampaignRecipientSendTest extends TestCase
         $job->handle(
             app(BuildMailCampaignRecipientPreviewService::class),
             app(BuildMailCampaignRecipientEmailHtmlService::class),
+            app(BuildRepresentativeSignatureSnapshotService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
         );
@@ -186,7 +332,7 @@ class MailCampaignRecipientSendTest extends TestCase
     /**
      * @return array{0: MailCampaign, 1: MailCampaignRecipient}
      */
-    private function makeQueuedRecipientFixture(User $user): array
+    private function makeQueuedRecipientFixture(User $user, string $customerType = 'Khách thường'): array
     {
         $batch = ImportBatch::query()->create([
             'batch_code' => 'IMP-2026-06',
@@ -200,12 +346,12 @@ class MailCampaignRecipientSendTest extends TestCase
         $record = ImportBatchAggregatedRecord::query()->create([
             'import_batch_id' => $batch->id,
             'customer_code' => '90300',
-            'customer_type' => 'Khách thường',
+            'customer_type' => $customerType,
             'source_sheets' => ['Tổng hợp'],
             'aggregated_payload' => [
                 'customerCode' => '90300',
                 'customerFullName' => '90300 - Công ty A',
-                'customerType' => 'Khách thường',
+                'customerType' => $customerType,
                 'tongHop' => [
                     'email' => 'send@example.com',
                 ],
@@ -234,12 +380,48 @@ class MailCampaignRecipientSendTest extends TestCase
             'import_batch_aggregated_record_id' => $record->id,
             'customer_code' => '90300',
             'customer_full_name' => '90300 - Công ty A',
-            'customer_type' => 'Khách thường',
+            'customer_type' => $customerType,
             'recipient_email' => 'send@example.com',
             'delivery_status' => 'queued',
             'attempts_count' => 0,
         ]);
 
         return [$campaign, $recipient];
+    }
+
+    /**
+     * @param  array<string, array<string, string|null>>  $blocks
+     */
+    private function attachRepresentativeSignatureToCampaignCanvas(MailCampaign $campaign, array $blocks): void
+    {
+        $parts = app(EnsureTemplatePartCatalogPersistedService::class)->ensure();
+        $signaturePart = $parts['representative-signature'];
+        $canvas = $campaign->templateCanvas()->firstOrFail();
+        $nextVersionNo = (int) TemplatePartVersion::query()
+            ->where('template_part_id', $signaturePart->id)
+            ->max('version_no') + 1;
+
+        $version = TemplatePartVersion::query()->create([
+            'template_part_id' => $signaturePart->id,
+            'version_no' => $nextVersionNo,
+            'version_label' => 'Signature for campaign test',
+            'structure_json' => [
+                'type' => 'representative-signature',
+                'label' => 'Chữ ký đại diện',
+                'description' => 'Chữ ký người đại diện theo 2 block Khách thường và Key Account.',
+                'kind' => 'composite',
+                'blocks' => $blocks,
+            ],
+            'legacy_mail_template_id' => null,
+            'created_by' => $campaign->created_by,
+            'updated_by' => $campaign->updated_by,
+        ]);
+
+        MailTemplateCanvasPart::query()->create([
+            'mail_template_canvas_id' => $canvas->id,
+            'template_part_id' => $signaturePart->id,
+            'template_part_version_id' => $version->id,
+            'sort_order' => 2,
+        ]);
     }
 }
