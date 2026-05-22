@@ -54,9 +54,15 @@ class BuildTemplatePartVersionOverviewService
                         'versionLabel' => $version->version_label,
                         'isActive' => $version->is_active,
                         'hasTextTemplate' => filled($version->text_template),
-                        'rowCount' => is_array($version->structure_json['rows'] ?? null)
-                            ? count($version->structure_json['rows'])
-                            : 0,
+                        'rowCount' => $templatePart->kind === 'table'
+                            ? (is_array($version->structure_json['rows'] ?? null)
+                                ? count($version->structure_json['rows'])
+                                : 0)
+                            : ($templatePart->kind === 'composite'
+                                ? (is_array($version->structure_json['blocks'] ?? null)
+                                    ? count($version->structure_json['blocks'])
+                                    : 0)
+                                : 0),
                         'legacyMailTemplateId' => $version->legacy_mail_template_id,
                         'updatedAt' => optional($version->updated_at)->toIso8601String(),
                     ])->values()->all(),

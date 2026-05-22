@@ -36,6 +36,7 @@ class TemplateSectionCatalogService
         return [
             $this->buildSectionPayload('subject', $subjectTemplate),
             $this->buildSectionPayload('greeting', $greetingTemplate),
+            $this->buildSectionPayload('representative-signature', ''),
         ];
     }
 
@@ -59,6 +60,10 @@ class TemplateSectionCatalogService
             $section['rows'] = [];
         }
 
+        if (($section['kind'] ?? null) === 'composite') {
+            $section['blocks'] = $this->defaultRepresentativeSignatureBlocks();
+        }
+
         return $section;
     }
 
@@ -76,7 +81,29 @@ class TemplateSectionCatalogService
             'kind' => $definition['kind'],
             'sourceSheet' => $definition['sourceSheet'],
             'content' => in_array($type, ['subject', 'greeting'], true) ? $textContent : null,
+            'blocks' => $type === 'representative-signature' ? $this->defaultRepresentativeSignatureBlocks() : null,
         ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * @return array<string, array<string, string|null>>
+     */
+    private function defaultRepresentativeSignatureBlocks(): array
+    {
+        return [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => null,
+                'representativeRole' => '',
+                'representativeName' => '',
+            ],
+            'keyAccountCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => null,
+                'representativeRole' => '',
+                'representativeName' => '',
+            ],
+        ];
     }
 
     private function resolveGreetingContent(MailTemplate $mailTemplate): string

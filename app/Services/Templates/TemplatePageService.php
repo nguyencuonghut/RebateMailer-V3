@@ -61,6 +61,7 @@ class TemplatePageService
             'writeCapabilities' => [
                 'Tạo template mới',
                 'Chỉnh sửa subject và lời chào',
+                'Thiết kế chữ ký đại diện cho Khách thường và Key Account',
                 'Thiết kế 4 bảng dữ liệu theo từng sheet nguồn',
                 'Đặt một template làm mẫu hoạt động',
             ],

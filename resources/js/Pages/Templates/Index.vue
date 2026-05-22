@@ -8,6 +8,7 @@ import TemplateVariableContractCard from '@/Components/templates/TemplateVariabl
 import TemplatePartVersionsCard from '@/Components/templates/TemplatePartVersionsCard.vue';
 import TemplateSubjectPreviewCard from '@/Components/templates/TemplateSubjectPreviewCard.vue';
 import TemplateGreetingPreviewCard from '@/Components/templates/TemplateGreetingPreviewCard.vue';
+import TemplateRepresentativeSignatureEditor from '@/Components/templates/TemplateRepresentativeSignatureEditor.vue';
 import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTongHopTablePreviewCard.vue';
 import TemplateKhoanNppTablePreviewCard from '@/Components/templates/TemplateKhoanNppTablePreviewCard.vue';
 import TemplateCamCaTablePreviewCard from '@/Components/templates/TemplateCamCaTablePreviewCard.vue';
@@ -54,7 +55,7 @@ const props = defineProps<{
                 type: string;
                 label?: string;
                 description?: string;
-                kind?: 'text' | 'table';
+                kind?: 'text' | 'table' | 'composite';
                 sourceSheet?: string | null;
                 content?: string;
                 rows?: Array<{
@@ -66,6 +67,20 @@ const props = defineProps<{
                     hideWhenValueZero?: boolean;
                     isBold?: boolean;
                 }>;
+                blocks?: {
+                    normalCustomer?: {
+                        title?: string;
+                        signatureImageDataUrl?: string | null;
+                        representativeRole?: string;
+                        representativeName?: string;
+                    };
+                    keyAccountCustomer?: {
+                        title?: string;
+                        signatureImageDataUrl?: string | null;
+                        representativeRole?: string;
+                        representativeName?: string;
+                    };
+                };
             }>;
         };
     } | null;
@@ -77,7 +92,7 @@ const props = defineProps<{
             partType: string;
             code: string;
             label: string;
-            kind: 'text' | 'table';
+            kind: 'text' | 'table' | 'composite';
             sourceSheet: string | null;
             maxActiveVersions: number;
             activePolicy: string;
@@ -100,7 +115,7 @@ const props = defineProps<{
         partType: string;
         code: string;
         label: string;
-        kind: 'text' | 'table';
+        kind: 'text' | 'table' | 'composite';
         sourceSheet: string | null;
         maxActiveVersions: number;
         selectedVersionId: number | null;
@@ -311,7 +326,7 @@ const props = defineProps<{
         type: string;
         label: string;
         description: string;
-        kind: 'text' | 'table';
+        kind: 'text' | 'table' | 'composite';
         sourceSheet: string | null;
         maxActiveVersions: number;
     }>;
@@ -436,7 +451,7 @@ const tongHopDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table';
+    kind?: 'text' | 'table' | 'composite';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -456,7 +471,7 @@ const khoanNppDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table';
+    kind?: 'text' | 'table' | 'composite';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -476,7 +491,7 @@ const camCaDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table';
+    kind?: 'text' | 'table' | 'composite';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -496,7 +511,7 @@ const keyAccountDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table';
+    kind?: 'text' | 'table' | 'composite';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -541,6 +556,9 @@ const camCaDraftSection = computed(() =>
 );
 const keyAccountDraftSection = computed(() =>
     keyAccountDraftSections.value.find((section) => section.type === 'key-account-table') ?? null,
+);
+const representativeSignatureSection = computed(() =>
+    props.builderTemplate?.structure.sections?.find((section) => section.type === 'representative-signature') ?? null,
 );
 </script>
 
@@ -659,10 +677,11 @@ const keyAccountDraftSection = computed(() =>
                         <Tab value="0">Canvas chính</Tab>
                         <Tab value="1">Subject</Tab>
                         <Tab value="2">Lời chào</Tab>
-                        <Tab value="3">Bảng chế độ tháng</Tab>
-                        <Tab value="4">Bảng chương trình khoán đặc biệt</Tab>
-                        <Tab value="5">Bảng chiết khấu cám cá</Tab>
-                        <Tab value="6">Bảng chiết khấu Key Account</Tab>
+                        <Tab value="3">Chữ ký đại diện</Tab>
+                        <Tab value="4">Bảng chế độ tháng</Tab>
+                        <Tab value="5">Bảng chương trình khoán đặc biệt</Tab>
+                        <Tab value="6">Bảng chiết khấu cám cá</Tab>
+                        <Tab value="7">Bảng chiết khấu Key Account</Tab>
                     </TabList>
 
                     <TabPanels class="mt-4">
@@ -719,6 +738,9 @@ const keyAccountDraftSection = computed(() =>
                                                         <p class="text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
                                                             <template v-if="part.kind === 'text'">
                                                                 Text length: {{ part.contentSummary.textLength }} ký tự
+                                                            </template>
+                                                            <template v-else-if="part.kind === 'composite'">
+                                                                Configured blocks: {{ part.contentSummary.rowCount }}
                                                             </template>
                                                             <template v-else>
                                                                 Row count: {{ part.contentSummary.rowCount }}
@@ -955,6 +977,25 @@ const keyAccountDraftSection = computed(() =>
                         <TabPanel value="3">
                             <div class="space-y-6">
                                 <TemplatePartVersionsCard
+                                    title="Version của Chữ ký đại diện"
+                                    description="Part composite này chứa 2 block chữ ký riêng cho Khách thường và Key Account. Canvas chỉ ghép một version đang chọn của part này."
+                                    :group="partVersionGroupByType['representative-signature'] ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :is-binding-version-id="isBindingPartVersionId"
+                                    @select-version="bindPartVersionToCanvas"
+                                />
+
+                                <TemplateRepresentativeSignatureEditor
+                                    :template-id="builderTemplate?.id ?? null"
+                                    :can-manage-templates="canManageTemplates"
+                                    :section="representativeSignatureSection"
+                                />
+                            </div>
+                        </TabPanel>
+
+                        <TabPanel value="4">
+                            <div class="space-y-6">
+                                <TemplatePartVersionsCard
                                     title="Version của Bảng chế độ tháng"
                                     description="Quản lý version độc lập cho part `Tổng hợp`. Canvas chỉ ghép một version đang chọn của part này."
                                     :group="partVersionGroupByType['tong-hop-table'] ?? null"
@@ -982,7 +1023,7 @@ const keyAccountDraftSection = computed(() =>
                             </div>
                         </TabPanel>
 
-                        <TabPanel value="4">
+                        <TabPanel value="5">
                             <div class="space-y-6">
                                 <TemplatePartVersionsCard
                                     title="Version của Bảng chương trình khoán đặc biệt"
@@ -1011,7 +1052,7 @@ const keyAccountDraftSection = computed(() =>
                             </div>
                         </TabPanel>
 
-                        <TabPanel value="5">
+                        <TabPanel value="6">
                             <div class="space-y-6">
                                 <TemplatePartVersionsCard
                                     title="Version của Bảng chiết khấu cám cá"
@@ -1041,7 +1082,7 @@ const keyAccountDraftSection = computed(() =>
                             </div>
                         </TabPanel>
 
-                        <TabPanel value="6">
+                        <TabPanel value="7">
                             <div class="space-y-6">
                                 <TemplatePartVersionsCard
                                     title="Version của Bảng chiết khấu Key Account"

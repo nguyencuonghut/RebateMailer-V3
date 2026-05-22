@@ -30,7 +30,7 @@ const emit = defineEmits<{
         type: string;
         label?: string;
         description?: string;
-        kind?: 'text' | 'table';
+        kind?: 'text' | 'table' | 'composite';
         sourceSheet?: string | null;
         content?: string;
         rows?: Array<{
@@ -262,7 +262,7 @@ watch(
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
                                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-500">
-                                                {{ section.kind === 'table' ? 'Table section' : 'Text section' }}
+                                                {{ section.kind === 'table' ? 'Table section' : (section.kind === 'composite' ? 'Composite section' : 'Text section') }}
                                             </p>
                                             <h4 class="mt-2 text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
                                                 {{ section.label }}

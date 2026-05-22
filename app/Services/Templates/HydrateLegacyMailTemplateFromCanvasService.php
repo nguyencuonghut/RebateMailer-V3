@@ -49,6 +49,7 @@ class HydrateLegacyMailTemplateFromCanvasService
                 'sourceSheet' => $definition['sourceSheet'],
                 'content' => $part->kind === 'text' ? $version->text_template : null,
                 'rows' => $part->kind === 'table' ? ($version->structure_json['rows'] ?? []) : null,
+                'blocks' => $part->kind === 'composite' ? ($version->structure_json['blocks'] ?? []) : null,
             ], static fn (mixed $value): bool => $value !== null);
 
             $sections[] = $section;

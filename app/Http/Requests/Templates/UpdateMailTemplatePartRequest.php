@@ -37,7 +37,7 @@ class UpdateMailTemplatePartRequest extends FormRequest
             'section.type' => ['required_with:section', 'string', Rule::in($templatePartCatalogService->allowedTypes())],
             'section.label' => ['nullable', 'string', 'max:255'],
             'section.description' => ['nullable', 'string', 'max:1000'],
-            'section.kind' => ['nullable', 'string', Rule::in(['text', 'table'])],
+            'section.kind' => ['nullable', 'string', Rule::in(['text', 'table', 'composite'])],
             'section.sourceSheet' => ['nullable', 'string', 'max:255'],
             'section.rows' => ['nullable', 'array'],
             'section.rows.*.content' => ['nullable', 'string', 'max:5000'],
@@ -47,6 +47,17 @@ class UpdateMailTemplatePartRequest extends FormRequest
             'section.rows.*.valueColumn' => ['nullable', 'string', Rule::in(['quantity', 'supportRate', 'amount'])],
             'section.rows.*.hideWhenValueZero' => ['nullable', 'boolean'],
             'section.rows.*.isBold' => ['nullable', 'boolean'],
+            'section.blocks' => ['nullable', 'array'],
+            'section.blocks.normalCustomer' => ['nullable', 'array'],
+            'section.blocks.normalCustomer.title' => ['nullable', 'string', 'max:255'],
+            'section.blocks.normalCustomer.signatureImageDataUrl' => ['nullable', 'string', 'max:1048576'],
+            'section.blocks.normalCustomer.representativeRole' => ['nullable', 'string', 'max:255'],
+            'section.blocks.normalCustomer.representativeName' => ['nullable', 'string', 'max:255'],
+            'section.blocks.keyAccountCustomer' => ['nullable', 'array'],
+            'section.blocks.keyAccountCustomer.title' => ['nullable', 'string', 'max:255'],
+            'section.blocks.keyAccountCustomer.signatureImageDataUrl' => ['nullable', 'string', 'max:1048576'],
+            'section.blocks.keyAccountCustomer.representativeRole' => ['nullable', 'string', 'max:255'],
+            'section.blocks.keyAccountCustomer.representativeName' => ['nullable', 'string', 'max:255'],
         ];
     }
 

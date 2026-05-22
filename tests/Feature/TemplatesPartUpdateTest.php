@@ -310,4 +310,87 @@ class TemplatesPartUpdateTest extends TestCase
         $this->assertTrue($mailTemplate->structure_json['sections'][2]['rows'][1]['hideWhenValueZero']);
         $this->assertSame('child-program-loop', $mailTemplate->structure_json['sections'][2]['rows'][3]['rowType']);
     }
+
+    public function test_user_with_manage_permission_can_update_representative_signature_part_through_part_route(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Template chữ ký đại diện',
+            'subject_template' => 'Subject',
+            'structure_json' => [
+                'version' => '2.4-A',
+                'sections' => [
+                    ['type' => 'subject', 'label' => 'Subject', 'kind' => 'text', 'content' => 'Subject'],
+                    ['type' => 'greeting', 'label' => 'Lời chào', 'kind' => 'text', 'content' => 'Xin chào'],
+                    [
+                        'type' => 'representative-signature',
+                        'label' => 'Chữ ký đại diện',
+                        'kind' => 'composite',
+                        'blocks' => [
+                            'normalCustomer' => [
+                                'title' => 'Đại diện công ty',
+                                'signatureImageDataUrl' => null,
+                                'representativeRole' => '',
+                                'representativeName' => '',
+                            ],
+                            'keyAccountCustomer' => [
+                                'title' => 'Đại diện công ty',
+                                'signatureImageDataUrl' => null,
+                                'representativeRole' => '',
+                                'representativeName' => '',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        app(SyncLegacyMailTemplateToCompositionService::class)->syncMailTemplate($mailTemplate);
+
+        $section = [
+            'type' => 'representative-signature',
+            'label' => 'Chữ ký đại diện',
+            'description' => 'Chữ ký đại diện theo loại khách hàng.',
+            'kind' => 'composite',
+            'blocks' => [
+                'normalCustomer' => [
+                    'title' => 'Đại diện công ty',
+                    'signatureImageDataUrl' => 'data:image/png;base64,ZmFrZS1ub3JtYWw=',
+                    'representativeRole' => 'Trưởng ban tài chính',
+                    'representativeName' => 'Nguyễn Văn A',
+                ],
+                'keyAccountCustomer' => [
+                    'title' => 'Đại diện công ty',
+                    'signatureImageDataUrl' => 'data:image/png;base64,ZmFrZS1rZXk=',
+                    'representativeRole' => 'Giám đốc kinh doanh KA',
+                    'representativeName' => 'Trần Thị B',
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->put(route('templates.parts.update', $mailTemplate), [
+                'partType' => 'representative-signature',
+                'section' => $section,
+            ])
+            ->assertRedirect(route('templates.index'));
+
+        $signaturePart = TemplatePart::query()->where('type', 'representative-signature')->firstOrFail();
+        $signatureVersion = TemplatePartVersion::query()
+            ->where('template_part_id', $signaturePart->id)
+            ->where('legacy_mail_template_id', $mailTemplate->id)
+            ->firstOrFail();
+
+        $this->assertSame('representative-signature', $signatureVersion->structure_json['type']);
+        $this->assertSame('Trưởng ban tài chính', $signatureVersion->structure_json['blocks']['normalCustomer']['representativeRole']);
+        $this->assertSame('Nguyễn Văn A', $signatureVersion->structure_json['blocks']['normalCustomer']['representativeName']);
+        $this->assertSame('Giám đốc kinh doanh KA', $signatureVersion->structure_json['blocks']['keyAccountCustomer']['representativeRole']);
+        $this->assertSame('representative-signature', $mailTemplate->fresh()->structure_json['sections'][2]['type']);
+        $this->assertSame('composite', $mailTemplate->fresh()->structure_json['sections'][2]['kind']);
+        $this->assertSame('Nguyễn Văn A', $mailTemplate->fresh()->structure_json['sections'][2]['blocks']['normalCustomer']['representativeName']);
+        $this->assertSame('Trần Thị B', $mailTemplate->fresh()->structure_json['sections'][2]['blocks']['keyAccountCustomer']['representativeName']);
+    }
 }

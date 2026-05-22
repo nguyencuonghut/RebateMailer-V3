@@ -97,6 +97,24 @@ class BuildMailTemplateCanvasCompositionService
             ];
         }
 
+        if ($partType->kind() === 'composite') {
+            $blocks = $version->structure_json['blocks'] ?? [];
+            $configuredBlocks = collect(is_array($blocks) ? $blocks : [])
+                ->filter(fn (mixed $block): bool => is_array($block))
+                ->filter(function (array $block): bool {
+                    return filled($block['signatureImageDataUrl'] ?? null)
+                        || filled($block['representativeRole'] ?? null)
+                        || filled($block['representativeName'] ?? null);
+                })
+                ->count();
+
+            return [
+                'hasContent' => $configuredBlocks > 0,
+                'rowCount' => $configuredBlocks,
+                'textLength' => 0,
+            ];
+        }
+
         $rows = $version->structure_json['rows'] ?? [];
 
         return [
