@@ -2,6 +2,7 @@
 
 namespace App\Services\Mail;
 
+use App\Jobs\GenerateMailCampaignPdfExportJob;
 use App\Models\MailCampaign;
 use App\Models\MailCampaignExport;
 use App\Models\User;
@@ -29,7 +30,7 @@ class RequestMailCampaignPdfExportService
             throw new RuntimeException('Chiến dịch đang có yêu cầu export PDF chưa hoàn tất.');
         }
 
-        return MailCampaignExport::query()->create([
+        $export = MailCampaignExport::query()->create([
             'mail_campaign_id' => $campaign->id,
             'export_type' => 'pdf',
             'status' => 'queued',
@@ -38,5 +39,9 @@ class RequestMailCampaignPdfExportService
             'total_recipients' => $recipientCount,
             'exported_recipients' => 0,
         ]);
+
+        GenerateMailCampaignPdfExportJob::dispatch($export->id);
+
+        return $export;
     }
 }

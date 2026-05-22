@@ -225,6 +225,14 @@ const exportAggregatedUrl = computed(() =>
         ? route('mail.campaigns.recipients.export-aggregated', { mailCampaign: props.selectedCampaignId })
         : null,
 );
+const latestPdfExportDownloadUrl = computed(() =>
+    props.selectedCampaignId && props.selectedCampaign?.latestPdfExport?.status === 'completed' && props.selectedCampaign.latestPdfExport.id
+        ? route('mail.campaigns.exports.pdf.download', {
+            mailCampaign: props.selectedCampaignId,
+            mailCampaignExport: props.selectedCampaign.latestPdfExport.id,
+        })
+        : null,
+);
 const requestPdfExport = (): void => {
     if (!props.selectedCampaignId || !props.canManageCampaigns) {
         return;
@@ -278,7 +286,10 @@ const showLegacyMissingScheduleInfo = computed(() =>
 );
 const shouldAutoRefreshCampaign = computed(() =>
     !!props.selectedCampaign
-    && ['scheduled', 'dispatching'].includes(props.selectedCampaign.status),
+    && (
+        ['scheduled', 'dispatching'].includes(props.selectedCampaign.status)
+        || ['queued', 'processing'].includes(props.selectedCampaign.latestPdfExport?.status ?? '')
+    ),
 );
 const resolveSourceSheetSeverity = (sheet: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' => {
     if (sheet === 'Tổng hợp') {
@@ -958,6 +969,17 @@ onBeforeUnmount(() => {
                                         </div>
 
                                         <Tag :value="selectedCampaign.latestPdfExport.status" severity="info" rounded />
+                                    </div>
+
+                                    <div v-if="latestPdfExportDownloadUrl" class="mt-3 flex justify-end">
+                                        <a :href="latestPdfExportDownloadUrl">
+                                            <Button
+                                                type="button"
+                                                label="Tải file PDF"
+                                                icon="pi pi-download"
+                                                severity="success"
+                                            />
+                                        </a>
                                     </div>
 
                                     <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

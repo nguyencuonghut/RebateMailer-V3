@@ -14,4 +14,9 @@ return [
             900,
         ],
     ],
+    'exports' => [
+        'queue' => env('MAIL_CAMPAIGN_EXPORT_QUEUE', 'default'),
+        'disk' => env('MAIL_CAMPAIGN_EXPORT_DISK', 'local'),
+        'directory' => env('MAIL_CAMPAIGN_EXPORT_DIRECTORY', 'mail-exports/pdf'),
+    ],
 ];

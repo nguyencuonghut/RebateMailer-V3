@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\GenerateMailCampaignPdfExportJob;
 use App\Models\ImportBatch;
 use App\Models\ImportBatchAggregatedRecord;
 use App\Models\MailCampaign;
@@ -11,6 +12,7 @@ use App\Models\MailTemplateCanvas;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class MailCampaignPdfExportStoreTest extends TestCase
@@ -26,6 +28,8 @@ class MailCampaignPdfExportStoreTest extends TestCase
 
     public function test_user_with_mail_send_permission_can_request_pdf_export_for_campaign(): void
     {
+        Queue::fake();
+
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
         $campaign = $this->makeCampaignFixture($user);
 
@@ -42,6 +46,8 @@ class MailCampaignPdfExportStoreTest extends TestCase
             'total_recipients' => 1,
             'exported_recipients' => 0,
         ]);
+
+        Queue::assertPushed(GenerateMailCampaignPdfExportJob::class, 1);
     }
 
     public function test_request_pdf_export_requires_mail_send_permission(): void

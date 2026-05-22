@@ -12,6 +12,7 @@ use App\Http\Controllers\MailCampaignAggregatedDataExportController;
 use App\Http\Controllers\MailCampaignFailedRecipientsExportController;
 use App\Http\Controllers\MailCampaignRecipientRetryController;
 use App\Http\Controllers\MailCampaignPdfExportStoreController;
+use App\Http\Controllers\MailCampaignPdfExportDownloadController;
 use App\Http\Controllers\MailCampaignSampleSendController;
 use App\Http\Controllers\MailCampaignScheduleController;
 use App\Http\Controllers\MailCampaignStoreController;
@@ -130,6 +131,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/mail/campaigns/{mailCampaign}/exports/pdf', MailCampaignPdfExportStoreController::class)
         ->middleware(['permission:'.PermissionName::MailSend->value, 'throttle:5,1'])
         ->name('mail.campaigns.exports.pdf.store');
+    Route::get('/mail/campaigns/{mailCampaign}/exports/pdf/{mailCampaignExport}', MailCampaignPdfExportDownloadController::class)
+        ->middleware(['permission:'.PermissionName::MailView->value, 'throttle:10,1'])
+        ->name('mail.campaigns.exports.pdf.download');
 
     Route::get('/users', [UserManagementController::class, 'index'])
         ->middleware('permission:'.PermissionName::UsersView->value)
