@@ -20,6 +20,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'latest_error_message',
     'sent_at',
     'failed_at',
+    'sent_subject_snapshot',
+    'sent_html_snapshot',
+    'sent_signature_snapshot',
+    'snapshot_version',
 ])]
 class MailCampaignRecipient extends Model
 {
@@ -34,6 +38,8 @@ class MailCampaignRecipient extends Model
             'attempts_count' => 'integer',
             'sent_at' => 'datetime',
             'failed_at' => 'datetime',
+            'sent_signature_snapshot' => 'json:unicode',
+            'snapshot_version' => 'integer',
         ];
     }
 

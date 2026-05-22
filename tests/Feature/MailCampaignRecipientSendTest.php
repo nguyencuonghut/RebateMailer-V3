@@ -39,6 +39,7 @@ class MailCampaignRecipientSendTest extends TestCase
         [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
 
         $previewService = Mockery::mock(BuildMailCampaignRecipientPreviewService::class);
+        $capturedHtmlBody = null;
         $previewService->shouldReceive('build')
             ->once()
             ->withArgs(fn (MailCampaign $resolvedCampaign, int $recipientId): bool => $resolvedCampaign->id === $campaign->id && $recipientId === $recipient->id)
@@ -64,6 +65,8 @@ class MailCampaignRecipientSendTest extends TestCase
             ]);
         app()->instance(BuildMailCampaignRecipientPreviewService::class, $previewService);
 
+        Mail::assertNothingSent();
+
         $job = new DispatchMailCampaignRecipientJob($recipient->id);
         $job->handle(
             app(BuildMailCampaignRecipientPreviewService::class),
@@ -73,16 +76,28 @@ class MailCampaignRecipientSendTest extends TestCase
         );
 
         Mail::assertSent(MailCampaignRecipientMail::class, function (MailCampaignRecipientMail $mail) use ($recipient): bool {
+            $GLOBALS['__mail_campaign_snapshot_html'] = $mail->htmlBody;
+
             return $mail->hasTo((string) $recipient->recipient_email)
                 && $mail->subjectLine === 'Thư chiết khấu tháng 6';
         });
+
+        $capturedHtmlBody = $GLOBALS['__mail_campaign_snapshot_html'] ?? null;
+        unset($GLOBALS['__mail_campaign_snapshot_html']);
 
         $this->assertDatabaseHas('mail_campaign_recipients', [
             'id' => $recipient->id,
             'delivery_status' => 'sent',
             'attempts_count' => 1,
             'latest_error_message' => null,
+            'sent_subject_snapshot' => 'Thư chiết khấu tháng 6',
+            'snapshot_version' => 1,
         ]);
+
+        $recipient->refresh();
+
+        $this->assertSame($capturedHtmlBody, $recipient->sent_html_snapshot);
+        $this->assertNull($recipient->sent_signature_snapshot);
 
         $this->assertDatabaseHas('mail_campaign_recipient_attempts', [
             'mail_campaign_recipient_id' => $recipient->id,
