@@ -127,7 +127,7 @@ services:
       - php
       - artisan
       - queue:work
-      - "--queue=default,mail-dispatch,mail-export-pdf"
+      - "--queue=default"
       - "--sleep=3"
       - "--max-time=3600"
       - "--no-ansi"
