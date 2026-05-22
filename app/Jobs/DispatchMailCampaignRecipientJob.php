@@ -152,10 +152,6 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
                 'latest_error_message' => null,
                 'sent_at' => now(),
                 'failed_at' => null,
-                'sent_subject_snapshot' => (string) $subjectLine,
-                'sent_html_snapshot' => $emailHtml,
-                'sent_signature_snapshot' => null,
-                'snapshot_version' => 1,
             ])->save();
 
             $logMailCampaignRecipientAttemptService->log(

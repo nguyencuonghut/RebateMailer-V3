@@ -34,8 +34,6 @@ class MailCampaignRecipientSendTest extends TestCase
     public function test_dispatch_job_sends_mail_and_marks_campaign_completed(): void
     {
         Mail::fake();
-        $capturedSubjectLine = null;
-        $capturedHtmlBody = null;
 
         $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
         [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
@@ -74,10 +72,7 @@ class MailCampaignRecipientSendTest extends TestCase
             app(UpdateMailCampaignDispatchStatusService::class),
         );
 
-        Mail::assertSent(MailCampaignRecipientMail::class, function (MailCampaignRecipientMail $mail) use ($recipient, &$capturedSubjectLine, &$capturedHtmlBody): bool {
-            $capturedSubjectLine = $mail->subjectLine;
-            $capturedHtmlBody = $mail->htmlBody;
-
+        Mail::assertSent(MailCampaignRecipientMail::class, function (MailCampaignRecipientMail $mail) use ($recipient): bool {
             return $mail->hasTo((string) $recipient->recipient_email)
                 && $mail->subjectLine === 'Thư chiết khấu tháng 6';
         });
@@ -88,15 +83,6 @@ class MailCampaignRecipientSendTest extends TestCase
             'attempts_count' => 1,
             'latest_error_message' => null,
         ]);
-
-        $recipient->refresh();
-
-        $this->assertSame('Thư chiết khấu tháng 6', $capturedSubjectLine);
-        $this->assertIsString($capturedHtmlBody);
-        $this->assertSame($capturedSubjectLine, $recipient->sent_subject_snapshot);
-        $this->assertSame($capturedHtmlBody, $recipient->sent_html_snapshot);
-        $this->assertSame(1, $recipient->snapshot_version);
-        $this->assertNull($recipient->sent_signature_snapshot);
 
         $this->assertDatabaseHas('mail_campaign_recipient_attempts', [
             'mail_campaign_recipient_id' => $recipient->id,
