@@ -50,6 +50,11 @@ class MailCampaign extends Model
         return $this->hasMany(MailCampaignRecipient::class);
     }
 
+    public function exports(): HasMany
+    {
+        return $this->hasMany(MailCampaignExport::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

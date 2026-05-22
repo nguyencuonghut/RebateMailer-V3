@@ -123,6 +123,21 @@ const props = defineProps<{
             failedPercent: number;
             queuedPercent: number;
         };
+        canRequestPdfExport: boolean;
+        pdfExportDisabledReason: string | null;
+        latestPdfExport: {
+            id: number;
+            status: string;
+            statusLabel: string;
+            totalRecipients: number;
+            exportedRecipients: number;
+            requestedAt: string | null;
+            startedAt: string | null;
+            completedAt: string | null;
+            failedAt: string | null;
+            errorMessage: string | null;
+            fileName: string | null;
+        } | null;
     } | null;
     selectedRecipientPreview: {
         recipient: {
@@ -210,6 +225,16 @@ const exportAggregatedUrl = computed(() =>
         ? route('mail.campaigns.recipients.export-aggregated', { mailCampaign: props.selectedCampaignId })
         : null,
 );
+const requestPdfExport = (): void => {
+    if (!props.selectedCampaignId || !props.canManageCampaigns) {
+        return;
+    }
+
+    router.post(route('mail.campaigns.exports.pdf.store', { mailCampaign: props.selectedCampaignId }), {}, {
+        preserveScroll: true,
+        preserveState: true,
+    });
+};
 
 const toggleFailedFilter = (): void => {
     selectedRecipientDeliveryStatus.value = isFilteringFailed.value ? null : 'failed';
@@ -778,6 +803,15 @@ onBeforeUnmount(() => {
                                     <div class="flex flex-wrap justify-end gap-3">
                                         <Button
                                             type="button"
+                                            label="Export PDF mail đã gửi"
+                                            severity="contrast"
+                                            outlined
+                                            icon="pi pi-file-pdf"
+                                            :disabled="!selectedCampaign.canRequestPdfExport"
+                                            @click="requestPdfExport"
+                                        />
+                                        <Button
+                                            type="button"
                                             label="Gửi mẫu"
                                             severity="secondary"
                                             outlined
@@ -819,6 +853,16 @@ onBeforeUnmount(() => {
                                     </div>
                                     <Button
                                         type="button"
+                                        label="Export PDF mail đã gửi"
+                                        severity="contrast"
+                                        outlined
+                                        size="small"
+                                        icon="pi pi-file-pdf"
+                                        :disabled="!selectedCampaign.canRequestPdfExport"
+                                        @click="requestPdfExport"
+                                    />
+                                    <Button
+                                        type="button"
                                         label="Gửi mẫu"
                                         severity="secondary"
                                         outlined
@@ -845,6 +889,16 @@ onBeforeUnmount(() => {
                                     </div>
                                     <Button
                                         type="button"
+                                        label="Export PDF mail đã gửi"
+                                        severity="contrast"
+                                        outlined
+                                        size="small"
+                                        icon="pi pi-file-pdf"
+                                        :disabled="!selectedCampaign.canRequestPdfExport"
+                                        @click="requestPdfExport"
+                                    />
+                                    <Button
+                                        type="button"
                                         label="Gửi mẫu"
                                         severity="secondary"
                                         outlined
@@ -852,6 +906,92 @@ onBeforeUnmount(() => {
                                         icon="pi pi-send"
                                         @click="openSampleDialog"
                                     />
+                                </div>
+                            </div>
+
+                            <div class="rounded-[1.4rem] border p-4" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                                <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                            Export PDF mail đã gửi gần nhất
+                                        </h3>
+                                        <p class="mt-2 text-sm leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                            Có thể tạo yêu cầu export PDF cho toàn bộ người nhận của campaign đã chọn. Slice hiện tại mới ghi nhận yêu cầu và trạng thái chờ xử lý.
+                                        </p>
+                                        <p
+                                            v-if="!selectedCampaign.canRequestPdfExport && selectedCampaign.pdfExportDisabledReason"
+                                            class="mt-2 text-sm leading-6 text-amber-600"
+                                        >
+                                            {{ selectedCampaign.pdfExportDisabledReason }}
+                                        </p>
+                                    </div>
+
+                                    <Button
+                                        v-if="!showScheduleControls && !showScheduledDispatchInfo && !showLegacyMissingScheduleInfo"
+                                        type="button"
+                                        label="Export PDF mail đã gửi"
+                                        severity="contrast"
+                                        outlined
+                                        icon="pi pi-file-pdf"
+                                        :disabled="!selectedCampaign.canRequestPdfExport"
+                                        @click="requestPdfExport"
+                                    />
+                                </div>
+
+                                <div
+                                    v-if="selectedCampaign.latestPdfExport"
+                                    class="mt-4 rounded-[1rem] border p-4"
+                                    :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-app-bg)' }"
+                                >
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                Trạng thái: {{ selectedCampaign.latestPdfExport.statusLabel }}
+                                            </p>
+                                            <p
+                                                v-if="selectedCampaign.latestPdfExport.requestedAt"
+                                                class="mt-1 text-sm leading-6"
+                                                :style="{ color: 'var(--dashboard-muted-text)' }"
+                                            >
+                                                Yêu cầu lúc: {{ new Date(selectedCampaign.latestPdfExport.requestedAt).toLocaleString('vi-VN') }}
+                                            </p>
+                                        </div>
+
+                                        <Tag :value="selectedCampaign.latestPdfExport.status" severity="info" rounded />
+                                    </div>
+
+                                    <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                        <div class="rounded-[0.9rem] border px-4 py-3" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                                            <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Tổng người nhận</p>
+                                            <p class="mt-1 text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ selectedCampaign.latestPdfExport.totalRecipients }}
+                                            </p>
+                                        </div>
+                                        <div class="rounded-[0.9rem] border px-4 py-3" :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }">
+                                            <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Đã export</p>
+                                            <p class="mt-1 text-lg font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ selectedCampaign.latestPdfExport.exportedRecipients }}
+                                            </p>
+                                        </div>
+                                        <div
+                                            v-if="selectedCampaign.latestPdfExport.errorMessage"
+                                            class="rounded-[0.9rem] border px-4 py-3"
+                                            :style="{ borderColor: 'rgba(239, 68, 68, 0.24)', background: 'rgba(239, 68, 68, 0.06)' }"
+                                        >
+                                            <p class="text-sm" :style="{ color: 'var(--dashboard-muted-text)' }">Lỗi gần nhất</p>
+                                            <p class="mt-1 text-sm font-medium" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ selectedCampaign.latestPdfExport.errorMessage }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-else
+                                    class="mt-4 rounded-[1rem] border px-4 py-3 text-sm leading-6"
+                                    :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-app-bg)', color: 'var(--dashboard-muted-text)' }"
+                                >
+                                    Campaign này chưa có yêu cầu export PDF nào được tạo.
                                 </div>
                             </div>
                         </template>
