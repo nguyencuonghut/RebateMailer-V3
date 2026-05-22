@@ -182,19 +182,45 @@ const effectivePreviewRows = computed(() => {
     }
 
     const valueMap = new Map((props.bindingOptions ?? []).map((option) => [option.key, option.valuePreview]));
-
     const visibleRows = props.draftSection.rows.flatMap((row) => {
-        const columnKey = row.columnKey?.trim() || (row.content ?? '').trim();
+        const rowType = row.rowType?.trim() ?? 'blank';
+        const content = (row.content ?? '').trim();
+        const columnKey = row.columnKey?.trim() || content;
         const value = valueMap.get(columnKey) ?? '';
+        const hideWhenZero = row.hideWhenValueZero ?? false;
 
-        if (row.hideWhenValueZero && shouldHideWhenValueZero(value)) {
+        if ((rowType === 'parent' || rowType === 'child' || rowType === 'data') && hideWhenZero && shouldHideWhenValueZero(value)) {
             return [];
         }
 
-        return [{
-            ...row,
-            value,
-        }];
+        if (rowType === 'blank') {
+            return [{
+                ...row,
+                rowType,
+                numbering: '',
+                value: '',
+            }];
+        }
+
+        if (rowType === 'total' || rowType === 'text') {
+            return [{
+                ...row,
+                rowType,
+                numbering: '',
+                value,
+            }];
+        }
+
+        if (rowType === 'parent' || rowType === 'child' || rowType === 'data') {
+            return [{
+                ...row,
+                rowType,
+                columnKey,
+                value,
+            }];
+        }
+
+        return [];
     });
 
     return recalculateVisibleNumbering(visibleRows);

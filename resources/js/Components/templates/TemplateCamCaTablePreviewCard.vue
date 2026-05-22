@@ -92,6 +92,36 @@ const isZeroOrBlank = (value: string): boolean => {
 const shouldHideProgramItem = (programItem: { content?: string; amount?: string }): boolean =>
     isZeroOrBlank(programItem.content ?? '') && isZeroOrBlank(programItem.amount ?? '');
 
+const toRoman = (value: number): string => {
+    const map: Array<[number, string]> = [
+        [1000, 'M'],
+        [900, 'CM'],
+        [500, 'D'],
+        [400, 'CD'],
+        [100, 'C'],
+        [90, 'XC'],
+        [50, 'L'],
+        [40, 'XL'],
+        [10, 'X'],
+        [9, 'IX'],
+        [5, 'V'],
+        [4, 'IV'],
+        [1, 'I'],
+    ];
+
+    let remaining = value;
+    let roman = '';
+
+    for (const [number, glyph] of map) {
+        while (remaining >= number) {
+            roman += glyph;
+            remaining -= number;
+        }
+    }
+
+    return roman;
+};
+
 const effectivePreviewRows = computed(() => {
     const preview = props.preview;
 
@@ -150,7 +180,7 @@ const effectivePreviewRows = computed(() => {
 
             rows.push({
                 rowType,
-                numbering: row.numbering || ['I', 'II', 'III', 'IV', 'V'][parentCounter - 1] || String(parentCounter),
+                numbering: toRoman(parentCounter),
                 content,
                 value,
                 fontWeight: row.fontWeight,

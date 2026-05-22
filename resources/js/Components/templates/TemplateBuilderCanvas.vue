@@ -75,6 +75,7 @@ const {
     updateCamCaColumnKey,
     updateKeyAccountColumnKey,
     updateKeyAccountValueColumn,
+    rehydrateSectionRows,
     saveCanvasComposition,
     savePart,
     saveValidationErrors,
@@ -494,6 +495,7 @@ watch(
                                             handle=".template-row-handle"
                                             ghost-class="opacity-60"
                                             class="mt-4 space-y-3"
+                                            @change="rehydrateSectionRows(element)"
                                         >
                                             <template #item="{ element: row, index: rowIndex }">
                                                 <article
