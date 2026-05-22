@@ -299,4 +299,88 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.latestPdfExport.exportedRecipients', 0)
             );
     }
+
+    public function test_mail_page_allows_new_pdf_export_request_after_latest_export_failed(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-06',
+            'name' => 'Batch tháng 6/2026',
+            'original_file_name' => 'thang-6.xlsx',
+            'stored_path' => 'imports/tmp/thang-6.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '90400',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90400',
+                'customerFullName' => '90400 - Công ty B',
+                'customerType' => 'Khách thường',
+                'tongHop' => [
+                    'email' => 'b@example.com',
+                ],
+            ],
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Mẫu gửi mail tháng 6-2026',
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Chiến dịch tháng 6',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '90400',
+            'customer_full_name' => '90400 - Công ty B',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'b@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
+        ]);
+
+        $export = MailCampaignExport::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'export_type' => 'pdf',
+            'status' => 'failed',
+            'requested_by' => $user->id,
+            'requested_at' => now()->subMinute(),
+            'started_at' => now()->subMinute(),
+            'failed_at' => now(),
+            'error_message' => 'PDF render failed',
+            'total_recipients' => 1,
+            'exported_recipients' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('mail.index', ['campaign' => $campaign->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Mail/Index')
+                ->where('selectedCampaign.id', $campaign->id)
+                ->where('selectedCampaign.canRequestPdfExport', true)
+                ->where('selectedCampaign.pdfExportDisabledReason', null)
+                ->where('selectedCampaign.latestPdfExport.id', $export->id)
+                ->where('selectedCampaign.latestPdfExport.status', 'failed')
+                ->where('selectedCampaign.latestPdfExport.errorMessage', 'PDF render failed')
+                ->where('selectedCampaign.latestPdfExport.totalRecipients', 1)
+                ->where('selectedCampaign.latestPdfExport.exportedRecipients', 0)
+            );
+    }
 }

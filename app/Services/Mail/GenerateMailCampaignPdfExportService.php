@@ -78,6 +78,11 @@ class GenerateMailCampaignPdfExportService
                 'status' => 'failed',
                 'error_message' => $throwable->getMessage(),
                 'failed_at' => now(),
+                'completed_at' => null,
+                'file_disk' => null,
+                'file_path' => null,
+                'file_name' => null,
+                'exported_recipients' => 0,
             ])->save();
 
             throw $throwable;

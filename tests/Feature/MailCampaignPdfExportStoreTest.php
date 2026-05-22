@@ -124,6 +124,40 @@ class MailCampaignPdfExportStoreTest extends TestCase
         $this->assertDatabaseCount('mail_campaign_exports', 1);
     }
 
+    public function test_request_pdf_export_can_create_new_request_after_previous_export_failed(): void
+    {
+        Queue::fake();
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        $campaign = $this->makeCampaignFixture($user);
+
+        MailCampaignExport::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'export_type' => 'pdf',
+            'status' => 'failed',
+            'requested_by' => $user->id,
+            'requested_at' => now()->subMinute(),
+            'failed_at' => now()->subMinute(),
+            'error_message' => 'PDF render failed',
+            'total_recipients' => 1,
+            'exported_recipients' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('mail.campaigns.exports.pdf.store', $campaign))
+            ->assertRedirect(route('mail.index', ['campaign' => $campaign->id]));
+
+        $this->assertDatabaseCount('mail_campaign_exports', 2);
+        $this->assertDatabaseHas('mail_campaign_exports', [
+            'mail_campaign_id' => $campaign->id,
+            'export_type' => 'pdf',
+            'status' => 'queued',
+            'requested_by' => $user->id,
+        ]);
+
+        Queue::assertPushed(GenerateMailCampaignPdfExportJob::class, 1);
+    }
+
     private function makeCampaignFixture(User $user): MailCampaign
     {
         $batch = ImportBatch::query()->create([

@@ -50,6 +50,55 @@ class MailCampaignPdfExportJobTest extends TestCase
         $this->assertNotSame('', Storage::disk('local')->get($export->file_path));
     }
 
+    public function test_job_marks_export_failed_when_recipient_cannot_be_rendered(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $export] = $this->makeFailedExportFixture($user);
+
+        try {
+            $job = new GenerateMailCampaignPdfExportJob($export->id);
+            $job->handle(app(\App\Services\Mail\GenerateMailCampaignPdfExportService::class));
+            $this->fail('Expected export job to throw when recipient cannot be rendered.');
+        } catch (\Throwable) {
+            // expected
+        }
+
+        $export->refresh();
+
+        $this->assertSame('failed', $export->status);
+        $this->assertNotNull($export->failed_at);
+        $this->assertSame(0, $export->exported_recipients);
+        $this->assertNotNull($export->error_message);
+        $this->assertStringContainsString('Template canvas hiện chưa có liên kết legacy mail template', $export->error_message);
+    }
+
+    public function test_job_marks_export_failed_when_campaign_no_longer_has_recipients(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $export] = $this->makeExportFixture($user);
+
+        $campaign->recipients()->delete();
+
+        try {
+            $job = new GenerateMailCampaignPdfExportJob($export->id);
+            $job->handle(app(\App\Services\Mail\GenerateMailCampaignPdfExportService::class));
+            $this->fail('Expected export job to throw when campaign has no recipients.');
+        } catch (\Throwable) {
+            // expected
+        }
+
+        $export->refresh();
+
+        $this->assertSame('failed', $export->status);
+        $this->assertSame(0, $export->exported_recipients);
+        $this->assertNotNull($export->failed_at);
+        $this->assertSame('Chiến dịch không có người nhận để tạo file PDF.', $export->error_message);
+        $this->assertNull($export->completed_at);
+        $this->assertNull($export->file_disk);
+        $this->assertNull($export->file_path);
+        $this->assertNull($export->file_name);
+    }
+
     /**
      * @return array{0: MailCampaign, 1: MailCampaignExport}
      */
@@ -114,6 +163,75 @@ class MailCampaignPdfExportJobTest extends TestCase
             ],
             'snapshot_version' => 1,
             'sent_at' => now(),
+        ]);
+
+        $export = MailCampaignExport::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'export_type' => 'pdf',
+            'status' => 'queued',
+            'requested_by' => $user->id,
+            'requested_at' => now(),
+            'total_recipients' => 1,
+            'exported_recipients' => 0,
+        ]);
+
+        return [$campaign, $export];
+    }
+
+    /**
+     * @return array{0: MailCampaign, 1: MailCampaignExport}
+     */
+    private function makeFailedExportFixture(User $user): array
+    {
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-PDF-FAIL-2026-05',
+            'name' => 'Batch PDF lỗi',
+            'original_file_name' => 'thang-5.xlsx',
+            'stored_path' => 'imports/tmp/thang-5.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '90399',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90399',
+                'customerFullName' => '90399 - Công ty lỗi',
+                'customerType' => 'Khách thường',
+                'tongHop' => [
+                    'email' => 'fail@example.com',
+                ],
+            ],
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Canvas PDF lỗi',
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Chiến dịch PDF lỗi',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '90399',
+            'customer_full_name' => '90399 - Công ty lỗi',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'fail@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
         ]);
 
         $export = MailCampaignExport::query()->create([

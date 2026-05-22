@@ -38,6 +38,27 @@ class MailCampaignPdfExportDownloadTest extends TestCase
         $response->assertHeader('content-disposition', 'attachment; filename='.$export->file_name);
     }
 
+    public function test_download_is_blocked_when_export_is_not_completed(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $export] = $this->makeCompletedExportFixture($user);
+        $export->forceFill(['status' => 'processing', 'completed_at' => null])->save();
+
+        $this->actingAs($user)
+            ->get(route('mail.campaigns.exports.pdf.download', [$campaign, $export]))
+            ->assertNotFound();
+    }
+
+    public function test_download_is_blocked_when_export_file_is_missing(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $export] = $this->makeCompletedExportFixture($user);
+
+        $this->actingAs($user)
+            ->get(route('mail.campaigns.exports.pdf.download', [$campaign, $export]))
+            ->assertNotFound();
+    }
+
     /**
      * @return array{0: MailCampaign, 1: MailCampaignExport}
      */
