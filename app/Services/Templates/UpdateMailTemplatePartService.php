@@ -61,7 +61,7 @@ class UpdateMailTemplatePartService
 
             $version->forceFill([
                 'text_template' => $templatePart->kind === 'text' ? (string) ($payload['content'] ?? '') : null,
-                'structure_json' => $templatePart->kind !== 'text' ? $payload['section'] : null,
+                'structure_json' => $templatePart->kind === 'table' ? $payload['section'] : null,
                 'updated_by' => $user->id,
             ])->save();
 

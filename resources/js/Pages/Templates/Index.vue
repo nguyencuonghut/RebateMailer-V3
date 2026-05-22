@@ -12,7 +12,6 @@ import TemplateTongHopTablePreviewCard from '@/Components/templates/TemplateTong
 import TemplateKhoanNppTablePreviewCard from '@/Components/templates/TemplateKhoanNppTablePreviewCard.vue';
 import TemplateCamCaTablePreviewCard from '@/Components/templates/TemplateCamCaTablePreviewCard.vue';
 import TemplateKeyAccountTablePreviewCard from '@/Components/templates/TemplateKeyAccountTablePreviewCard.vue';
-import TemplateRepresentativeSignatureEditor from '@/Components/templates/TemplateRepresentativeSignatureEditor.vue';
 import DataTableGlobalFilterToolbar from '@/Components/common/DataTableGlobalFilterToolbar.vue';
 import type { TemplateTableRowType } from '@/Services/templates/useTemplateBuilderCanvas';
 import { useDataTableGlobalFilter } from '@/Services/useDataTableGlobalFilter';
@@ -55,7 +54,7 @@ const props = defineProps<{
                 type: string;
                 label?: string;
                 description?: string;
-                kind?: 'text' | 'table' | 'composite';
+                kind?: 'text' | 'table';
                 sourceSheet?: string | null;
                 content?: string;
                 rows?: Array<{
@@ -67,7 +66,6 @@ const props = defineProps<{
                     hideWhenValueZero?: boolean;
                     isBold?: boolean;
                 }>;
-                blocks?: Record<string, unknown>;
             }>;
         };
     } | null;
@@ -79,7 +77,7 @@ const props = defineProps<{
             partType: string;
             code: string;
             label: string;
-            kind: 'text' | 'table' | 'composite';
+            kind: 'text' | 'table';
             sourceSheet: string | null;
             maxActiveVersions: number;
             activePolicy: string;
@@ -102,7 +100,7 @@ const props = defineProps<{
         partType: string;
         code: string;
         label: string;
-        kind: 'text' | 'table' | 'composite';
+        kind: 'text' | 'table';
         sourceSheet: string | null;
         maxActiveVersions: number;
         selectedVersionId: number | null;
@@ -313,7 +311,7 @@ const props = defineProps<{
         type: string;
         label: string;
         description: string;
-        kind: 'text' | 'table' | 'composite';
+        kind: 'text' | 'table';
         sourceSheet: string | null;
         maxActiveVersions: number;
     }>;
@@ -438,7 +436,7 @@ const tongHopDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table' | 'composite';
+    kind?: 'text' | 'table';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -453,13 +451,12 @@ const tongHopDraftSections = ref<Array<{
         styleRole: 'parent' | 'child' | 'neutral';
         fontWeight: 'bold' | 'regular';
     }>;
-    blocks?: Record<string, unknown>;
 }>>([]);
 const khoanNppDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table' | 'composite';
+    kind?: 'text' | 'table';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -474,13 +471,12 @@ const khoanNppDraftSections = ref<Array<{
         styleRole: 'parent' | 'child' | 'neutral';
         fontWeight: 'bold' | 'regular';
     }>;
-    blocks?: Record<string, unknown>;
 }>>([]);
 const camCaDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table' | 'composite';
+    kind?: 'text' | 'table';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -495,13 +491,12 @@ const camCaDraftSections = ref<Array<{
         styleRole: 'parent' | 'child' | 'neutral';
         fontWeight: 'bold' | 'regular';
     }>;
-    blocks?: Record<string, unknown>;
 }>>([]);
 const keyAccountDraftSections = ref<Array<{
     type: string;
     label?: string;
     description?: string;
-    kind?: 'text' | 'table' | 'composite';
+    kind?: 'text' | 'table';
     sourceSheet?: string | null;
     content?: string;
     rows?: Array<{
@@ -516,7 +511,6 @@ const keyAccountDraftSections = ref<Array<{
         styleRole: 'parent' | 'child' | 'neutral';
         fontWeight: 'bold' | 'regular';
     }>;
-    blocks?: Record<string, unknown>;
 }>>([]);
 
 const partVersionGroupByType = computed(() =>
@@ -669,7 +663,6 @@ const keyAccountDraftSection = computed(() =>
                         <Tab value="4">Bảng chương trình khoán đặc biệt</Tab>
                         <Tab value="5">Bảng chiết khấu cám cá</Tab>
                         <Tab value="6">Bảng chiết khấu Key Account</Tab>
-                        <Tab value="7">Chữ ký đại diện</Tab>
                     </TabList>
 
                     <TabPanels class="mt-4">
@@ -1074,24 +1067,6 @@ const keyAccountDraftSection = computed(() =>
                                     :preview="keyAccountTablePreview"
                                     :draft-section="keyAccountDraftSection"
                                     :binding-options="keyAccountBindingOptions"
-                                />
-                            </div>
-                        </TabPanel>
-
-                        <TabPanel value="7">
-                            <div class="space-y-6">
-                                <TemplatePartVersionsCard
-                                    title="Version của Khối chữ ký đại diện"
-                                    description="Part composite này nằm trong canvas template và chứa đồng thời 2 block chữ ký cho Khách thường và Key Account."
-                                    :group="partVersionGroupByType['representative-signature'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
-                                    :is-binding-version-id="isBindingPartVersionId"
-                                    @select-version="bindPartVersionToCanvas"
-                                />
-
-                                <TemplateRepresentativeSignatureEditor
-                                    :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
                                 />
                             </div>
                         </TabPanel>

@@ -12,7 +12,7 @@ const props = defineProps<{
         partType: string;
         code: string;
         label: string;
-        kind: 'text' | 'table' | 'composite';
+        kind: 'text' | 'table';
         sourceSheet: string | null;
         maxActiveVersions: number;
         selectedVersionId: number | null;
@@ -127,9 +127,7 @@ const emit = defineEmits<{
 
                                 <div class="flex flex-wrap gap-2">
                                     <Tag
-                                        :value="group.kind === 'text'
-                                            ? (version.hasTextTemplate ? 'Có text template' : 'Text rỗng')
-                                            : (group.kind === 'composite' ? `${version.rowCount} block` : `${version.rowCount} row`)"
+                                        :value="group.kind === 'text' ? (version.hasTextTemplate ? 'Có text template' : 'Text rỗng') : `${version.rowCount} row`"
                                         severity="warn"
                                         rounded
                                     />

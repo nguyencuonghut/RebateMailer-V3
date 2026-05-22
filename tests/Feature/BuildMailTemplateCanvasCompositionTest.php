@@ -48,7 +48,7 @@ class BuildMailTemplateCanvasCompositionTest extends TestCase
         $this->assertNotNull($composition);
         $this->assertSame($canvas->id, $composition['canvasId']);
         $this->assertSame('composition-db', $composition['storageModel']);
-        $this->assertCount(7, $composition['partSelections']);
+        $this->assertCount(6, $composition['partSelections']);
         $this->assertSame('subject', $composition['partSelections'][0]['partType']);
         $this->assertSame(1, $composition['partSelections'][0]['maxActiveVersions']);
         $this->assertTrue($composition['partSelections'][0]['contentSummary']['hasContent']);
@@ -60,7 +60,5 @@ class BuildMailTemplateCanvasCompositionTest extends TestCase
         $this->assertSame(2, $composition['partSelections'][2]['contentSummary']['rowCount']);
         $this->assertFalse($composition['partSelections'][3]['isConfigured']);
         $this->assertStringStartsWith('template-part-version-', $composition['partSelections'][2]['selectedVersion']['versionKey']);
-        $this->assertSame('representative-signature', $composition['partSelections'][6]['partType']);
-        $this->assertSame('composite', $composition['partSelections'][6]['kind']);
     }
 }

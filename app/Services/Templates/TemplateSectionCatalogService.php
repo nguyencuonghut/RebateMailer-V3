@@ -46,10 +46,6 @@ class TemplateSectionCatalogService
     {
         $resolvedSection = $this->resolveTemplateCanvasSectionService->resolve($mailTemplate, $type);
 
-        if ($type === 'representative-signature') {
-            return $this->buildRepresentativeSignatureSection($resolvedSection);
-        }
-
         $section = $this->buildSectionPayload(
             $type,
             match ($type) {
@@ -81,53 +77,6 @@ class TemplateSectionCatalogService
             'sourceSheet' => $definition['sourceSheet'],
             'content' => in_array($type, ['subject', 'greeting'], true) ? $textContent : null,
         ], static fn (mixed $value): bool => $value !== null);
-    }
-
-    /**
-     * @param  array<string, mixed>|null  $resolvedSection
-     * @return array<string, mixed>
-     */
-    private function buildRepresentativeSignatureSection(?array $resolvedSection): array
-    {
-        $definition = collect($this->all())->firstWhere('type', 'representative-signature');
-        $blocks = $this->normalizeRepresentativeSignatureBlocks($resolvedSection['blocks'] ?? null);
-
-        return array_filter([
-            'type' => $definition['type'],
-            'label' => $definition['label'],
-            'description' => $definition['description'],
-            'kind' => $definition['kind'],
-            'sourceSheet' => $definition['sourceSheet'],
-            'blocks' => $blocks,
-        ], static fn (mixed $value): bool => $value !== null);
-    }
-
-    /**
-     * @return array<string, array<string, string|null>>
-     */
-    private function normalizeRepresentativeSignatureBlocks(mixed $blocks): array
-    {
-        $normalizedBlocks = is_array($blocks) ? $blocks : [];
-
-        return [
-            'normalCustomer' => $this->normalizeRepresentativeSignatureBlock($normalizedBlocks['normalCustomer'] ?? null),
-            'keyAccountCustomer' => $this->normalizeRepresentativeSignatureBlock($normalizedBlocks['keyAccountCustomer'] ?? null),
-        ];
-    }
-
-    /**
-     * @return array<string, string|null>
-     */
-    private function normalizeRepresentativeSignatureBlock(mixed $block): array
-    {
-        $block = is_array($block) ? $block : [];
-
-        return [
-            'title' => trim((string) ($block['title'] ?? 'Đại diện công ty')) ?: 'Đại diện công ty',
-            'signatureImageDataUrl' => ($value = trim((string) ($block['signatureImageDataUrl'] ?? ''))) !== '' ? $value : null,
-            'representativeRole' => ($value = trim((string) ($block['representativeRole'] ?? ''))) !== '' ? $value : null,
-            'representativeName' => ($value = trim((string) ($block['representativeName'] ?? ''))) !== '' ? $value : null,
-        ];
     }
 
     private function resolveGreetingContent(MailTemplate $mailTemplate): string
