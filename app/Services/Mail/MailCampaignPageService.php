@@ -4,7 +4,6 @@ namespace App\Services\Mail;
 
 use App\Models\ImportBatch;
 use App\Models\MailCampaign;
-use App\Models\MailCampaignExport;
 use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
 
@@ -44,7 +43,7 @@ class MailCampaignPageService
     private function resolveSelectedCampaign(?int $selectedCampaignId): ?MailCampaign
     {
         $query = MailCampaign::query()
-            ->with(['importBatch', 'templateCanvas', 'creator', 'recipients', 'exports' => fn ($query) => $query->latest('created_at')->latest('id')])
+            ->with(['importBatch', 'templateCanvas', 'creator', 'recipients'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -148,15 +147,6 @@ class MailCampaignPageService
             'failed' => $campaign->recipients->where('delivery_status', 'failed')->count(),
         ];
 
-        $latestPdfExport = $campaign->exports
-            ->first(fn (MailCampaignExport $export): bool => $export->export_type === 'sent-mails-pdf');
-
-        $hasPendingPdfExport = $campaign->exports
-            ->contains(fn (MailCampaignExport $export): bool => $export->export_type === 'sent-mails-pdf'
-                && in_array($export->status, ['queued', 'processing'], true));
-
-        $canRequestPdfExport = $recipientSummary['sent'] > 0 && ! $hasPendingPdfExport;
-
         return [
             'id' => $campaign->id,
             'name' => $campaign->name,
@@ -179,40 +169,7 @@ class MailCampaignPageService
                 'isActive' => $campaign->templateCanvas?->is_active ?? false,
             ],
             'recipientSummary' => $recipientSummary,
-            'canRequestPdfExport' => $canRequestPdfExport,
-            'pdfExportDisabledReason' => $canRequestPdfExport
-                ? null
-                : ($recipientSummary['sent'] === 0
-                    ? 'Chiến dịch chưa có mail đã gửi để export PDF.'
-                    : ($hasPendingPdfExport
-                        ? 'Đang có một yêu cầu export PDF mail đã gửi chưa hoàn tất.'
-                        : null)),
-            'latestPdfExport' => $latestPdfExport ? $this->presentPdfExport($latestPdfExport) : null,
             'progress' => $this->buildProgressPayload($campaign, $recipientSummary),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function presentPdfExport(MailCampaignExport $export): array
-    {
-        return [
-            'id' => $export->id,
-            'type' => $export->export_type,
-            'status' => $export->status,
-            'statusLabel' => $this->presentPdfExportStatus($export->status),
-            'statusDetail' => $this->presentPdfExportStatusDetail($export),
-            'requestedAt' => optional($export->requested_at)->toIso8601String(),
-            'startedAt' => optional($export->started_at)->toIso8601String(),
-            'completedAt' => optional($export->completed_at)->toIso8601String(),
-            'failedAt' => optional($export->failed_at)->toIso8601String(),
-            'fileName' => $export->file_name,
-            'filePath' => $export->file_path,
-            'totalRecipients' => $export->total_recipients,
-            'exportedRecipients' => $export->exported_recipients,
-            'errorMessage' => $export->error_message,
-            'canDownload' => $export->status === 'completed' && filled($export->file_path),
         ];
     }
 
@@ -274,10 +231,6 @@ class MailCampaignPageService
                 'attemptsCount' => $recipient->attempts_count,
                 'canRetry' => $recipient->delivery_status === 'failed',
                 'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
-                'canDownloadSentPdf' => $recipient->delivery_status === 'sent'
-                    && filled($recipient->sent_subject_snapshot)
-                    && filled($recipient->sent_html_snapshot)
-                    && is_array($recipient->sent_signature_snapshot),
                 'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
                     'id' => $attempt->id,
                     'eventType' => $attempt->event_type,
@@ -332,28 +285,6 @@ class MailCampaignPageService
             'paused' => 'Tạm dừng',
             'cancelled' => 'Đã hủy',
             default => $status,
-        };
-    }
-
-    private function presentPdfExportStatus(string $status): string
-    {
-        return match ($status) {
-            'queued' => 'Đang chờ tạo file',
-            'processing' => 'Đang tạo file',
-            'completed' => 'Đã tạo xong',
-            'failed' => 'Tạo file thất bại',
-            default => ucfirst($status),
-        };
-    }
-
-    private function presentPdfExportStatusDetail(MailCampaignExport $export): ?string
-    {
-        return match ($export->status) {
-            'queued' => 'Yêu cầu đã được ghi nhận và đang chờ worker lấy job.',
-            'processing' => 'Worker đã lấy job và đang render PDF.',
-            'completed' => 'File PDF đã tạo xong và sẵn sàng để tải xuống.',
-            'failed' => 'Quá trình tạo PDF đã thất bại.',
-            default => null,
         };
     }
 

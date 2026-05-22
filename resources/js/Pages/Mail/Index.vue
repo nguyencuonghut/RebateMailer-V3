@@ -71,24 +71,6 @@ type RecipientRow = {
     }>;
 };
 
-type PdfExportSummary = {
-    id: number;
-    type: string;
-    status: string;
-    statusLabel: string;
-    statusDetail: string | null;
-    requestedAt: string | null;
-    startedAt: string | null;
-    completedAt: string | null;
-    failedAt: string | null;
-    fileName: string | null;
-    filePath: string | null;
-    totalRecipients: number;
-    exportedRecipients: number;
-    errorMessage: string | null;
-    canDownload: boolean;
-};
-
 const props = defineProps<{
     title: string;
     description: string;
@@ -127,9 +109,6 @@ const props = defineProps<{
             sent: number;
             failed: number;
         };
-        canRequestPdfExport: boolean;
-        pdfExportDisabledReason: string | null;
-        latestPdfExport: PdfExportSummary | null;
         progress: {
             batchId: number;
             batchCode: string | null;
@@ -231,48 +210,9 @@ const exportAggregatedUrl = computed(() =>
         ? route('mail.campaigns.recipients.export-aggregated', { mailCampaign: props.selectedCampaignId })
         : null,
 );
-const latestPdfExportDownloadUrl = computed(() =>
-    props.selectedCampaignId && props.selectedCampaign?.latestPdfExport?.canDownload
-        ? route('mail.campaigns.pdf-exports.download', {
-            mailCampaign: props.selectedCampaignId,
-            mailCampaignExport: props.selectedCampaign.latestPdfExport.id,
-        })
-        : null,
-);
-
-const latestPdfExportProgressPercent = computed(() => {
-    const exportSummary = props.selectedCampaign?.latestPdfExport;
-
-    if (!exportSummary || exportSummary.totalRecipients <= 0) {
-        return 0;
-    }
-
-    if (exportSummary.status === 'completed') {
-        return 100;
-    }
-
-    return Math.max(0, Math.min(100, Math.round((exportSummary.exportedRecipients / exportSummary.totalRecipients) * 100)));
-});
-const isRequestingPdfExport = ref(false);
 
 const toggleFailedFilter = (): void => {
     selectedRecipientDeliveryStatus.value = isFilteringFailed.value ? null : 'failed';
-};
-
-const requestPdfExport = (): void => {
-    if (!props.selectedCampaignId || !props.selectedCampaign?.canRequestPdfExport || isRequestingPdfExport.value) {
-        return;
-    }
-
-    isRequestingPdfExport.value = true;
-
-    router.post(route('mail.campaigns.pdf-exports.store', { mailCampaign: props.selectedCampaignId }), {}, {
-        preserveScroll: true,
-        preserveState: true,
-        onFinish: () => {
-            isRequestingPdfExport.value = false;
-        },
-    });
 };
 
 const selectedCampaignOption = computed(() =>
@@ -311,16 +251,10 @@ const showLegacyMissingScheduleInfo = computed(() =>
     && !props.selectedCampaign.scheduledForAt
     && !props.selectedCampaign.scheduledAt,
 );
-const shouldAutoRefreshCampaign = computed(() => {
-    if (!props.selectedCampaign) {
-        return false;
-    }
-
-    const hasInFlightDispatch = ['scheduled', 'dispatching'].includes(props.selectedCampaign.status);
-    const hasInFlightPdfExport = ['queued', 'processing'].includes(props.selectedCampaign.latestPdfExport?.status ?? '');
-
-    return hasInFlightDispatch || hasInFlightPdfExport;
-});
+const shouldAutoRefreshCampaign = computed(() =>
+    !!props.selectedCampaign
+    && ['scheduled', 'dispatching'].includes(props.selectedCampaign.status),
+);
 const resolveSourceSheetSeverity = (sheet: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' => {
     if (sheet === 'Tổng hợp') {
         return 'info';
@@ -967,16 +901,6 @@ onBeforeUnmount(() => {
 
                                     <div class="flex shrink-0 gap-2">
                                         <Button
-                                            v-if="selectedCampaign"
-                                            type="button"
-                                            label="Export PDF mail đã gửi"
-                                            severity="contrast"
-                                            icon="pi pi-file-pdf"
-                                            :disabled="!selectedCampaign.canRequestPdfExport || isRequestingPdfExport"
-                                            :title="selectedCampaign.pdfExportDisabledReason || undefined"
-                                            @click="requestPdfExport"
-                                        />
-                                        <Button
                                             type="button"
                                             :label="isFilteringFailed ? 'Xem tất cả' : `Chỉ xem lỗi${failedRecipientCount > 0 ? ` (${failedRecipientCount})` : ''}`"
                                             :severity="isFilteringFailed ? 'secondary' : 'danger'"
@@ -1009,66 +933,6 @@ onBeforeUnmount(() => {
                                             />
                                         </a>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div
-                                v-if="selectedCampaign?.latestPdfExport"
-                                class="rounded-[1.25rem] border px-4 py-3 text-sm"
-                                :style="{ borderColor: 'var(--dashboard-panel-border)', background: 'var(--dashboard-card-bg)' }"
-                            >
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <p class="font-semibold" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                            Export PDF mail đã gửi gần nhất
-                                        </p>
-                                        <p class="mt-1 leading-6" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                            Trạng thái: {{ selectedCampaign.latestPdfExport.statusLabel }}.
-                                            <template v-if="selectedCampaign.latestPdfExport.requestedAt">
-                                                Yêu cầu lúc {{ new Date(selectedCampaign.latestPdfExport.requestedAt).toLocaleString('vi-VN') }}.
-                                            </template>
-                                            <template v-if="selectedCampaign.latestPdfExport.totalRecipients > 0">
-                                                Phạm vi {{ selectedCampaign.latestPdfExport.totalRecipients }} mail đã gửi.
-                                            </template>
-                                        </p>
-                                        <p
-                                            v-if="selectedCampaign.latestPdfExport.statusDetail"
-                                            class="mt-1 leading-6"
-                                            :style="{ color: 'var(--dashboard-muted-text)' }"
-                                        >
-                                            {{ selectedCampaign.latestPdfExport.statusDetail }}
-                                        </p>
-                                        <div
-                                            v-if="selectedCampaign.latestPdfExport.totalRecipients > 0 && ['queued', 'processing', 'completed'].includes(selectedCampaign.latestPdfExport.status)"
-                                            class="mt-3"
-                                        >
-                                            <div class="mb-1 flex items-center justify-between text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
-                                                <span>Tiến độ export PDF</span>
-                                                <span>{{ selectedCampaign.latestPdfExport.exportedRecipients }}/{{ selectedCampaign.latestPdfExport.totalRecipients }} ({{ latestPdfExportProgressPercent }}%)</span>
-                                            </div>
-                                            <ProgressBar :value="latestPdfExportProgressPercent" />
-                                        </div>
-                                        <p
-                                            v-if="selectedCampaign.latestPdfExport.errorMessage"
-                                            class="mt-1 leading-6 text-red-500"
-                                        >
-                                            {{ selectedCampaign.latestPdfExport.errorMessage }}
-                                        </p>
-                                    </div>
-
-                                    <Tag :value="selectedCampaign.latestPdfExport.statusLabel" :severity="selectedCampaign.latestPdfExport.status === 'failed' ? 'danger' : selectedCampaign.latestPdfExport.status === 'completed' ? 'success' : 'info'" rounded />
-                                </div>
-
-                                <div v-if="latestPdfExportDownloadUrl" class="mt-3">
-                                    <a :href="latestPdfExportDownloadUrl">
-                                        <Button
-                                            type="button"
-                                            label="Tải file PDF"
-                                            icon="pi pi-download"
-                                            severity="success"
-                                            size="small"
-                                        />
-                                    </a>
                                 </div>
                             </div>
 
@@ -1140,19 +1004,6 @@ onBeforeUnmount(() => {
                                                 outlined
                                                 @click="openRecipientPreview(data.id)"
                                             />
-                                            <a
-                                                v-if="data.canDownloadSentPdf && selectedCampaign"
-                                                :href="route('mail.campaigns.recipients.download-pdf', { mailCampaign: selectedCampaign.id, mailCampaignRecipient: data.id })"
-                                            >
-                                                <Button
-                                                    type="button"
-                                                    label="Trích xuất PDF"
-                                                    size="small"
-                                                    severity="contrast"
-                                                    icon="pi pi-file-pdf"
-                                                    outlined
-                                                />
-                                            </a>
                                             <Button
                                                 type="button"
                                                 label="Chi tiết lỗi"
