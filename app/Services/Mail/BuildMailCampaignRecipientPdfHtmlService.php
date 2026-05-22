@@ -12,17 +12,16 @@ class BuildMailCampaignRecipientPdfHtmlService
     }
 
     /**
-     * @param  array<string, mixed>  $preview
-     * @param  array<string, string|null>  $signature
+     * @param  array{subjectLine: string, bodyHtml: string|null, preview: array<string, mixed>|null, signature: array<string, string|null>}  $payload
      */
-    public function build(array $preview, array $signature): string
+    public function build(array $payload): string
     {
         return $this->viewFactory
             ->make('mail.campaign-recipient-pdf', [
-                'subjectLine' => (string) data_get($preview, 'subject.renderedText', ''),
-                'bodyHtml' => null,
-                'preview' => $preview,
-                'signature' => $signature,
+                'subjectLine' => (string) ($payload['subjectLine'] ?? ''),
+                'bodyHtml' => $payload['bodyHtml'] ?? null,
+                'preview' => $payload['preview'] ?? null,
+                'signature' => $payload['signature'] ?? [],
             ])
             ->render();
     }

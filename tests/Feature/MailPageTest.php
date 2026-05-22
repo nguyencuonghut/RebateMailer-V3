@@ -383,4 +383,80 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.latestPdfExport.exportedRecipients', 0)
             );
     }
+
+    public function test_mail_page_exposes_recipient_pdf_export_capability_in_recipient_list(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-07',
+            'name' => 'Batch tháng 7/2026',
+            'original_file_name' => 'thang-7.xlsx',
+            'stored_path' => 'imports/tmp/thang-7.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '90600',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90600',
+                'customerFullName' => '90600 - Công ty PDF',
+                'customerType' => 'Khách thường',
+                'tongHop' => [
+                    'email' => 'pdf@example.com',
+                ],
+            ],
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Canvas tháng 7-2026',
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Chiến dịch tháng 7',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '90600',
+            'customer_full_name' => '90600 - Công ty PDF',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'pdf@example.com',
+            'delivery_status' => 'sent',
+            'attempts_count' => 1,
+            'sent_subject_snapshot' => 'Chế độ tháng 03.2026 - 90600 - Công ty PDF',
+            'sent_html_snapshot' => '<!DOCTYPE html><html lang="vi"><body><div>Kính gửi 90600 - Công ty PDF</div></body></html>',
+            'sent_signature_snapshot' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => null,
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn PDF',
+            ],
+            'snapshot_version' => 1,
+            'sent_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('mail.index', ['campaign' => $campaign->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Mail/Index')
+                ->where('selectedCampaign.id', $campaign->id)
+                ->where('recipientList.0.customerCode', '90600')
+                ->where('recipientList.0.canExportPdf', true)
+            );
+    }
 }

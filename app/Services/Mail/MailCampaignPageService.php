@@ -7,11 +7,13 @@ use App\Models\MailCampaign;
 use App\Models\MailCampaignExport;
 use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
+use RuntimeException;
 
 class MailCampaignPageService
 {
     public function __construct(
         private readonly BuildMailCampaignRecipientPreviewService $buildMailCampaignRecipientPreviewService,
+        private readonly BuildMailCampaignRecipientPdfPayloadService $buildMailCampaignRecipientPdfPayloadService,
     ) {
     }
 
@@ -287,6 +289,7 @@ class MailCampaignPageService
                 'latestErrorMessage' => $recipient->latest_error_message,
                 'latestFriendlyMessage' => $this->resolveLatestFriendlyMessage($recipient),
                 'attemptsCount' => $recipient->attempts_count,
+                'canExportPdf' => $this->canExportRecipientPdf($campaign, $recipient),
                 'canRetry' => $recipient->delivery_status === 'failed',
                 'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
                 'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
@@ -303,6 +306,17 @@ class MailCampaignPageService
             ])
             ->values()
             ->all();
+    }
+
+    private function canExportRecipientPdf(MailCampaign $campaign, MailCampaignRecipient $recipient): bool
+    {
+        try {
+            $this->buildMailCampaignRecipientPdfPayloadService->build($campaign, $recipient);
+
+            return true;
+        } catch (RuntimeException) {
+            return false;
+        }
     }
 
     private function resolveLatestFriendlyMessage(MailCampaignRecipient $recipient): ?string

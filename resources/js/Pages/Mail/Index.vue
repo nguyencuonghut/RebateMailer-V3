@@ -56,6 +56,7 @@ type RecipientRow = {
     latestErrorMessage: string | null;
     latestFriendlyMessage: string | null;
     attemptsCount: number;
+    canExportPdf: boolean;
     canRetry: boolean;
     canResend: boolean;
     attemptLogs: Array<{
@@ -225,6 +226,13 @@ const exportAggregatedUrl = computed(() =>
         ? route('mail.campaigns.recipients.export-aggregated', { mailCampaign: props.selectedCampaignId })
         : null,
 );
+const resolveRecipientPdfDownloadUrl = (recipientId: number): string | null =>
+    props.selectedCampaignId
+        ? route('mail.campaigns.recipients.pdf.download', {
+            mailCampaign: props.selectedCampaignId,
+            mailCampaignRecipient: recipientId,
+        })
+        : null;
 const latestPdfExportDownloadUrl = computed(() =>
     props.selectedCampaignId && props.selectedCampaign?.latestPdfExport?.status === 'completed' && props.selectedCampaign.latestPdfExport.id
         ? route('mail.campaigns.exports.pdf.download', {
@@ -1165,6 +1173,29 @@ onBeforeUnmount(() => {
                                                 :icon="previewErrorsCache.get(data.id)?.length ? 'pi pi-exclamation-circle' : undefined"
                                                 outlined
                                                 @click="openRecipientPreview(data.id)"
+                                            />
+                                            <a
+                                                v-if="data.canExportPdf && resolveRecipientPdfDownloadUrl(data.id)"
+                                                :href="resolveRecipientPdfDownloadUrl(data.id) || undefined"
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    label="Export PDF"
+                                                    size="small"
+                                                    severity="contrast"
+                                                    outlined
+                                                    icon="pi pi-file-pdf"
+                                                />
+                                            </a>
+                                            <Button
+                                                v-else
+                                                type="button"
+                                                label="Export PDF"
+                                                size="small"
+                                                severity="contrast"
+                                                outlined
+                                                icon="pi pi-file-pdf"
+                                                disabled
                                             />
                                             <Button
                                                 type="button"
