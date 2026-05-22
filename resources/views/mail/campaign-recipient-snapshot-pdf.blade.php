@@ -15,6 +15,23 @@
                 font-family: 'DejaVu Sans', sans-serif;
                 color: #0f172a;
             }
+
+            .pdf-page-layout {
+                width: 100%;
+                min-height: 265mm;
+                border-collapse: collapse;
+            }
+
+            .pdf-page-content {
+                vertical-align: top;
+            }
+
+            .pdf-page-signature-cell {
+                vertical-align: bottom;
+                padding-top: 18mm;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
         </style>
     </head>
     <body>

@@ -71,6 +71,24 @@ type RecipientRow = {
     }>;
 };
 
+type PdfExportSummary = {
+    id: number;
+    type: string;
+    status: string;
+    statusLabel: string;
+    statusDetail: string | null;
+    requestedAt: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    failedAt: string | null;
+    fileName: string | null;
+    filePath: string | null;
+    totalRecipients: number;
+    exportedRecipients: number;
+    errorMessage: string | null;
+    canDownload: boolean;
+};
+
 const props = defineProps<{
     title: string;
     description: string;
@@ -111,22 +129,7 @@ const props = defineProps<{
         };
         canRequestPdfExport: boolean;
         pdfExportDisabledReason: string | null;
-        latestPdfExport: {
-            id: number;
-            type: string;
-            status: string;
-            statusLabel: string;
-            requestedAt: string | null;
-            startedAt: string | null;
-            completedAt: string | null;
-            failedAt: string | null;
-            fileName: string | null;
-            filePath: string | null;
-            totalRecipients: number;
-            exportedRecipients: number;
-            errorMessage: string | null;
-            canDownload: boolean;
-        } | null;
+        latestPdfExport: PdfExportSummary | null;
         progress: {
             batchId: number;
             batchCode: string | null;
@@ -236,6 +239,20 @@ const latestPdfExportDownloadUrl = computed(() =>
         })
         : null,
 );
+
+const latestPdfExportProgressPercent = computed(() => {
+    const exportSummary = props.selectedCampaign?.latestPdfExport;
+
+    if (!exportSummary || exportSummary.totalRecipients <= 0) {
+        return 0;
+    }
+
+    if (exportSummary.status === 'completed') {
+        return 100;
+    }
+
+    return Math.max(0, Math.min(100, Math.round((exportSummary.exportedRecipients / exportSummary.totalRecipients) * 100)));
+});
 const isRequestingPdfExport = ref(false);
 
 const toggleFailedFilter = (): void => {
@@ -294,10 +311,16 @@ const showLegacyMissingScheduleInfo = computed(() =>
     && !props.selectedCampaign.scheduledForAt
     && !props.selectedCampaign.scheduledAt,
 );
-const shouldAutoRefreshCampaign = computed(() =>
-    !!props.selectedCampaign
-    && ['scheduled', 'dispatching'].includes(props.selectedCampaign.status),
-);
+const shouldAutoRefreshCampaign = computed(() => {
+    if (!props.selectedCampaign) {
+        return false;
+    }
+
+    const hasInFlightDispatch = ['scheduled', 'dispatching'].includes(props.selectedCampaign.status);
+    const hasInFlightPdfExport = ['queued', 'processing'].includes(props.selectedCampaign.latestPdfExport?.status ?? '');
+
+    return hasInFlightDispatch || hasInFlightPdfExport;
+});
 const resolveSourceSheetSeverity = (sheet: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' => {
     if (sheet === 'Tổng hợp') {
         return 'info';
@@ -1008,6 +1031,23 @@ onBeforeUnmount(() => {
                                                 Phạm vi {{ selectedCampaign.latestPdfExport.totalRecipients }} mail đã gửi.
                                             </template>
                                         </p>
+                                        <p
+                                            v-if="selectedCampaign.latestPdfExport.statusDetail"
+                                            class="mt-1 leading-6"
+                                            :style="{ color: 'var(--dashboard-muted-text)' }"
+                                        >
+                                            {{ selectedCampaign.latestPdfExport.statusDetail }}
+                                        </p>
+                                        <div
+                                            v-if="selectedCampaign.latestPdfExport.totalRecipients > 0 && ['queued', 'processing', 'completed'].includes(selectedCampaign.latestPdfExport.status)"
+                                            class="mt-3"
+                                        >
+                                            <div class="mb-1 flex items-center justify-between text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                                <span>Tiến độ export PDF</span>
+                                                <span>{{ selectedCampaign.latestPdfExport.exportedRecipients }}/{{ selectedCampaign.latestPdfExport.totalRecipients }} ({{ latestPdfExportProgressPercent }}%)</span>
+                                            </div>
+                                            <ProgressBar :value="latestPdfExportProgressPercent" />
+                                        </div>
                                         <p
                                             v-if="selectedCampaign.latestPdfExport.errorMessage"
                                             class="mt-1 leading-6 text-red-500"

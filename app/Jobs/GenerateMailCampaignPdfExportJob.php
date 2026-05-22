@@ -7,6 +7,7 @@ use App\Services\Mail\GenerateMailCampaignPdfExportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class GenerateMailCampaignPdfExportJob implements ShouldQueue
@@ -37,8 +38,19 @@ class GenerateMailCampaignPdfExportJob implements ShouldQueue
         $export = MailCampaignExport::query()->find($this->mailCampaignExportId);
 
         if (! $export instanceof MailCampaignExport) {
+            Log::warning('mail_campaign_pdf_export.job_missing_export', [
+                'export_id' => $this->mailCampaignExportId,
+                'queue' => $this->queue,
+            ]);
+
             return;
         }
+
+        Log::info('mail_campaign_pdf_export.job_started', [
+            'export_id' => $export->id,
+            'campaign_id' => $export->mail_campaign_id,
+            'queue' => $this->queue,
+        ]);
 
         try {
             $generateMailCampaignPdfExportService->generate($export);
@@ -48,6 +60,13 @@ class GenerateMailCampaignPdfExportJob implements ShouldQueue
                 'failed_at' => now(),
                 'error_message' => $throwable->getMessage(),
             ])->save();
+
+            Log::error('mail_campaign_pdf_export.job_failed', [
+                'export_id' => $export->id,
+                'campaign_id' => $export->mail_campaign_id,
+                'queue' => $this->queue,
+                'error' => $throwable->getMessage(),
+            ]);
         }
     }
 
@@ -64,5 +83,12 @@ class GenerateMailCampaignPdfExportJob implements ShouldQueue
             'failed_at' => now(),
             'error_message' => $throwable->getMessage(),
         ])->save();
+
+        Log::error('mail_campaign_pdf_export.job_failed_callback', [
+            'export_id' => $export->id,
+            'campaign_id' => $export->mail_campaign_id,
+            'queue' => $this->queue,
+            'error' => $throwable->getMessage(),
+        ]);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\MailCampaign;
 use App\Models\MailCampaignExport;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class RequestMailCampaignPdfExportService
@@ -46,6 +47,14 @@ class RequestMailCampaignPdfExportService
         ]));
 
         GenerateMailCampaignPdfExportJob::dispatch($export->id);
+
+        Log::info('mail_campaign_pdf_export.requested', [
+            'export_id' => $export->id,
+            'campaign_id' => $campaign->id,
+            'requested_by' => $user->id,
+            'sent_recipients' => $sentRecipientsCount,
+            'queue' => (string) config('mail_campaigns.exports.queue', 'default'),
+        ]);
 
         return $export;
     }

@@ -6,6 +6,7 @@ use App\Models\MailCampaignExport;
 use App\Models\MailCampaignRecipient;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -63,6 +64,12 @@ class GenerateMailCampaignPdfExportService
             'exported_recipients' => 0,
         ])->save();
 
+        Log::info('mail_campaign_pdf_export.processing_started', [
+            'export_id' => $export->id,
+            'campaign_id' => $campaign->id,
+            'total_recipients' => $totalRecipients,
+        ]);
+
         $chunkSize = max(1, (int) config('mail_campaigns.exports.chunk_size', 100));
         $tempHtmlPath = tempnam(sys_get_temp_dir(), 'mail-campaign-export-');
 
@@ -88,6 +95,13 @@ class GenerateMailCampaignPdfExportService
                     $export->forceFill([
                         'exported_recipients' => $processedRecipients,
                     ])->save();
+
+                    Log::info('mail_campaign_pdf_export.processing_progress', [
+                        'export_id' => $export->id,
+                        'campaign_id' => $campaign->id,
+                        'processed_recipients' => $processedRecipients,
+                        'total_recipients' => $totalRecipients,
+                    ]);
                 }
             }
 
@@ -131,6 +145,14 @@ class GenerateMailCampaignPdfExportService
             'total_recipients' => $totalRecipients,
             'exported_recipients' => $processedRecipients,
         ])->save();
+
+        Log::info('mail_campaign_pdf_export.processing_completed', [
+            'export_id' => $export->id,
+            'campaign_id' => $campaign->id,
+            'processed_recipients' => $processedRecipients,
+            'total_recipients' => $totalRecipients,
+            'file_path' => $filePath,
+        ]);
 
         return $export->fresh();
     }
@@ -204,6 +226,23 @@ class GenerateMailCampaignPdfExportService
 
             .pdf-page:last-child {
                 page-break-after: auto;
+            }
+
+            .pdf-page-layout {
+                width: 100%;
+                min-height: 265mm;
+                border-collapse: collapse;
+            }
+
+            .pdf-page-content {
+                vertical-align: top;
+            }
+
+            .pdf-page-signature-cell {
+                vertical-align: bottom;
+                padding-top: 18mm;
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
         </style>
     </head>

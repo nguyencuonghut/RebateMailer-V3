@@ -202,6 +202,7 @@ class MailCampaignPageService
             'type' => $export->export_type,
             'status' => $export->status,
             'statusLabel' => $this->presentPdfExportStatus($export->status),
+            'statusDetail' => $this->presentPdfExportStatusDetail($export),
             'requestedAt' => optional($export->requested_at)->toIso8601String(),
             'startedAt' => optional($export->started_at)->toIso8601String(),
             'completedAt' => optional($export->completed_at)->toIso8601String(),
@@ -342,6 +343,17 @@ class MailCampaignPageService
             'completed' => 'Đã tạo xong',
             'failed' => 'Tạo file thất bại',
             default => ucfirst($status),
+        };
+    }
+
+    private function presentPdfExportStatusDetail(MailCampaignExport $export): ?string
+    {
+        return match ($export->status) {
+            'queued' => 'Yêu cầu đã được ghi nhận và đang chờ worker lấy job.',
+            'processing' => 'Worker đã lấy job và đang render PDF.',
+            'completed' => 'File PDF đã tạo xong và sẵn sàng để tải xuống.',
+            'failed' => 'Quá trình tạo PDF đã thất bại.',
+            default => null,
         };
     }
 
