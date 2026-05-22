@@ -9,6 +9,7 @@ class UpdateMailTemplateStructureService
 {
     public function __construct(
         private readonly SyncLegacyMailTemplateToCompositionService $syncLegacyMailTemplateToCompositionService,
+        private readonly ResolveMailTemplateEditLockService $resolveMailTemplateEditLockService,
     ) {
     }
 
@@ -17,6 +18,8 @@ class UpdateMailTemplateStructureService
      */
     public function update(MailTemplate $mailTemplate, User $user, array $payload): MailTemplate
     {
+        $this->resolveMailTemplateEditLockService->assertEditable($mailTemplate);
+
         $mailTemplate->forceFill([
             'structure_json' => [
                 'version' => $payload['version'],

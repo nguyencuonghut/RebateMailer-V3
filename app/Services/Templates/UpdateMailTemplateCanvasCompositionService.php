@@ -16,6 +16,7 @@ class UpdateMailTemplateCanvasCompositionService
         private readonly TemplateSectionCatalogService $templateSectionCatalogService,
         private readonly SyncLegacyMailTemplateToCompositionService $syncLegacyMailTemplateToCompositionService,
         private readonly HydrateLegacyMailTemplateFromCanvasService $hydrateLegacyMailTemplateFromCanvasService,
+        private readonly ResolveMailTemplateEditLockService $resolveMailTemplateEditLockService,
     ) {
     }
 
@@ -24,6 +25,8 @@ class UpdateMailTemplateCanvasCompositionService
      */
     public function update(MailTemplate $mailTemplate, array $partTypes): MailTemplateCanvas
     {
+        $this->resolveMailTemplateEditLockService->assertEditable($mailTemplate);
+
         $partsByType = $this->ensureTemplatePartCatalogPersistedService->ensure();
         $canvas = $this->syncLegacyMailTemplateToCompositionService->syncMailTemplate($mailTemplate, $partsByType);
 

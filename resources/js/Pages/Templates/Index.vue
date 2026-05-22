@@ -32,6 +32,8 @@ const props = defineProps<{
     title: string;
     description: string;
     canManageTemplates: boolean;
+    selectedTemplateWriteLocked: boolean;
+    selectedTemplateWriteLockReason: string | null;
     writeCapabilities: string[];
     readOnlyNotice: string;
     templateList: Array<{
@@ -43,6 +45,8 @@ const props = defineProps<{
         sectionCount: number;
         createdBy: string;
         updatedAt: string | null;
+        isWriteLocked?: boolean;
+        writeLockReason?: string | null;
     }>;
     activeTemplateId: number | null;
     builderTemplate: {
@@ -343,6 +347,7 @@ const isActivatingTemplateId = ref<number | null>(null);
 const isBindingPartVersionId = ref<number | null>(null);
 const isSwitchingPreviewBatch = ref(false);
 const isSwitchingPreviewCustomer = ref(false);
+const canEditSelectedTemplate = computed(() => props.canManageTemplates && !props.selectedTemplateWriteLocked);
 
 const activateTemplate = (templateId: number): void => {
     isActivatingTemplateId.value = templateId;
@@ -361,7 +366,7 @@ const activateTemplate = (templateId: number): void => {
 };
 
 const bindPartVersionToCanvas = (payload: { partType: string; versionId: number }): void => {
-    if (!props.builderTemplate) {
+    if (!props.builderTemplate || !canEditSelectedTemplate.value) {
         return;
     }
 
@@ -616,6 +621,22 @@ const representativeSignatureSection = computed(() =>
                             {{ readOnlyNotice }}
                         </p>
                     </template>
+                </div>
+
+                <div
+                    v-if="canManageTemplates && selectedTemplateWriteLocked && selectedTemplateWriteLockReason"
+                    class="mt-4 rounded-[1.4rem] border px-5 py-4"
+                    :style="{
+                        borderColor: 'rgba(239, 68, 68, 0.32)',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                    }"
+                >
+                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-red-400">
+                        Template đã khóa chỉnh sửa
+                    </p>
+                    <p class="mt-3 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                        {{ selectedTemplateWriteLockReason }}
+                    </p>
                 </div>
             </section>
 
@@ -916,14 +937,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Subject"
                                     description="Canvas không còn tự tạo `Subject`. Ở tab này bạn có thể dùng lại version cũ cho canvas hiện tại hoặc thêm mới `Subject` vào canvas rồi chỉnh nội dung."
                                     :group="partVersionGroupByType['subject'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
@@ -948,14 +969,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Lời chào"
                                     description="Canvas không còn tự tạo `Lời chào`. Ở tab này bạn có thể dùng lại version cũ cho canvas hiện tại hoặc thêm mới `Lời chào` vào canvas rồi chỉnh nội dung."
                                     :group="partVersionGroupByType['greeting'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
@@ -980,14 +1001,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Chữ ký đại diện"
                                     description="Part composite này chứa 2 block chữ ký riêng cho Khách thường và Key Account. Canvas chỉ ghép một version đang chọn của part này."
                                     :group="partVersionGroupByType['representative-signature'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateRepresentativeSignatureEditor
                                     :template-id="builderTemplate?.id ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section="representativeSignatureSection"
                                 />
                             </div>
@@ -999,14 +1020,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Bảng chế độ tháng"
                                     description="Quản lý version độc lập cho part `Tổng hợp`. Canvas chỉ ghép một version đang chọn của part này."
                                     :group="partVersionGroupByType['tong-hop-table'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
@@ -1029,14 +1050,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Bảng chương trình khoán đặc biệt"
                                     description="Part `Khoán NPP` có version riêng, active riêng và được ghép linh động vào canvas."
                                     :group="partVersionGroupByType['khoan-npp-table'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
@@ -1058,14 +1079,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Bảng chiết khấu cám cá"
                                     description="Part `Cám cá` được quản lý như một tập version độc lập với canvas."
                                     :group="partVersionGroupByType['cam-ca-table'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"
@@ -1088,14 +1109,14 @@ const representativeSignatureSection = computed(() =>
                                     title="Version của Bảng chiết khấu Key Account"
                                     description="Part `Key Account` có lifecycle version riêng và chỉ được ghép vào canvas qua composition binding."
                                     :group="partVersionGroupByType['key-account-table'] ?? null"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :is-binding-version-id="isBindingPartVersionId"
                                     @select-version="bindPartVersionToCanvas"
                                 />
 
                                 <TemplateBuilderCanvas
                                     :template="builderTemplate"
-                                    :can-manage-templates="canManageTemplates"
+                                    :can-manage-templates="canEditSelectedTemplate"
                                     :section-catalog="templateParts"
                                     :tong-hop-binding-options="tongHopBindingOptions"
                                     :cam-ca-binding-options="camCaBindingOptions"

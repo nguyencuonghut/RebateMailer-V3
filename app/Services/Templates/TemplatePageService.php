@@ -21,6 +21,7 @@ class TemplatePageService
         private readonly BuildTemplatePartVersionOverviewService $buildTemplatePartVersionOverviewService,
         private readonly BuildTemplateStructureFromCanvasService $buildTemplateStructureFromCanvasService,
         private readonly SyncLegacyMailTemplateToCompositionService $syncLegacyMailTemplateToCompositionService,
+        private readonly ResolveMailTemplateEditLockService $resolveMailTemplateEditLockService,
     ) {
     }
 
@@ -40,6 +41,9 @@ class TemplatePageService
         $selectedTemplate = $builderTemplate === null
             ? null
             : MailTemplate::query()->find($builderTemplate['id']);
+        $selectedTemplateEditLock = $selectedTemplate
+            ? $this->resolveMailTemplateEditLockService->resolve($selectedTemplate)
+            : ['isLocked' => false, 'reason' => null, 'sentCampaignCount' => 0, 'sentRecipientCount' => 0];
         $subjectPreview = $this->buildTemplateSubjectPreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
         $greetingPreview = $this->buildTemplateGreetingPreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
         $tongHopPreview = $this->buildTemplateTongHopTablePreviewService->build($selectedTemplate, $resolvedPreviewBatchId, $selectedPreviewRecordId);
@@ -58,6 +62,8 @@ class TemplatePageService
             'title' => 'Thiết kế mẫu email',
             'description' => 'Thiết kế subject, lời chào và 4 bảng dữ liệu của email chiết khấu theo đúng cấu trúc nghiệp vụ đã được xác nhận.',
             'canManageTemplates' => $canManageTemplates,
+            'selectedTemplateWriteLocked' => (bool) $selectedTemplateEditLock['isLocked'],
+            'selectedTemplateWriteLockReason' => $selectedTemplateEditLock['reason'],
             'writeCapabilities' => [
                 'Tạo template mới',
                 'Chỉnh sửa subject và lời chào',
@@ -130,16 +136,22 @@ class TemplatePageService
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->get()
-            ->map(fn (MailTemplateCanvas $canvas): array => [
-                'id' => $canvas->legacy_mail_template_id ?? $canvas->getKey(),
-                'name' => $canvas->name,
-                'subjectTemplate' => $this->resolveCanvasSubjectTemplate($canvas),
-                'isActive' => $canvas->is_active,
-                'statusLabel' => $canvas->is_active ? 'Đang hoạt động' : 'Ngừng hoạt động',
-                'sectionCount' => $canvas->partBindings->count(),
-                'createdBy' => $canvas->creator?->name ?? 'Không xác định',
-                'updatedAt' => optional($canvas->updated_at)->toIso8601String(),
-            ])
+            ->map(function (MailTemplateCanvas $canvas): array {
+                $lockState = $this->buildTemplateListLockState($canvas);
+
+                return [
+                    'id' => $canvas->legacy_mail_template_id ?? $canvas->getKey(),
+                    'name' => $canvas->name,
+                    'subjectTemplate' => $this->resolveCanvasSubjectTemplate($canvas),
+                    'isActive' => $canvas->is_active,
+                    'statusLabel' => $canvas->is_active ? 'Đang hoạt động' : 'Ngừng hoạt động',
+                    'sectionCount' => $canvas->partBindings->count(),
+                    'createdBy' => $canvas->creator?->name ?? 'Không xác định',
+                    'updatedAt' => optional($canvas->updated_at)->toIso8601String(),
+                    'isWriteLocked' => $lockState['isWriteLocked'],
+                    'writeLockReason' => $lockState['writeLockReason'],
+                ];
+            })
             ->values()
             ->all();
     }
@@ -182,5 +194,34 @@ class TemplatePageService
             ->first(fn ($binding): bool => $binding->templatePart?->type === 'subject');
 
         return (string) ($subjectBinding?->templatePartVersion?->text_template ?? '');
+    }
+
+    /**
+     * @return array{isWriteLocked: bool, writeLockReason: string|null}
+     */
+    private function buildTemplateListLockState(MailTemplateCanvas $canvas): array
+    {
+        if (! $canvas->legacy_mail_template_id) {
+            return [
+                'isWriteLocked' => false,
+                'writeLockReason' => null,
+            ];
+        }
+
+        $mailTemplate = $canvas->legacyMailTemplate ?? MailTemplate::query()->find($canvas->legacy_mail_template_id);
+
+        if (! $mailTemplate) {
+            return [
+                'isWriteLocked' => false,
+                'writeLockReason' => null,
+            ];
+        }
+
+        $state = $this->resolveMailTemplateEditLockService->resolve($mailTemplate);
+
+        return [
+            'isWriteLocked' => (bool) $state['isLocked'],
+            'writeLockReason' => $state['reason'],
+        ];
     }
 }

@@ -15,11 +15,14 @@ class UpdateMailTemplateCanvasPartBindingService
     public function __construct(
         private readonly ResolveMailTemplateCanvasService $resolveMailTemplateCanvasService,
         private readonly HydrateLegacyMailTemplateFromCanvasService $hydrateLegacyMailTemplateFromCanvasService,
+        private readonly ResolveMailTemplateEditLockService $resolveMailTemplateEditLockService,
     ) {
     }
 
     public function update(MailTemplate $mailTemplate, string $partType, int $templatePartVersionId): void
     {
+        $this->resolveMailTemplateEditLockService->assertEditable($mailTemplate);
+
         $canvas = $this->resolveMailTemplateCanvasService->resolve($mailTemplate);
 
         if (! $canvas) {

@@ -10,11 +10,14 @@ class AppendMailTemplateSectionService
     public function __construct(
         private readonly UpdateMailTemplateCanvasCompositionService $updateMailTemplateCanvasCompositionService,
         private readonly ResolveMailTemplateCanvasService $resolveMailTemplateCanvasService,
+        private readonly ResolveMailTemplateEditLockService $resolveMailTemplateEditLockService,
     ) {
     }
 
     public function append(MailTemplate $mailTemplate, User $user, string $type): MailTemplate
     {
+        $this->resolveMailTemplateEditLockService->assertEditable($mailTemplate);
+
         $canvas = $this->resolveMailTemplateCanvasService->resolve($mailTemplate);
 
         $sections = $canvas?->partBindings

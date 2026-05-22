@@ -36,6 +36,8 @@ class TemplatesPageTest extends TestCase
                 ->component('Templates/Index')
                 ->where('title', 'Thiết kế mẫu email')
                 ->where('canManageTemplates', true)
+                ->where('selectedTemplateWriteLocked', false)
+                ->where('selectedTemplateWriteLockReason', null)
                 ->has('writeCapabilities', 5)
                 ->where('writeCapabilities.0', 'Tạo template mới')
                 ->has('templateParts', 7)
@@ -180,6 +182,7 @@ class TemplatesPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Templates/Index')
                 ->where('canManageTemplates', false)
+                ->where('selectedTemplateWriteLocked', false)
                 ->where('readOnlyNotice', 'Tài khoản hiện tại chỉ được xem cấu trúc template email. Các thao tác tạo, chỉnh sửa và kích hoạt template chỉ mở cho người dùng có quyền quản lý template.')
             );
     }
