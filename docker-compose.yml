@@ -125,10 +125,13 @@ services:
     entrypoint: []
     command:
       - php
+      - -d
+      - memory_limit=512M
       - artisan
       - queue:work
       - "--queue=default"
       - "--sleep=3"
+      - "--timeout=600"
       - "--max-time=3600"
       - "--no-ansi"
     depends_on:
