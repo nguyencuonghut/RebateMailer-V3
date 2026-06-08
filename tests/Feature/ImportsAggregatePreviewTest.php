@@ -176,6 +176,9 @@ class ImportsAggregatePreviewTest extends TestCase
         $this->assertNotNull($record);
         $this->assertNotSame('', $record['customerFullName']);
         $this->assertSame('Khách thường', $record['customerType']);
+        $this->assertIsArray($record['emails']);
+        $this->assertNotEmpty($record['emails']);
+        $this->assertSame($record['emails'][0], $record['email']);
         $this->assertSame(['Tổng hợp', 'Khoán NPP'], $record['sourceSheets']);
         $this->assertNotNull($record['tongHop']);
         $this->assertNotNull($record['khoanNpp']);
@@ -194,6 +197,7 @@ class ImportsAggregatePreviewTest extends TestCase
         $this->assertNotNull($record);
         $this->assertSame('16068 - Công ty TNHH TM DV Thắng Giang', $record['customerFullName']);
         $this->assertSame('Khách thường', $record['customerType']);
+        $this->assertNotEmpty($record['emails']);
         $this->assertSame(['Cám cá'], $record['sourceSheets']);
         $this->assertNull($record['tongHop']);
         $this->assertNull($record['khoanNpp']);
@@ -225,6 +229,9 @@ class ImportsAggregatePreviewTest extends TestCase
         $this->assertNotNull($record);
         $this->assertNotSame('', $record['customerFullName']);
         $this->assertSame('Key Account', $record['customerType']);
+        $this->assertIsArray($record['emails']);
+        $this->assertNotEmpty($record['emails']);
+        $this->assertSame($record['emails'][0], $record['email']);
         $this->assertSame(['Key Account'], $record['sourceSheets']);
         $this->assertNull($record['tongHop']);
         $this->assertNull($record['khoanNpp']);

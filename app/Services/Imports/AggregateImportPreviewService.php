@@ -20,6 +20,7 @@ class AggregateImportPreviewService
                 $recordsByCustomerCode[$code]['customerFullName'],
                 $record['customerFullName'] ?? null,
             );
+            $recordsByCustomerCode[$code] = $this->mergeRecordEmails($recordsByCustomerCode[$code], $record);
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Tổng hợp';
             $recordsByCustomerCode[$code]['tongHop'] = $record;
         }
@@ -31,6 +32,7 @@ class AggregateImportPreviewService
                 $recordsByCustomerCode[$code]['customerFullName'],
                 $record['customerFullName'] ?? null,
             );
+            $recordsByCustomerCode[$code] = $this->mergeRecordEmails($recordsByCustomerCode[$code], $record);
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Khoán NPP';
             $recordsByCustomerCode[$code]['khoanNpp'] = $record;
         }
@@ -42,6 +44,7 @@ class AggregateImportPreviewService
                 $recordsByCustomerCode[$code]['customerFullName'],
                 $record['customerFullName'] ?? null,
             );
+            $recordsByCustomerCode[$code] = $this->mergeRecordEmails($recordsByCustomerCode[$code], $record);
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Cám cá';
             $recordsByCustomerCode[$code]['camCa'] = $record;
         }
@@ -54,6 +57,7 @@ class AggregateImportPreviewService
                 $recordsByCustomerCode[$code]['customerFullName'],
                 $record['customerFullName'] ?? null,
             );
+            $recordsByCustomerCode[$code] = $this->mergeRecordEmails($recordsByCustomerCode[$code], $record);
             $recordsByCustomerCode[$code]['sourceSheets'][] = 'Key Account';
             $recordsByCustomerCode[$code]['keyAccount'] = $record;
         }
@@ -128,6 +132,8 @@ class AggregateImportPreviewService
             'customerCode' => $customerCode,
             'customerFullName' => '',
             'customerType' => $customerType,
+            'email' => '',
+            'emails' => [],
             'sourceSheets' => [],
             'tongHop' => null,
             'khoanNpp' => null,
@@ -145,6 +151,44 @@ class AggregateImportPreviewService
         }
 
         return trim((string) $candidateValue);
+    }
+
+    /**
+     * @param  array<string, mixed>  $aggregateRecord
+     * @param  array<string, mixed>  $sheetRecord
+     * @return array<string, mixed>
+     */
+    private function mergeRecordEmails(array $aggregateRecord, array $sheetRecord): array
+    {
+        $currentEmails = is_array($aggregateRecord['emails'] ?? null) ? $aggregateRecord['emails'] : [];
+        $sheetEmails = $this->extractEmails($sheetRecord);
+        $merged = [];
+        $seen = [];
+
+        foreach (array_merge($currentEmails, $sheetEmails) as $email) {
+            $value = trim((string) $email);
+
+            if ($value === '') {
+                continue;
+            }
+
+            $key = mb_strtolower($value);
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $merged[] = $value;
+        }
+
+        $aggregateRecord['emails'] = $merged;
+
+        if (($aggregateRecord['email'] ?? '') === '' && $merged !== []) {
+            $aggregateRecord['email'] = $merged[0];
+        }
+
+        return $aggregateRecord;
     }
 
     /**

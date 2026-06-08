@@ -27,9 +27,11 @@ class ImportBatchAggregatedRecordPersistenceTest extends TestCase
             [
                 'customerCode' => '90300',
                 'customerType' => 'Khách thường',
+                'email' => 'a@example.com',
+                'emails' => ['a@example.com', 'b@example.com'],
                 'sourceSheets' => ['Tổng hợp', 'Khoán NPP'],
-                'tongHop' => ['customerCode' => '90300'],
-                'khoanNpp' => ['customerCode' => '90300'],
+                'tongHop' => ['customerCode' => '90300', 'email' => 'a@example.com', 'emails' => ['a@example.com', 'b@example.com']],
+                'khoanNpp' => ['customerCode' => '90300', 'email' => 'a@example.com', 'emails' => ['a@example.com', 'b@example.com']],
                 'camCa' => null,
                 'keyAccount' => null,
             ],
@@ -49,6 +51,10 @@ class ImportBatchAggregatedRecordPersistenceTest extends TestCase
             'customer_code' => '90300',
             'customer_type' => 'Khách thường',
         ]);
+
+        $record = $importBatch->fresh()->aggregatedRecords()->where('customer_code', '90300')->firstOrFail();
+        $this->assertSame(['a@example.com', 'b@example.com'], $record->aggregated_payload['emails']);
+        $this->assertSame(['a@example.com', 'b@example.com'], $record->aggregated_payload['tongHop']['emails']);
 
         $this->assertDatabaseHas('import_batch_aggregated_records', [
             'import_batch_id' => $importBatch->id,
