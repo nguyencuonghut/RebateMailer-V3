@@ -254,30 +254,47 @@ const formatCellNumber = (value: string): string => {
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
-                                        <td
-                                            class="px-4 py-3 align-top"
-                                            :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
-                                        >
-                                            {{ row.numbering }}
-                                        </td>
-                                        <td
-                                            class="px-4 py-3 align-top"
-                                            :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
-                                        >
-                                            {{ row.content }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                            {{ formatCellNumber(row.quantity) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
-                                            {{ formatCellNumber(row.supportRate) }}
-                                        </td>
-                                        <td
-                                            class="px-4 py-3 text-right align-top"
-                                            :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 500 }"
-                                        >
-                                            {{ formatAmount(row.amount, row.rowType) }}
-                                        </td>
+                                        <template v-if="row.rowType === 'in-words'">
+                                            <td
+                                                class="px-4 py-3 align-top"
+                                                :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td
+                                                colspan="4"
+                                                class="px-4 py-3 align-top"
+                                                :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ `${row.content}${row.amount?.trim() ? ` ${row.amount}` : ''}` }}
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td
+                                                class="px-4 py-3 align-top"
+                                                :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td
+                                                class="px-4 py-3 align-top"
+                                                :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ row.content }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ formatCellNumber(row.quantity) }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ formatCellNumber(row.supportRate) }}
+                                            </td>
+                                            <td
+                                                class="px-4 py-3 text-right align-top"
+                                                :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 500 }"
+                                            >
+                                                {{ formatAmount(row.amount, row.rowType) }}
+                                            </td>
+                                        </template>
                                     </tr>
                                 </tbody>
                             </table>

@@ -290,18 +290,35 @@ const effectivePreviewRows = computed(() => {
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
-                                        <td
-                                            class="px-4 py-3 align-top"
-                                            :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
-                                        >
-                                            {{ row.numbering }}
-                                        </td>
-                                        <td class="px-4 py-3 align-top" :style="{ paddingLeft: `${1 + (row.indentLevel ?? 0) * 1.25}rem`, color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }">
-                                            <div>{{ row.content }}</div>
-                                        </td>
-                                        <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 500 }">
-                                            {{ formatPreviewValue(row, row.value) }}
-                                        </td>
+                                        <template v-if="isInWordsRow(row)">
+                                            <td
+                                                class="px-4 py-3 align-top"
+                                                :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td
+                                                colspan="2"
+                                                class="px-4 py-3 align-top"
+                                                :style="{ paddingLeft: `${1 + (row.indentLevel ?? 0) * 1.25}rem`, color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                <div>{{ `${row.content}${row.value?.trim() ? ` ${row.value}` : ''}` }}</div>
+                                            </td>
+                                        </template>
+                                        <template v-else>
+                                            <td
+                                                class="px-4 py-3 align-top"
+                                                :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td class="px-4 py-3 align-top" :style="{ paddingLeft: `${1 + (row.indentLevel ?? 0) * 1.25}rem`, color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }">
+                                                <div>{{ row.content }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right align-top" :style="{ color: 'var(--dashboard-strong-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 500 }">
+                                                {{ formatPreviewValue(row, row.value) }}
+                                            </td>
+                                        </template>
                                     </tr>
                                 </tbody>
                             </table>

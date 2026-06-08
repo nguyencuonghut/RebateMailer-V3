@@ -70,7 +70,9 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
         $this->assertStringContainsString('Chế độ tháng 03.2026 - 90300 - Công ty A', $html);
         $this->assertStringContainsString('Kính gửi 90300 - Công ty A', $html);
         $this->assertStringContainsString('Chiết khấu theo hóa đơn', $html);
+        $this->assertStringContainsString('colspan="2"', $html);
         $this->assertStringContainsString('Bảy trăm tám mươi chín nghìn đồng', $html);
+        $this->assertMatchesRegularExpression('/Bằng chữ:\s+Bảy trăm tám mươi chín nghìn đồng/u', $html);
         $this->assertStringContainsString('Đại diện công ty', $html);
         $this->assertStringContainsString('Trưởng ban tài chính', $html);
         $this->assertStringContainsString('Nguyễn Văn A', $html);

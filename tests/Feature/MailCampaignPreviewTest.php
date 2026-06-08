@@ -201,7 +201,9 @@ class MailCampaignPreviewTest extends TestCase
                     && ! str_contains($html, 'Nguồn dữ liệu:')
                     && ! str_contains($html, 'Email này được render từ dữ liệu aggregate thật của khách hàng đã chọn trong chiến dịch.')
                     && str_contains($html, 'Bằng chữ:')
+                    && str_contains($html, 'colspan="2"')
                     && str_contains($html, 'colspan="3"')
+                    && preg_match('/Bằng chữ:\s+Bảy trăm tám mươi chín nghìn đồng/u', $html) === 1
                     && str_contains($html, 'font-weight:700; border-top:1px solid #e2e8f0;">I</td>'))
             );
     }

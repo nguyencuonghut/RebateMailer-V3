@@ -368,7 +368,23 @@ const formatCell = (value: string, rowType: string): string => {
                                         class="border-t"
                                         :style="{ borderColor: 'var(--dashboard-panel-border)' }"
                                     >
-                                        <template v-if="row.rowType === 'total' || row.rowType === 'in-words'">
+                                        <template v-if="row.rowType === 'in-words'">
+                                            <td
+                                                class="px-4 py-3 text-sm align-top"
+                                                :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"
+                                            >
+                                                {{ row.numbering }}
+                                            </td>
+                                            <td
+                                                colspan="4"
+                                                class="px-4 py-3 text-sm align-top"
+                                                :class="row.fontWeight === 'bold' ? 'font-semibold' : 'font-normal'"
+                                                :style="{ color: 'var(--dashboard-strong-text)' }"
+                                            >
+                                                {{ `${row.content}${row.amount?.trim() ? ` ${row.amount}` : ''}` }}
+                                            </td>
+                                        </template>
+                                        <template v-else-if="row.rowType === 'total'">
                                             <td
                                                 class="px-4 py-3 text-sm align-top"
                                                 :style="{ color: 'var(--dashboard-muted-text)', fontWeight: row.fontWeight === 'bold' ? 700 : 400 }"

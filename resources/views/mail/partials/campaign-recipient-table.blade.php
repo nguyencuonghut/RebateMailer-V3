@@ -14,16 +14,22 @@
         <tbody>
             @foreach (($table['rows'] ?? []) as $row)
                 @php($fontWeight = (($row['fontWeight'] ?? 'regular') === 'bold') ? '700' : '400')
-                @if (in_array(($row['rowType'] ?? ''), ['total', 'in-words'], true))
+                @if (($row['rowType'] ?? '') === 'in-words')
+                    <tr>
+                        <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
+                        <td colspan="4" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
+                            {{ trim((string) ($row['content'] ?? '')) }}
+                            @if (trim((string) ($row['amount'] ?? '')) !== '')
+                                {{ ' ' . trim((string) ($row['amount'] ?? '')) }}
+                            @endif
+                        </td>
+                    </tr>
+                @elseif (($row['rowType'] ?? '') === 'total')
                     <tr>
                         <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
                         <td colspan="3" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
                         <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
-                            @if (($row['rowType'] ?? '') === 'in-words')
-                                {{ $row['amount'] ?? '' }}
-                            @else
-                                {{ ($row['amount'] ?? '') !== '' ? number_format((float) str_replace(',', '', (string) $row['amount'])) : '—' }}
-                            @endif
+                            {{ ($row['amount'] ?? '') !== '' ? number_format((float) str_replace(',', '', (string) $row['amount'])) : '—' }}
                         </td>
                     </tr>
                 @else
@@ -61,17 +67,25 @@
                 @php($isInWordsRow = in_array(($row['rowType'] ?? ''), ['in-words', 'text'], true)
                     || trim((string) ($row['columnKey'] ?? '')) === 'Bằng chữ'
                     || str_starts_with(trim((string) ($row['content'] ?? '')), 'Bằng chữ'))
-                <tr>
-                    <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
-                    <td valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
-                    <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
-                        @if ($isInWordsRow)
-                            {{ $row['value'] ?? '' }}
-                        @else
+                @if ($isInWordsRow)
+                    <tr>
+                        <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
+                        <td colspan="2" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
+                            {{ trim((string) ($row['content'] ?? '')) }}
+                            @if ($valueRaw !== '')
+                                {{ ' ' . $valueRaw }}
+                            @endif
+                        </td>
+                    </tr>
+                @else
+                    <tr>
+                        <td valign="top" style="padding:12px 14px; font-size:14px; color:#64748b; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['numbering'] ?? '' }}</td>
+                        <td valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">{{ $row['content'] ?? '' }}</td>
+                        <td align="right" valign="top" style="padding:12px 14px; font-size:14px; color:#0f172a; font-weight:{{ $fontWeight }}; border-top:1px solid #e2e8f0;">
                             {{ $valueRaw !== '' ? number_format((float) str_replace(',', '', $valueRaw)) : '—' }}
-                        @endif
-                    </td>
-                </tr>
+                        </td>
+                    </tr>
+                @endif
             @endforeach
         </tbody>
     </table>
