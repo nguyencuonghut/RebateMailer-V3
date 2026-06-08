@@ -9,6 +9,11 @@ use ZipArchive;
 
 class ParseKhoanNppPreviewService
 {
+    public function __construct(
+        private readonly NormalizeImportedEmailListService $normalizeImportedEmailListService,
+    ) {
+    }
+
     private const SHEET_NAME = 'Khoán NPP';
 
     /**
@@ -184,6 +189,8 @@ class ParseKhoanNppPreviewService
             ];
         }
 
+        $email = trim((string) ($rowValues['Email'] ?? ''));
+
         return [
             'rowNumber' => $rowNumber,
             'sourceRowNumbers' => [$rowNumber],
@@ -191,7 +198,8 @@ class ParseKhoanNppPreviewService
             'month' => $rowValues['Tháng'] ?? '',
             'customerCode' => $rowValues['Mã số'] ?? '',
             'customerFullName' => $rowValues['Mã & tên khách hàng'] ?? '',
-            'email' => $rowValues['Email'] ?? '',
+            'email' => $email,
+            'emails' => $this->normalizeImportedEmailListService->normalize($email),
             'address' => $rowValues['Địa chỉ'] ?? '',
             'feedCategory' => $rowValues['Thức ăn chăn nuôi'] ?? '',
             'grandTotal' => $rowValues['Tổng cộng'] ?? '',

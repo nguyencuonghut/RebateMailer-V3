@@ -67,6 +67,7 @@ class ImportsKeyAccountPreviewTest extends TestCase
             'Chi phí tiền lãi do không đạt CKSL bảo lãnh',
             'Chiết khấu thanh toán dòng thịt',
         ], $payload['discreteHeaders']);
+        $this->assertSame([$payload['records'][0]['email']], $payload['records'][0]['emails']);
 
         $records = collect($payload['records'])->keyBy('customerCode');
 

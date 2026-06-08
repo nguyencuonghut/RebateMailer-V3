@@ -62,6 +62,7 @@ class ImportsKhoanNppPreviewTest extends TestCase
         $this->assertSame(16, $payload['programBlockCount']);
         $this->assertNotEmpty($payload['records'][0]['customerCode']);
         $this->assertNotEmpty($payload['records'][0]['customerFullName']);
+        $this->assertSame([$payload['records'][0]['email']], $payload['records'][0]['emails']);
         $this->assertNotEmpty($payload['records'][0]['programItems']);
         $this->assertNotEmpty($payload['records'][0]['programItems'][0]['content']);
 

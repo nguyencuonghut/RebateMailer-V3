@@ -63,6 +63,7 @@ class ImportsTongHopPreviewTest extends TestCase
         $this->assertNotEmpty($payload['records'][0]['month']);
         $this->assertNotEmpty($payload['records'][0]['customerCode']);
         $this->assertNotEmpty($payload['records'][0]['customerFullName']);
+        $this->assertSame([$payload['records'][0]['email']], $payload['records'][0]['emails']);
         $this->assertNotEmpty($payload['records'][0]['dynamicItems']);
 
         $this->assertDatabaseHas('import_batch_sheet_records', [

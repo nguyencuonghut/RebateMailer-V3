@@ -9,6 +9,11 @@ use ZipArchive;
 
 class ParseKeyAccountPreviewService
 {
+    public function __construct(
+        private readonly NormalizeImportedEmailListService $normalizeImportedEmailListService,
+    ) {
+    }
+
     private const SHEET_NAME = 'Key Account';
 
     /**
@@ -219,13 +224,16 @@ class ParseKeyAccountPreviewService
             ];
         }
 
+        $email = trim((string) ($rowValues['Email'] ?? ''));
+
         return [
             'rowNumber' => $rowNumber,
             'stt' => $rowValues['STT'] ?? '',
             'month' => $rowValues['Tháng'] ?? '',
             'customerCode' => $customerCode,
             'customerFullName' => $rowValues['Mã & tên khách hàng'] ?? '',
-            'email' => $rowValues['Email'] ?? '',
+            'email' => $email,
+            'emails' => $this->normalizeImportedEmailListService->normalize($email),
             'address' => $rowValues['Địa chỉ'] ?? '',
             'feedCategory' => $rowValues['Thức ăn chăn nuôi'] ?? '',
             'totalQuantity' => $rowValues['Tổng sản lượng'] ?? '',

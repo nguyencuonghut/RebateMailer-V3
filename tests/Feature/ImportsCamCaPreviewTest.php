@@ -71,6 +71,7 @@ class ImportsCamCaPreviewTest extends TestCase
             'Chiết khấu thanh toán',
             'Chi phí tiền lãi do không đạt CKSL bảo lãnh',
         ], $payload['discreteHeaders']);
+        $this->assertSame([$payload['records'][0]['email']], $payload['records'][0]['emails']);
 
         $records = collect($payload['records'])->keyBy('customerCode');
 
