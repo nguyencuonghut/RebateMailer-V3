@@ -27,15 +27,7 @@
                                         </tr>
                                         @endif
                                         <tr>
-                                            <td style="padding:32px 32px 16px 32px; background:linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);">
-                                                <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.18em; color:#0284c7;">Rebate Mailer</div>
-                                                <h1 style="margin:12px 0 0 0; font-size:28px; line-height:1.3; color:#0f172a;">
-                                                    {{ data_get($preview, 'subject.renderedText', 'Chưa có subject') }}
-                                                </h1>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding:28px 32px 36px 32px; background:#ffffff;">
+                                            <td style="padding:32px; background:#ffffff;">
                                                 @include('mail.partials.campaign-recipient-content', ['preview' => $preview, 'bodyHtml' => null])
                                             </td>
                                         </tr>

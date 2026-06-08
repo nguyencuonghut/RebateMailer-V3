@@ -65,9 +65,7 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
         ]);
 
         $this->assertStringContainsString('<!DOCTYPE html>', $html);
-        $this->assertStringContainsString('Rebate Mailer', $html);
         $this->assertStringContainsString('font-family: DejaVu Sans, Arial, Helvetica, sans-serif;', $html);
-        $this->assertStringContainsString('Chế độ tháng 03.2026 - 90300 - Công ty A', $html);
         $this->assertStringContainsString('Kính gửi 90300 - Công ty A', $html);
         $this->assertStringContainsString('Chiết khấu theo hóa đơn', $html);
         $this->assertStringContainsString('colspan="2"', $html);
@@ -77,5 +75,7 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
         $this->assertStringContainsString('Trưởng ban tài chính', $html);
         $this->assertStringContainsString('Nguyễn Văn A', $html);
         $this->assertStringNotContainsString('Từ chiến dịch:', $html);
+        $this->assertStringNotContainsString('Rebate Mailer', $html);
+        $this->assertStringNotContainsString('<h1', $html);
     }
 }
