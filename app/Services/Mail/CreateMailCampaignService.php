@@ -36,17 +36,20 @@ class CreateMailCampaignService
                 ->get()
                 ->each(function (ImportBatchAggregatedRecord $record) use ($campaign): void {
                     $payload = is_array($record->aggregated_payload) ? $record->aggregated_payload : [];
+                    $recipientEmails = $this->resolveRecipientEmails($payload);
 
-                    MailCampaignRecipient::query()->create([
-                        'mail_campaign_id' => $campaign->id,
-                        'import_batch_aggregated_record_id' => $record->id,
-                        'customer_code' => (string) ($payload['customerCode'] ?? $record->customer_code),
-                        'customer_full_name' => trim((string) ($payload['customerFullName'] ?? $record->customer_code)),
-                        'customer_type' => (string) ($payload['customerType'] ?? $record->customer_type),
-                        'recipient_email' => $this->resolveRecipientEmail($payload),
-                        'delivery_status' => 'pending',
-                        'attempts_count' => 0,
-                    ]);
+                    foreach ($recipientEmails as $recipientEmail) {
+                        MailCampaignRecipient::query()->create([
+                            'mail_campaign_id' => $campaign->id,
+                            'import_batch_aggregated_record_id' => $record->id,
+                            'customer_code' => (string) ($payload['customerCode'] ?? $record->customer_code),
+                            'customer_full_name' => trim((string) ($payload['customerFullName'] ?? $record->customer_code)),
+                            'customer_type' => (string) ($payload['customerType'] ?? $record->customer_type),
+                            'recipient_email' => $recipientEmail,
+                            'delivery_status' => 'pending',
+                            'attempts_count' => 0,
+                        ]);
+                    }
                 });
 
             return $campaign;
@@ -55,10 +58,48 @@ class CreateMailCampaignService
 
     /**
      * @param  array<string, mixed>  $payload
+     * @return list<string|null>
      */
-    private function resolveRecipientEmail(array $payload): ?string
+    private function resolveRecipientEmails(array $payload): array
     {
-        $candidates = [
+        $candidateLists = [
+            $payload['emails'] ?? null,
+            data_get($payload, 'tongHop.emails'),
+            data_get($payload, 'khoanNpp.emails'),
+            data_get($payload, 'camCa.emails'),
+            data_get($payload, 'keyAccount.emails'),
+        ];
+        $resolved = [];
+        $seen = [];
+
+        foreach ($candidateLists as $candidateList) {
+            if (! is_array($candidateList)) {
+                continue;
+            }
+
+            foreach ($candidateList as $candidate) {
+                $email = trim((string) $candidate);
+
+                if ($email === '') {
+                    continue;
+                }
+
+                $normalizedKey = mb_strtolower($email);
+
+                if (isset($seen[$normalizedKey])) {
+                    continue;
+                }
+
+                $seen[$normalizedKey] = true;
+                $resolved[] = $email;
+            }
+        }
+
+        if ($resolved !== []) {
+            return $resolved;
+        }
+
+        $fallbackCandidates = [
             $payload['email'] ?? null,
             data_get($payload, 'tongHop.email'),
             data_get($payload, 'khoanNpp.email'),
@@ -66,14 +107,14 @@ class CreateMailCampaignService
             data_get($payload, 'keyAccount.email'),
         ];
 
-        foreach ($candidates as $candidate) {
+        foreach ($fallbackCandidates as $candidate) {
             $email = trim((string) $candidate);
 
             if ($email !== '') {
-                return $email;
+                return [$email];
             }
         }
 
-        return null;
+        return [null];
     }
 }
