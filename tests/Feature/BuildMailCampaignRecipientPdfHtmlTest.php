@@ -29,6 +29,7 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
                 ],
                 'greeting' => [
                     'renderedText' => "Kính gửi 90300 - Công ty A,\nĐịa chỉ: Địa chỉ A",
+                    'renderedHtml' => 'Kính gửi <strong>90300 - Công ty A,</strong><br>Địa chỉ: <strong>Địa chỉ A</strong>',
                 ],
                 'tables' => [
                     [
@@ -66,7 +67,8 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
 
         $this->assertStringContainsString('<!DOCTYPE html>', $html);
         $this->assertStringContainsString('font-family: DejaVu Sans, Arial, Helvetica, sans-serif;', $html);
-        $this->assertStringContainsString('Kính gửi 90300 - Công ty A', $html);
+        $this->assertStringContainsString('Kính gửi <strong>90300 - Công ty A,</strong><br>Địa chỉ: <strong>Địa chỉ A</strong>', $html);
+        $this->assertStringContainsString('Kính gửi <strong>90300 - Công ty A,</strong><br>Địa chỉ: <strong>Địa chỉ A</strong>', $html);
         $this->assertStringContainsString('Chiết khấu theo hóa đơn', $html);
         $this->assertStringContainsString('colspan="2"', $html);
         $this->assertStringContainsString('Bảy trăm tám mươi chín nghìn đồng', $html);

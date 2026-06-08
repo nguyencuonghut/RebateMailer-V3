@@ -9,8 +9,8 @@
 @if (filled($bodyHtml ?? null))
     {!! $forPdf ? app(\App\Services\Mail\NormalizeMailCampaignRecipientPdfBodyHtmlService::class)->normalize((string) $bodyHtml) : $bodyHtml !!}
 @else
-    <div style="font-size:{{ $greetingFontSize }}; white-space:pre-line; color:#1e293b; line-height:{{ $forPdf ? '1.3' : '1.6' }};">
-        {{ data_get($preview, 'greeting.renderedText', 'Chưa có lời chào') }}
+    <div style="font-size:{{ $greetingFontSize }}; color:#1e293b; line-height:{{ $forPdf ? '1.3' : '1.6' }};">
+        {!! data_get($preview, 'greeting.renderedHtml', nl2br(e((string) data_get($preview, 'greeting.renderedText', 'Chưa có lời chào')))) !!}
     </div>
 
     @if (! empty($preview['errors']) && is_array($preview['errors']))

@@ -1,6 +1,7 @@
 @php($forPdf = (bool) ($forPdf ?? false))
 @if (is_array($signature ?? null) && ($signature['title'] ?? null || $signature['signatureImageDataUrl'] ?? null || $signature['representativeRole'] ?? null || $signature['representativeName'] ?? null))
-    <div style="margin-top:{{ $forPdf ? '10px' : '32px' }}; text-align:right;">
+    <div style="margin-top:{{ $forPdf ? '10px' : '32px' }}; text-align:right; padding-right:{{ $forPdf ? '24px' : '32px' }};">
+        <div style="display:inline-block; width:{{ $forPdf ? '220px' : '300px' }}; text-align:center;">
         @if (! empty($signature['title']))
             <div style="font-size:{{ $forPdf ? '11px' : '15px' }}; font-weight:700; color:#0f172a;">{{ $signature['title'] }}</div>
         @endif
@@ -10,7 +11,7 @@
                 <img
                     src="{{ $signature['signatureImageDataUrl'] }}"
                     alt="Chữ ký đại diện"
-                    style="max-width:{{ $forPdf ? '108px' : '180px' }}; max-height:{{ $forPdf ? '54px' : '96px' }}; object-fit:contain;"
+                    style="max-width:{{ $forPdf ? '152px' : '250px' }}; max-height:{{ $forPdf ? '76px' : '132px' }}; object-fit:contain;"
                 >
             </div>
         @endif
@@ -22,5 +23,6 @@
         @if (! empty($signature['representativeName']))
             <div style="margin-top:1px; font-size:{{ $forPdf ? '11px' : '15px' }}; font-weight:700; color:#0f172a;">{{ $signature['representativeName'] }}</div>
         @endif
+        </div>
     </div>
 @endif
