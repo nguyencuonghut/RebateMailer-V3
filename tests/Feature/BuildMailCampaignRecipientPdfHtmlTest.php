@@ -93,9 +93,9 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
             ],
         ]);
 
-        $this->assertStringContainsString('font-size:14px; line-height:1.45;">Kính gửi A', $html);
-        $this->assertStringContainsString('margin-top:18px;', $html);
-        $this->assertStringContainsString('font-size:17px;">Bảng', $html);
-        $this->assertStringContainsString('padding:8px 10px; font-size:12px;">1', $html);
+        $this->assertStringContainsString('font-size:12px; line-height:1.3;">Kính gửi A', $html);
+        $this->assertStringContainsString('margin-top:12px;', $html);
+        $this->assertStringContainsString('font-size:14px;">Bảng', $html);
+        $this->assertStringContainsString('padding:5px 7px; font-size:10px;">1', $html);
     }
 }

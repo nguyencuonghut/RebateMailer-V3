@@ -1,10 +1,10 @@
 @php($forPdf = (bool) ($forPdf ?? false))
 @php($tableType = (string) ($table['type'] ?? ''))
-@php($tableFontSize = $forPdf ? '12px' : '14px')
-@php($cellPadding = $forPdf ? '8px 10px' : '12px 14px')
-@php($headerPadding = $forPdf ? '9px 10px' : '12px 14px')
-@php($tableRadius = $forPdf ? '12px' : '16px')
-@php($cellLineHeight = $forPdf ? '1.4' : '1.6')
+@php($tableFontSize = $forPdf ? '10px' : '14px')
+@php($cellPadding = $forPdf ? '5px 7px' : '12px 14px')
+@php($headerPadding = $forPdf ? '6px 7px' : '12px 14px')
+@php($tableRadius = $forPdf ? '8px' : '16px')
+@php($cellLineHeight = $forPdf ? '1.25' : '1.6')
 
 @if (in_array($tableType, ['khoan-npp-table', 'key-account-table'], true))
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; border:1px solid #dbe4ef; border-radius:{{ $tableRadius }}; overflow:hidden;">
