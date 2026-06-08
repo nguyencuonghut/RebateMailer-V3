@@ -78,4 +78,24 @@ class BuildMailCampaignRecipientPdfHtmlTest extends TestCase
         $this->assertStringNotContainsString('Rebate Mailer', $html);
         $this->assertStringNotContainsString('<h1', $html);
     }
+
+    public function test_service_normalizes_snapshot_body_html_for_print_friendly_pdf(): void
+    {
+        $html = app(BuildMailCampaignRecipientPdfHtmlService::class)->build([
+            'subjectLine' => 'Subject',
+            'bodyHtml' => '<div style="font-size:15px; line-height:1.6;">Kính gửi A</div><div style="margin-top:28px;"><h2 style="font-size:20px;">Bảng</h2><table><tr><td style="padding:12px 14px; font-size:14px;">1</td></tr></table></div>',
+            'preview' => null,
+            'signature' => [
+                'title' => null,
+                'signatureImageDataUrl' => null,
+                'representativeRole' => null,
+                'representativeName' => null,
+            ],
+        ]);
+
+        $this->assertStringContainsString('font-size:14px; line-height:1.45;">Kính gửi A', $html);
+        $this->assertStringContainsString('margin-top:18px;', $html);
+        $this->assertStringContainsString('font-size:17px;">Bảng', $html);
+        $this->assertStringContainsString('padding:8px 10px; font-size:12px;">1', $html);
+    }
 }
