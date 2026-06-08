@@ -459,4 +459,78 @@ class MailPageTest extends TestCase
                 ->where('recipientList.0.canExportPdf', true)
             );
     }
+
+    public function test_mail_page_explains_multiple_recipient_rows_for_same_customer(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-08',
+            'name' => 'Batch tháng 8/2026',
+            'original_file_name' => 'thang-8.xlsx',
+            'stored_path' => 'imports/tmp/thang-8.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '90700',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp', 'Khoán NPP'],
+            'aggregated_payload' => [
+                'customerCode' => '90700',
+                'customerFullName' => '90700 - Công ty nhiều email',
+                'customerType' => 'Khách thường',
+                'email' => 'one@example.com',
+                'emails' => ['one@example.com', 'two@example.com', 'three@example.com'],
+                'tongHop' => [
+                    'email' => 'one@example.com; two@example.com; three@example.com',
+                    'emails' => ['one@example.com', 'two@example.com', 'three@example.com'],
+                ],
+            ],
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Canvas tháng 8-2026',
+            'is_active' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Chiến dịch tháng 8',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        foreach (['one@example.com', 'two@example.com', 'three@example.com'] as $email) {
+            MailCampaignRecipient::query()->create([
+                'mail_campaign_id' => $campaign->id,
+                'import_batch_aggregated_record_id' => $record->id,
+                'customer_code' => '90700',
+                'customer_full_name' => '90700 - Công ty nhiều email',
+                'customer_type' => 'Khách thường',
+                'recipient_email' => $email,
+                'delivery_status' => 'pending',
+                'attempts_count' => 0,
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('mail.index', ['campaign' => $campaign->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Mail/Index')
+                ->where('recipientList.0.customerCode', '90700')
+                ->where('recipientList.0.aggregatedEmails', ['one@example.com', 'two@example.com', 'three@example.com'])
+                ->where('recipientList.0.relatedRecipientCount', 3)
+                ->where('recipientList.0.recipientGroupLabel', '3 địa chỉ nhận cho cùng khách hàng')
+                ->where('recipientList.1.relatedRecipientCount', 3)
+                ->where('recipientList.2.relatedRecipientCount', 3)
+            );
+    }
 }

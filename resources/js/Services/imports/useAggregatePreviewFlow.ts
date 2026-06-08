@@ -11,6 +11,8 @@ export type AggregatedImportRecord = {
     customerCode: string;
     customerFullName: string;
     customerType: AggregateCustomerType;
+    email: string | null;
+    emails: string[];
     sourceSheets: string[];
     tongHop: Record<string, unknown> | null;
     khoanNpp: Record<string, unknown> | null;

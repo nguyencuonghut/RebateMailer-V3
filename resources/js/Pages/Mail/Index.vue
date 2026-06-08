@@ -49,6 +49,9 @@ type RecipientRow = {
     customerCode: string;
     customerFullName: string;
     recipientEmail: string | null;
+    aggregatedEmails: string[];
+    relatedRecipientCount: number;
+    recipientGroupLabel: string;
     sourceSheets: string[];
     sourceSheetsLabel: string;
     deliveryStatus: string;
@@ -194,6 +197,8 @@ const {
     'customerCode',
     'customerFullName',
     'recipientEmail',
+    (recipient) => recipient.aggregatedEmails.join(' '),
+    'recipientGroupLabel',
     'sourceSheetsLabel',
     'deliveryStatusLabel',
     'latestErrorMessage',
@@ -1118,12 +1123,36 @@ onBeforeUnmount(() => {
                                 class="p-datatable-sm"
                             >
                                 <Column field="customerCode" header="Mã số" />
-                                <Column field="customerFullName" header="Mã & tên khách hàng" />
+                                <Column header="Mã & tên khách hàng">
+                                    <template #body="{ data }">
+                                        <div class="space-y-1">
+                                            <p :style="{ color: 'var(--dashboard-strong-text)' }">
+                                                {{ data.customerFullName }}
+                                            </p>
+                                            <p
+                                                v-if="data.relatedRecipientCount > 1"
+                                                class="text-xs"
+                                                :style="{ color: 'var(--dashboard-muted-text)' }"
+                                            >
+                                                {{ data.recipientGroupLabel }}. Mỗi dòng là một email riêng để theo dõi gửi lỗi/retry độc lập.
+                                            </p>
+                                        </div>
+                                    </template>
+                                </Column>
                                 <Column header="Email">
                                     <template #body="{ data }">
-                                        <span :style="{ color: data.recipientEmail ? 'var(--dashboard-strong-text)' : 'var(--dashboard-muted-text)' }">
-                                            {{ data.recipientEmail || 'Chưa có email' }}
-                                        </span>
+                                        <div class="space-y-1">
+                                            <span :style="{ color: data.recipientEmail ? 'var(--dashboard-strong-text)' : 'var(--dashboard-muted-text)' }">
+                                                {{ data.recipientEmail || 'Chưa có email' }}
+                                            </span>
+                                            <p
+                                                v-if="data.aggregatedEmails.length > 1"
+                                                class="text-xs"
+                                                :style="{ color: 'var(--dashboard-muted-text)' }"
+                                            >
+                                                Danh sách trong file import: {{ data.aggregatedEmails.join('; ') }}
+                                            </p>
+                                        </div>
                                     </template>
                                 </Column>
                                 <Column header="Nguồn dữ liệu">

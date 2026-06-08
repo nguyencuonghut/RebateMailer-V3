@@ -272,16 +272,27 @@ class MailCampaignPageService
      */
     private function buildRecipientList(MailCampaign $campaign): array
     {
-        return MailCampaignRecipient::query()
+        $recipients = MailCampaignRecipient::query()
             ->where('mail_campaign_id', $campaign->id)
             ->with(['aggregatedRecord', 'attemptLogs' => fn ($q) => $q->latest()->limit(20)])
             ->orderBy('customer_code')
-            ->get()
+            ->get();
+
+        $recipientGroupCounts = $recipients
+            ->groupBy(fn (MailCampaignRecipient $recipient): string => $this->resolveRecipientGroupKey($recipient))
+            ->map(fn ($group): int => $group->count());
+
+        return $recipients
             ->map(fn (MailCampaignRecipient $recipient): array => [
                 'id' => $recipient->id,
                 'customerCode' => $recipient->customer_code,
                 'customerFullName' => $recipient->customer_full_name,
                 'recipientEmail' => $recipient->recipient_email,
+                'aggregatedEmails' => $this->extractAggregatedEmails($recipient),
+                'relatedRecipientCount' => $recipientGroupCounts->get($this->resolveRecipientGroupKey($recipient), 1),
+                'recipientGroupLabel' => $this->presentRecipientGroupLabel(
+                    $recipientGroupCounts->get($this->resolveRecipientGroupKey($recipient), 1),
+                ),
                 'sourceSheets' => $recipient->aggregatedRecord?->source_sheets ?? [],
                 'sourceSheetsLabel' => $this->presentSourceSheets($recipient->aggregatedRecord?->source_sheets),
                 'deliveryStatus' => $recipient->delivery_status,
@@ -306,6 +317,41 @@ class MailCampaignPageService
             ])
             ->values()
             ->all();
+    }
+
+    private function resolveRecipientGroupKey(MailCampaignRecipient $recipient): string
+    {
+        if ($recipient->import_batch_aggregated_record_id !== null) {
+            return 'aggregated-record:'.$recipient->import_batch_aggregated_record_id;
+        }
+
+        return 'recipient:'.$recipient->id;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractAggregatedEmails(MailCampaignRecipient $recipient): array
+    {
+        $emails = $recipient->aggregatedRecord?->aggregated_payload['emails'] ?? null;
+
+        if (! is_array($emails)) {
+            return $recipient->recipient_email ? [(string) $recipient->recipient_email] : [];
+        }
+
+        return array_values(array_filter(
+            array_map(static fn ($value): string => trim((string) $value), $emails),
+            static fn (string $value): bool => $value !== '',
+        ));
+    }
+
+    private function presentRecipientGroupLabel(int $count): string
+    {
+        if ($count <= 1) {
+            return '1 địa chỉ nhận cho khách hàng này';
+        }
+
+        return sprintf('%d địa chỉ nhận cho cùng khách hàng', $count);
     }
 
     private function canExportRecipientPdf(MailCampaign $campaign, MailCampaignRecipient $recipient): bool

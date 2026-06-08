@@ -96,6 +96,112 @@ class MailCampaignDispatchTest extends TestCase
         });
     }
 
+    public function test_dispatch_queues_every_recipient_row_for_same_customer_with_multiple_emails(): void
+    {
+        Queue::fake();
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-07',
+            'name' => 'Batch imp-2026-07',
+            'original_file_name' => 'imp-2026-07.xlsx',
+            'stored_path' => 'imports/tmp/imp-2026-07.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'validated_ready',
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '90300',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '90300',
+                'customerFullName' => '90300 - Công ty A',
+                'customerType' => 'Khách thường',
+                'email' => 'a@example.com',
+                'emails' => ['a@example.com', 'b@example.com', 'c@example.com'],
+                'tongHop' => [
+                    'email' => 'a@example.com',
+                    'emails' => ['a@example.com', 'b@example.com', 'c@example.com'],
+                ],
+            ],
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Mẫu gửi mail nhiều email',
+            'is_active' => false,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Chiến dịch nhiều email',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'notes' => 'Gửi thử nhiều email',
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $firstRecipient = MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '90300',
+            'customer_full_name' => '90300 - Công ty A',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'a@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
+        ]);
+
+        $secondRecipient = MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '90300',
+            'customer_full_name' => '90300 - Công ty A',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'b@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
+        ]);
+
+        $thirdRecipient = MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '90300',
+            'customer_full_name' => '90300 - Công ty A',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'c@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('mail.campaigns.dispatch', $campaign));
+
+        $response->assertRedirect(route('mail.index', ['campaign' => $campaign->id]));
+
+        Queue::assertPushed(DispatchMailCampaignRecipientJob::class, 3);
+        Queue::assertPushed(DispatchMailCampaignRecipientJob::class, fn (DispatchMailCampaignRecipientJob $job): bool => $job->mailCampaignRecipientId === $firstRecipient->id);
+        Queue::assertPushed(DispatchMailCampaignRecipientJob::class, fn (DispatchMailCampaignRecipientJob $job): bool => $job->mailCampaignRecipientId === $secondRecipient->id);
+        Queue::assertPushed(DispatchMailCampaignRecipientJob::class, fn (DispatchMailCampaignRecipientJob $job): bool => $job->mailCampaignRecipientId === $thirdRecipient->id);
+
+        $this->assertDatabaseHas('mail_campaign_recipients', [
+            'id' => $firstRecipient->id,
+            'delivery_status' => 'queued',
+        ]);
+        $this->assertDatabaseHas('mail_campaign_recipients', [
+            'id' => $secondRecipient->id,
+            'delivery_status' => 'queued',
+        ]);
+        $this->assertDatabaseHas('mail_campaign_recipients', [
+            'id' => $thirdRecipient->id,
+            'delivery_status' => 'queued',
+        ]);
+    }
+
     public function test_dispatch_scheduled_campaigns_command_starts_due_campaigns_only(): void
     {
         Queue::fake();

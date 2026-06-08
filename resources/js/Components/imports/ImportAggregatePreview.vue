@@ -50,6 +50,8 @@ const {
 } = useDataTableGlobalFilter<AggregatePreview['records'][number]>([
     'customerCode',
     'customerFullName',
+    'email',
+    (record) => record.emails?.join(' ') ?? '',
     (record) => record.sourceSheets?.join(' ') ?? '',
     (record) => record.validationErrors?.join(' ') ?? '',
     (record) => [
@@ -166,6 +168,18 @@ const {
                     />
                 </template>
                 <Column field="customerFullName" header="Mã & tên khách hàng" />
+                <Column header="Email nhận">
+                    <template #body="{ data }">
+                        <div class="space-y-1">
+                            <p :style="{ color: data.emails.length > 0 ? 'var(--dashboard-strong-text)' : 'var(--dashboard-muted-text)' }">
+                                {{ data.emails.length > 0 ? data.emails.join('; ') : 'Chưa có email' }}
+                            </p>
+                            <p v-if="data.emails.length > 1" class="text-xs" :style="{ color: 'var(--dashboard-muted-text)' }">
+                                {{ data.emails.length }} địa chỉ sẽ cùng nhận mail khi tạo campaign.
+                            </p>
+                        </div>
+                    </template>
+                </Column>
                 <Column header="Nguồn dữ liệu">
                     <template #body="{ data }">
                         <div class="flex flex-wrap gap-2">
