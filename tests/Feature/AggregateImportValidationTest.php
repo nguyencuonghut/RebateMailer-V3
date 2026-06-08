@@ -55,6 +55,27 @@ class AggregateImportValidationTest extends TestCase
         $this->assertNotContains('[Tổng hợp] Email: không đúng định dạng', $record['validationErrors']);
     }
 
+    public function test_semicolon_delimited_emails_produce_no_email_error_when_all_are_valid(): void
+    {
+        $batch = $this->makeBatchWithTongHop('C001', email: 'a@example.com; b@example.com ; c@example.com', grandTotal: '1000000', totalInWords: 'Một triệu');
+
+        $result = $this->service->aggregate($batch);
+        $record = collect($result['records'])->firstWhere('customerCode', 'C001');
+
+        $this->assertNotContains('[Tổng hợp] Email: không được để trống', $record['validationErrors']);
+        $this->assertNotContains('[Tổng hợp] Email: không đúng định dạng', $record['validationErrors']);
+    }
+
+    public function test_invalid_email_in_semicolon_delimited_list_produces_specific_error(): void
+    {
+        $batch = $this->makeBatchWithTongHop('C001', email: 'a@example.com; bad-email; c@example.com', grandTotal: '1000000', totalInWords: 'Một triệu');
+
+        $result = $this->service->aggregate($batch);
+        $record = collect($result['records'])->firstWhere('customerCode', 'C001');
+
+        $this->assertContains('[Tổng hợp] Email: "bad-email" không đúng định dạng', $record['validationErrors']);
+    }
+
     // ─── Tổng cộng validation ───────────────────────────────────────────────
 
     public function test_empty_grand_total_produces_error(): void
@@ -260,6 +281,9 @@ class AggregateImportValidationTest extends TestCase
                 'customerCode' => $customerCode,
                 'customerFullName' => $customerCode.' - Tên khách',
                 'email' => $email,
+                'emails' => $email === ''
+                    ? []
+                    : array_values(array_filter(array_map(static fn (string $item): string => trim($item), explode(';', $email)), static fn (string $item): bool => $item !== '')),
                 'grandTotal' => $grandTotal,
                 'totalInWords' => $totalInWords,
             ],

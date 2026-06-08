@@ -155,11 +155,18 @@ class AggregateImportPreviewService
     {
         $errors = [];
 
-        $email = trim((string) ($record['email'] ?? ''));
-        if ($email === '') {
+        $emails = $this->extractEmails($record);
+
+        if ($emails === []) {
             $errors[] = "[{$sheetName}] Email: không được để trống";
-        } elseif (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            $errors[] = "[{$sheetName}] Email: không đúng định dạng";
+        } else {
+            foreach ($emails as $email) {
+                if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                    $errors[] = count($emails) === 1
+                        ? "[{$sheetName}] Email: không đúng định dạng"
+                        : "[{$sheetName}] Email: \"{$email}\" không đúng định dạng";
+                }
+            }
         }
 
         $grandTotal = trim((string) ($record['grandTotal'] ?? ''));
@@ -173,5 +180,25 @@ class AggregateImportPreviewService
         }
 
         return $errors;
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return list<string>
+     */
+    private function extractEmails(array $record): array
+    {
+        $emails = $record['emails'] ?? null;
+
+        if (is_array($emails)) {
+            return array_values(array_filter(array_map(
+                static fn (mixed $email): string => trim((string) $email),
+                $emails,
+            ), static fn (string $email): bool => $email !== ''));
+        }
+
+        $email = trim((string) ($record['email'] ?? ''));
+
+        return $email === '' ? [] : [$email];
     }
 }
