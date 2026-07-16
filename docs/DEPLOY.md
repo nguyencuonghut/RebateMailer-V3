@@ -157,6 +157,13 @@ nano .env    # Hoặc dùng editor khác
 | `MAIL_USERNAME` | Tài khoản SMTP |
 | `MAIL_PASSWORD` | Mật khẩu SMTP |
 
+**Khuyến nghị khi gửi qua SMTP và có nhiều người nhận Gmail:**
+- `MAIL_CAMPAIGN_MAX_PER_MINUTE=20`
+- `MAIL_CAMPAIGN_TRIES=50`
+- `MAIL_CAMPAIGN_MAX_EXCEPTIONS=10`
+- `MAIL_CAMPAIGN_RETRY_UNTIL_HOURS=6`
+- `MAIL_CAMPAIGN_BACKOFF_JITTER_SECONDS=30`
+
 **Kiểm tra DB_HOST và REDIS_HOST:**
 - `DB_HOST=postgres` — phải để là `postgres` (tên service trong docker-compose)
 - `REDIS_HOST=redis` — phải để là `redis` (tên service trong docker-compose)

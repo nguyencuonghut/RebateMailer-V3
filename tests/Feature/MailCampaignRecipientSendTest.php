@@ -15,13 +15,16 @@ use App\Models\User;
 use App\Services\Mail\BuildMailCampaignRecipientEmailHtmlService;
 use App\Services\Mail\BuildMailCampaignRecipientPreviewService;
 use App\Services\Mail\BuildRepresentativeSignatureSnapshotService;
+use App\Services\Mail\ClassifyMailDispatchExceptionService;
 use App\Services\Mail\LogMailCampaignRecipientAttemptService;
 use App\Services\Mail\UpdateMailCampaignDispatchStatusService;
 use App\Services\Templates\EnsureTemplatePartCatalogPersistedService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
 class MailCampaignRecipientSendTest extends TestCase
@@ -92,6 +95,7 @@ class MailCampaignRecipientSendTest extends TestCase
             app(BuildRepresentativeSignatureSnapshotService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
+            app(ClassifyMailDispatchExceptionService::class),
         );
 
         Mail::assertSent(MailCampaignRecipientMail::class, function (MailCampaignRecipientMail $mail) use ($recipient): bool {
@@ -185,6 +189,7 @@ class MailCampaignRecipientSendTest extends TestCase
             app(BuildRepresentativeSignatureSnapshotService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
+            app(ClassifyMailDispatchExceptionService::class),
         );
 
         $recipient->refresh();
@@ -241,6 +246,7 @@ class MailCampaignRecipientSendTest extends TestCase
             app(BuildRepresentativeSignatureSnapshotService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
+            app(ClassifyMailDispatchExceptionService::class),
         );
 
         Mail::assertNothingSent();
@@ -321,12 +327,208 @@ class MailCampaignRecipientSendTest extends TestCase
             app(BuildRepresentativeSignatureSnapshotService::class),
             app(LogMailCampaignRecipientAttemptService::class),
             app(UpdateMailCampaignDispatchStatusService::class),
+            app(ClassifyMailDispatchExceptionService::class),
         );
 
         $this->assertDatabaseHas('mail_campaigns', [
             'id' => $campaign->id,
             'status' => 'completed_with_failures',
         ]);
+    }
+
+    public function test_dispatch_job_keeps_recipient_queued_when_smtp_error_is_transient(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
+        $this->attachRepresentativeSignatureToCampaignCanvas($campaign, [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFs',
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+        ]);
+        $this->mockSuccessfulPreview($campaign, $recipient);
+
+        $exception = new TransportException('Expected response code "250" but got code "421", with message "421 4.7.0 Try again later, closing connection."');
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with((string) $recipient->recipient_email)
+            ->andReturn(new class($exception) {
+                public function __construct(private readonly TransportException $exception)
+                {
+                }
+
+                public function send(mixed $mail): void
+                {
+                    throw $this->exception;
+                }
+            });
+
+        $job = new DispatchMailCampaignRecipientJob($recipient->id);
+
+        try {
+            $job->handle(
+                app(BuildMailCampaignRecipientPreviewService::class),
+                app(BuildMailCampaignRecipientEmailHtmlService::class),
+                app(BuildRepresentativeSignatureSnapshotService::class),
+                app(LogMailCampaignRecipientAttemptService::class),
+                app(UpdateMailCampaignDispatchStatusService::class),
+                app(ClassifyMailDispatchExceptionService::class),
+            );
+
+            $this->fail('Expected transient SMTP exception to be rethrown for queue retry.');
+        } catch (TransportException $caught) {
+            $this->assertSame($exception, $caught);
+        }
+
+        $recipient->refresh();
+        $this->assertSame('queued', $recipient->delivery_status);
+        $this->assertSame(1, $recipient->attempts_count);
+        $this->assertSame($exception->getMessage(), $recipient->latest_error_message);
+        $this->assertNull($recipient->failed_at);
+
+        $attempt = $recipient->attemptLogs()->latest()->firstOrFail();
+        $this->assertSame('dispatch_attempt_failed', $attempt->event_type);
+        $this->assertSame('failed', $attempt->status);
+        $this->assertTrue((bool) ($attempt->context['isTransient'] ?? false));
+        $this->assertTrue((bool) ($attempt->context['willRetry'] ?? false));
+    }
+
+    public function test_dispatch_job_fails_permanently_when_smtp_reports_invalid_recipient(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
+        $this->attachRepresentativeSignatureToCampaignCanvas($campaign, [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFs',
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+        ]);
+        $this->mockSuccessfulPreview($campaign, $recipient);
+
+        $exception = new TransportException('Expected response code "250" but got code "550", with message "550-5.1.1 The email account that you tried to reach does not exist."');
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with((string) $recipient->recipient_email)
+            ->andReturn(new class($exception) {
+                public function __construct(private readonly TransportException $exception)
+                {
+                }
+
+                public function send(mixed $mail): void
+                {
+                    throw $this->exception;
+                }
+            });
+
+        $job = new DispatchMailCampaignRecipientJob($recipient->id);
+        $job->handle(
+            app(BuildMailCampaignRecipientPreviewService::class),
+            app(BuildMailCampaignRecipientEmailHtmlService::class),
+            app(BuildRepresentativeSignatureSnapshotService::class),
+            app(LogMailCampaignRecipientAttemptService::class),
+            app(UpdateMailCampaignDispatchStatusService::class),
+            app(ClassifyMailDispatchExceptionService::class),
+        );
+
+        $recipient->refresh();
+        $this->assertSame('failed', $recipient->delivery_status);
+        $this->assertSame(1, $recipient->attempts_count);
+        $this->assertSame($exception->getMessage(), $recipient->latest_error_message);
+        $this->assertNotNull($recipient->failed_at);
+
+        $attempt = $recipient->attemptLogs()->latest()->firstOrFail();
+        $this->assertSame('dispatch_attempt_failed', $attempt->event_type);
+        $this->assertFalse((bool) ($attempt->context['isTransient'] ?? true));
+        $this->assertFalse((bool) ($attempt->context['willRetry'] ?? true));
+    }
+
+    public function test_dispatch_job_fails_permanently_when_recipient_mailbox_is_full(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
+        $this->attachRepresentativeSignatureToCampaignCanvas($campaign, [
+            'normalCustomer' => [
+                'title' => 'Đại diện công ty',
+                'signatureImageDataUrl' => 'data:image/png;base64,bm9ybWFs',
+                'representativeRole' => 'Trưởng ban tài chính',
+                'representativeName' => 'Nguyễn Văn A',
+            ],
+        ]);
+        $this->mockSuccessfulPreview($campaign, $recipient);
+
+        $exception = new TransportException('Expected response code "250" but got code "552", with message "552 5.2.2 The email account is over quota. Mailbox full."');
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with((string) $recipient->recipient_email)
+            ->andReturn(new class($exception) {
+                public function __construct(private readonly TransportException $exception)
+                {
+                }
+
+                public function send(mixed $mail): void
+                {
+                    throw $this->exception;
+                }
+            });
+
+        $job = new DispatchMailCampaignRecipientJob($recipient->id);
+        $job->handle(
+            app(BuildMailCampaignRecipientPreviewService::class),
+            app(BuildMailCampaignRecipientEmailHtmlService::class),
+            app(BuildRepresentativeSignatureSnapshotService::class),
+            app(LogMailCampaignRecipientAttemptService::class),
+            app(UpdateMailCampaignDispatchStatusService::class),
+            app(ClassifyMailDispatchExceptionService::class),
+        );
+
+        $recipient->refresh();
+        $this->assertSame('failed', $recipient->delivery_status);
+        $this->assertSame(1, $recipient->attempts_count);
+        $this->assertSame($exception->getMessage(), $recipient->latest_error_message);
+        $this->assertNotNull($recipient->failed_at);
+
+        $attempt = $recipient->attemptLogs()->latest()->firstOrFail();
+        $this->assertSame('dispatch_attempt_failed', $attempt->event_type);
+        $this->assertFalse((bool) ($attempt->context['isTransient'] ?? true));
+        $this->assertFalse((bool) ($attempt->context['willRetry'] ?? true));
+    }
+
+    public function test_dispatch_job_final_failure_keeps_latest_smtp_message_for_user_visible_error(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        [$campaign, $recipient] = $this->makeQueuedRecipientFixture($user);
+        $smtpMessage = 'Expected response code "250" but got code "421", with message "421 4.7.0 Try again later."';
+
+        app(LogMailCampaignRecipientAttemptService::class)->log(
+            $recipient,
+            'dispatch_attempt_failed',
+            'failed',
+            $smtpMessage,
+            [
+                'exception' => TransportException::class,
+                'isTransient' => true,
+                'willRetry' => true,
+            ],
+        );
+
+        $job = new DispatchMailCampaignRecipientJob($recipient->id);
+        $job->failed(new MaxAttemptsExceededException('App\Jobs\DispatchMailCampaignRecipientJob has been attempted too many times.'));
+
+        $recipient->refresh();
+        $this->assertSame('failed', $recipient->delivery_status);
+        $this->assertSame($smtpMessage, $recipient->latest_error_message);
+
+        $attempt = $recipient->attemptLogs()->latest()->firstOrFail();
+        $this->assertSame('dispatch_failed', $attempt->event_type);
+        $this->assertSame($smtpMessage, $attempt->message);
+        $this->assertSame('App\Jobs\DispatchMailCampaignRecipientJob has been attempted too many times.', $attempt->context['finalExceptionMessage'] ?? null);
     }
 
     /**
@@ -387,6 +589,36 @@ class MailCampaignRecipientSendTest extends TestCase
         ]);
 
         return [$campaign, $recipient];
+    }
+
+    private function mockSuccessfulPreview(MailCampaign $campaign, MailCampaignRecipient $recipient): void
+    {
+        $previewService = Mockery::mock(BuildMailCampaignRecipientPreviewService::class);
+        $previewService->shouldReceive('build')
+            ->once()
+            ->withArgs(fn (MailCampaign $resolvedCampaign, int $recipientId): bool => $resolvedCampaign->id === $campaign->id && $recipientId === $recipient->id)
+            ->andReturn([
+                'recipient' => [
+                    'id' => $recipient->id,
+                    'customerCode' => $recipient->customer_code,
+                    'customerFullName' => $recipient->customer_full_name,
+                    'recipientEmail' => $recipient->recipient_email,
+                    'customerType' => $recipient->customer_type,
+                ],
+                'subject' => [
+                    'renderedText' => 'Thư chiết khấu tháng 6',
+                    'errors' => [],
+                ],
+                'greeting' => [
+                    'renderedText' => 'Kính gửi Quý khách',
+                    'errors' => [],
+                ],
+                'tables' => [],
+                'errors' => [],
+                'html' => '<html><body><h1>Preview mail</h1></body></html>',
+            ]);
+
+        app()->instance(BuildMailCampaignRecipientPreviewService::class, $previewService);
     }
 
     /**

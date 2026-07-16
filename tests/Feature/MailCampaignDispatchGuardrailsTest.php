@@ -10,6 +10,7 @@ use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
 use App\Models\User;
 use App\Services\Mail\StartMailCampaignDispatchService;
+use Carbon\CarbonImmutable;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Middleware\RateLimited;
@@ -35,7 +36,11 @@ class MailCampaignDispatchGuardrailsTest extends TestCase
         config()->set('mail_campaigns.dispatch.lock_seconds', 180);
         config()->set('mail_campaigns.dispatch.release_after_seconds', 25);
         config()->set('mail_campaigns.dispatch.tries', 7);
+        config()->set('mail_campaigns.dispatch.max_exceptions', 8);
+        config()->set('mail_campaigns.dispatch.retry_until_hours', 4);
+        config()->set('mail_campaigns.dispatch.backoff_jitter_seconds', 30);
         config()->set('mail_campaigns.dispatch.backoff_seconds', [30, 120, 600]);
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-16 08:00:00'));
 
         $job = new DispatchMailCampaignRecipientJob(99);
         $middleware = $job->middleware();
@@ -44,8 +49,12 @@ class MailCampaignDispatchGuardrailsTest extends TestCase
         $this->assertCount(2, $middleware);
         $this->assertInstanceOf(RateLimited::class, $middleware[0]);
         $this->assertInstanceOf(WithoutOverlapping::class, $middleware[1]);
-        $this->assertSame([30, 120, 600], $job->backoff());
+        $this->assertSame([36, 126, 606], $job->backoff());
         $this->assertSame(7, $job->tries());
+        $this->assertSame(8, $job->maxExceptions());
+        $this->assertSame(CarbonImmutable::parse('2026-07-16 12:00:00')->timestamp, $job->retryUntil()->getTimestamp());
+
+        CarbonImmutable::setTestNow();
     }
 
     public function test_start_dispatch_service_queues_jobs_on_mail_dispatch_queue(): void

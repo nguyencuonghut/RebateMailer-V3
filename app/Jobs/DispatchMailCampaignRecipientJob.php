@@ -8,8 +8,10 @@ use App\Models\MailCampaignRecipient;
 use App\Services\Mail\BuildRepresentativeSignatureSnapshotService;
 use App\Services\Mail\BuildMailCampaignRecipientEmailHtmlService;
 use App\Services\Mail\BuildMailCampaignRecipientPreviewService;
+use App\Services\Mail\ClassifyMailDispatchExceptionService;
 use App\Services\Mail\LogMailCampaignRecipientAttemptService;
 use App\Services\Mail\UpdateMailCampaignDispatchStatusService;
+use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -43,8 +45,11 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
      */
     public function backoff(): array
     {
+        $jitterCap = max(0, (int) config('mail_campaigns.dispatch.backoff_jitter_seconds', 30));
+        $jitter = $jitterCap > 0 ? $this->mailCampaignRecipientId % ($jitterCap + 1) : 0;
+
         return array_values(array_map(
-            static fn (mixed $seconds): int => (int) $seconds,
+            static fn (mixed $seconds): int => (int) $seconds + $jitter,
             config('mail_campaigns.dispatch.backoff_seconds', [60, 300, 900]),
         ));
     }
@@ -59,12 +64,18 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
         return (int) config('mail_campaigns.dispatch.max_exceptions', 5);
     }
 
+    public function retryUntil(): DateTimeInterface
+    {
+        return now()->addHours(max(1, (int) config('mail_campaigns.dispatch.retry_until_hours', 6)));
+    }
+
     public function handle(
         BuildMailCampaignRecipientPreviewService $buildMailCampaignRecipientPreviewService,
         BuildMailCampaignRecipientEmailHtmlService $buildMailCampaignRecipientEmailHtmlService,
         BuildRepresentativeSignatureSnapshotService $buildRepresentativeSignatureSnapshotService,
         LogMailCampaignRecipientAttemptService $logMailCampaignRecipientAttemptService,
         UpdateMailCampaignDispatchStatusService $updateMailCampaignDispatchStatusService,
+        ClassifyMailDispatchExceptionService $classifyMailDispatchExceptionService,
     ): void
     {
         $recipient = MailCampaignRecipient::query()->find($this->mailCampaignRecipientId);
@@ -198,26 +209,33 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
 
             $updateMailCampaignDispatchStatusService->refresh($campaign);
         } catch (Throwable $throwable) {
+            $message = $classifyMailDispatchExceptionService->diagnosticMessage($throwable);
+            $isTransient = $classifyMailDispatchExceptionService->isTransient($throwable);
+
             $recipient->forceFill([
-                'delivery_status' => 'failed',
+                'delivery_status' => $isTransient ? 'queued' : 'failed',
                 'attempts_count' => $recipient->attempts_count + 1,
-                'latest_error_message' => $throwable->getMessage(),
-                'failed_at' => now(),
+                'latest_error_message' => $message,
+                'failed_at' => $isTransient ? null : now(),
             ])->save();
 
             $logMailCampaignRecipientAttemptService->log(
                 $recipient,
                 'dispatch_attempt_failed',
                 'failed',
-                $throwable->getMessage(),
+                $message,
                 [
                     'exception' => $throwable::class,
+                    'isTransient' => $isTransient,
+                    'willRetry' => $isTransient,
                 ],
             );
 
             $updateMailCampaignDispatchStatusService->refresh($campaign);
 
-            throw $throwable;
+            if ($isTransient) {
+                throw $throwable;
+            }
         }
     }
 
@@ -229,9 +247,11 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
             return;
         }
 
+        $message = $this->resolveFinalFailureMessage($recipient, $throwable);
+
         $recipient->forceFill([
             'delivery_status' => 'failed',
-            'latest_error_message' => $throwable->getMessage(),
+            'latest_error_message' => $message,
             'failed_at' => now(),
         ])->save();
 
@@ -239,9 +259,10 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
             $recipient,
             'dispatch_failed',
             'failed',
-            $throwable->getMessage(),
+            $message,
             [
                 'exception' => $throwable::class,
+                'finalExceptionMessage' => $throwable->getMessage(),
             ],
         );
 
@@ -250,5 +271,28 @@ class DispatchMailCampaignRecipientJob implements ShouldQueue
         if ($campaign instanceof MailCampaign) {
             app(UpdateMailCampaignDispatchStatusService::class)->refresh($campaign);
         }
+    }
+
+    private function resolveFinalFailureMessage(MailCampaignRecipient $recipient, Throwable $throwable): string
+    {
+        $message = trim($throwable->getMessage());
+        $lowerMessage = mb_strtolower($message);
+
+        if (
+            $message !== ''
+            && ! str_contains($lowerMessage, 'has been attempted too many times')
+            && ! str_contains($lowerMessage, 'maxattemptsexceededexception')
+        ) {
+            return $message;
+        }
+
+        $latestDispatchAttempt = $recipient->attemptLogs()
+            ->where('event_type', 'dispatch_attempt_failed')
+            ->latest()
+            ->first();
+
+        $latestMessage = trim((string) $latestDispatchAttempt?->message);
+
+        return $latestMessage !== '' ? $latestMessage : ($message !== '' ? $message : $throwable::class);
     }
 }
