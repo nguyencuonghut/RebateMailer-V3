@@ -14,6 +14,7 @@ class StartMailCampaignDispatchService
     public function __construct(
         private readonly LogMailCampaignRecipientAttemptService $logMailCampaignRecipientAttemptService,
         private readonly UpdateMailCampaignDispatchStatusService $updateMailCampaignDispatchStatusService,
+        private readonly EnsureMailCampaignTemplateMonthMatchesBatchService $ensureMailCampaignTemplateMonthMatchesBatchService,
     ) {
     }
 
@@ -21,6 +22,16 @@ class StartMailCampaignDispatchService
     {
         if (! in_array($campaign->status, ['draft', 'scheduled'], true)) {
             throw new RuntimeException('Chỉ campaign ở trạng thái nháp hoặc đã lên lịch mới được mở dispatch.');
+        }
+
+        $campaign->loadMissing(['importBatch', 'templateCanvas']);
+        $mismatchMessage = $this->ensureMailCampaignTemplateMonthMatchesBatchService->mismatchMessage(
+            $campaign->importBatch,
+            $campaign->templateCanvas,
+        );
+
+        if ($mismatchMessage !== null) {
+            throw new RuntimeException($mismatchMessage);
         }
 
         $queuedRecipientIds = [];

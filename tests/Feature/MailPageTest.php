@@ -7,6 +7,7 @@ use App\Models\ImportBatchAggregatedRecord;
 use App\Models\MailCampaign;
 use App\Models\MailCampaignExport;
 use App\Models\MailCampaignRecipient;
+use App\Models\MailTemplate;
 use App\Models\MailTemplateCanvas;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -457,6 +458,115 @@ class MailPageTest extends TestCase
                 ->where('selectedCampaign.id', $campaign->id)
                 ->where('recipientList.0.customerCode', '90600')
                 ->where('recipientList.0.canExportPdf', true)
+            );
+    }
+
+    public function test_mail_page_exposes_preview_issues_in_recipient_list_before_opening_preview(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Mẫu gửi mail tháng 05-2026',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.4-C',
+                'sections' => [
+                    ['type' => 'subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'tong-hop-table', 'rows' => [
+                        [
+                            'content' => 'Khuyến mại từ 25/5-30/5',
+                            'rowType' => 'child',
+                            'columnKey' => 'Khuyến mại từ 25/5-30/5',
+                            'hideWhenValueZero' => true,
+                            'isBold' => false,
+                        ],
+                    ]],
+                ],
+            ],
+            'is_active' => false,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Canvas tháng 05-2026',
+            'is_active' => false,
+            'legacy_mail_template_id' => $mailTemplate->id,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-06',
+            'name' => 'Data import tháng 06-2026',
+            'original_file_name' => 'thang-06.xlsx',
+            'stored_path' => 'imports/tmp/thang-06.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Tổng hợp' => [
+                        'fixedHeaders' => ['Tổng cộng', 'Bằng chữ'],
+                        'dynamicHeaders' => [],
+                    ],
+                ],
+            ],
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '21033',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '21033',
+                'customerFullName' => '21033 - Đại lý tháng 06',
+                'customerType' => 'Khách thường',
+                'tongHop' => [
+                    'month' => '06-2026',
+                    'customerCode' => '21033',
+                    'customerFullName' => '21033 - Đại lý tháng 06',
+                    'email' => 'customer@example.com',
+                    'grandTotal' => '1000000',
+                    'totalInWords' => 'Một triệu đồng chẵn.',
+                    'dynamicItems' => [],
+                ],
+            ],
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Gửi mail tháng 06-2026',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '21033',
+            'customer_full_name' => '21033 - Đại lý tháng 06',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'customer@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('mail.index', ['campaign' => $campaign->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Mail/Index')
+                ->where('selectedRecipientPreview', null)
+                ->where('recipientList.0.customerCode', '21033')
+                ->where('recipientList.0.previewIssueCount', 1)
+                ->where('recipientList.0.previewIssues.0.section', 'Bảng chế độ tháng')
+                ->where(
+                    'recipientList.0.previewIssues.0.message',
+                    'Dòng "Khuyến mại từ 25/5-30/5" chưa tìm thấy dữ liệu tương ứng trong sheet Tổng hợp đã aggregate.',
+                )
             );
     }
 

@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Queue;
+use RuntimeException;
 use Tests\TestCase;
 
 class MailCampaignDispatchGuardrailsTest extends TestCase
@@ -61,6 +62,76 @@ class MailCampaignDispatchGuardrailsTest extends TestCase
             return $job->mailCampaignRecipientId === $recipient->id
                 && $job->queue === 'mail-dispatch-test';
         });
+    }
+
+    public function test_start_dispatch_service_rejects_campaign_when_template_month_differs_from_batch_month(): void
+    {
+        Queue::fake();
+
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-06',
+            'name' => 'Data import tháng 06-2026',
+            'original_file_name' => 'thang-06-2026.xlsx',
+            'stored_path' => 'imports/tmp/thang-06-2026.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'validated_ready',
+        ]);
+
+        $record = ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '21033',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp'],
+            'aggregated_payload' => [
+                'customerCode' => '21033',
+                'customerFullName' => '21033 - Đại lý tháng 06',
+                'customerType' => 'Khách thường',
+                'tongHop' => [
+                    'month' => '06-2026',
+                    'email' => 'customer@example.com',
+                ],
+            ],
+        ]);
+
+        $templateCanvas = MailTemplateCanvas::query()->create([
+            'name' => 'Mẫu mail gửi tháng 05-2026',
+            'is_active' => false,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Gửi mail tháng 06-2026',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $templateCanvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        MailCampaignRecipient::query()->create([
+            'mail_campaign_id' => $campaign->id,
+            'import_batch_aggregated_record_id' => $record->id,
+            'customer_code' => '21033',
+            'customer_full_name' => '21033 - Đại lý tháng 06',
+            'customer_type' => 'Khách thường',
+            'recipient_email' => 'customer@example.com',
+            'delivery_status' => 'pending',
+            'attempts_count' => 0,
+        ]);
+
+        try {
+            app(StartMailCampaignDispatchService::class)->start($campaign, $user);
+            $this->fail('Expected dispatch to reject a campaign whose template month differs from the batch month.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString(
+                'Template email đang là tháng 05-2026 nhưng batch nhập liệu là tháng 06-2026.',
+                $exception->getMessage(),
+            );
+        }
+
+        Queue::assertNothingPushed();
     }
 
     /**

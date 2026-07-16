@@ -178,6 +178,59 @@ class MailCampaignStoreTest extends TestCase
         ]);
     }
 
+    public function test_store_mail_campaign_rejects_template_month_that_differs_from_import_batch_month(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-2026-06',
+            'name' => 'Data import tháng 06-2026',
+            'original_file_name' => 'thang-06-2026.xlsx',
+            'stored_path' => 'imports/tmp/thang-06-2026.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'validated_ready',
+        ]);
+
+        ImportBatchAggregatedRecord::query()->create([
+            'import_batch_id' => $batch->id,
+            'customer_code' => '21033',
+            'customer_type' => 'Khách thường',
+            'source_sheets' => ['Tổng hợp', 'Cám cá'],
+            'aggregated_payload' => [
+                'customerCode' => '21033',
+                'customerFullName' => '21033 - Đại lý tháng 06',
+                'customerType' => 'Khách thường',
+                'tongHop' => [
+                    'month' => '06-2026',
+                    'email' => 'customer@example.com',
+                ],
+                'camCa' => [
+                    'month' => '06-2026',
+                ],
+            ],
+        ]);
+
+        $mayTemplateCanvas = MailTemplateCanvas::query()->create([
+            'name' => 'Mẫu mail gửi tháng 05-2026',
+            'is_active' => false,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('mail.campaigns.store'), [
+            'name' => 'Gửi mail tháng 06-2026',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $mayTemplateCanvas->id,
+        ]);
+
+        $response->assertSessionHasErrors([
+            'mail_template_canvas_id' => 'Template email đang là tháng 05-2026 nhưng batch nhập liệu là tháng 06-2026. Vui lòng chọn template cùng tháng hoặc tạo lại chiến dịch sau khi kích hoạt template đúng.',
+        ]);
+
+        $this->assertDatabaseCount('mail_campaigns', 0);
+        $this->assertDatabaseCount('mail_campaign_recipients', 0);
+    }
+
     public function test_store_mail_campaign_requires_send_permission(): void
     {
         $viewer = User::query()->where('email', 'guest@rebatemailer.test')->firstOrFail();

@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\DB;
 
 class CreateMailCampaignService
 {
+    public function __construct(
+        private readonly EnsureMailCampaignTemplateMonthMatchesBatchService $ensureMailCampaignTemplateMonthMatchesBatchService,
+    ) {
+    }
+
     /**
      * @param  array{name:string,import_batch_id:int,mail_template_canvas_id:int,notes?:string|null}  $input
      */
@@ -20,6 +25,8 @@ class CreateMailCampaignService
         return DB::transaction(function () use ($user, $input): MailCampaign {
             $importBatch = ImportBatch::query()->findOrFail($input['import_batch_id']);
             $templateCanvas = MailTemplateCanvas::query()->findOrFail($input['mail_template_canvas_id']);
+
+            $this->ensureMailCampaignTemplateMonthMatchesBatchService->assertForCreation($importBatch, $templateCanvas);
 
             $campaign = MailCampaign::query()->create([
                 'name' => $input['name'],

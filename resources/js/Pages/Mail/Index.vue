@@ -59,6 +59,11 @@ type RecipientRow = {
     latestErrorMessage: string | null;
     latestFriendlyMessage: string | null;
     attemptsCount: number;
+    previewIssues: Array<{
+        section: string;
+        message: string;
+    }>;
+    previewIssueCount: number;
     canExportPdf: boolean;
     canRetry: boolean;
     canResend: boolean;
@@ -176,6 +181,12 @@ const props = defineProps<{
 }>();
 
 const page = usePage<PageProps>();
+const dispatchError = computed(() => {
+    const errors = (page.props as PageProps & { errors?: Record<string, string | string[]> }).errors;
+    const message = errors?.dispatch;
+
+    return Array.isArray(message) ? message[0] : message ?? null;
+});
 
 const createForm = useForm({
     name: '',
@@ -202,6 +213,7 @@ const {
     'sourceSheetsLabel',
     'deliveryStatusLabel',
     'latestErrorMessage',
+    (recipient) => recipient.previewIssues.map((issue) => `${issue.section} ${issue.message}`).join(' '),
 ]);
 const selectedRecipientDeliveryStatus = ref<string | null>(null);
 const recipientDeliveryStatusOptions = [
@@ -434,6 +446,18 @@ const collectPreviewErrors = (preview: typeof props.selectedRecipientPreview): P
 };
 
 const previewErrorsCache = ref<Map<number, PreviewErrorEntry[]>>(new Map());
+const resolveRecipientPreviewIssues = (recipient: RecipientRow): PreviewErrorEntry[] => {
+    const cached = previewErrorsCache.value.get(recipient.id);
+
+    if (cached) {
+        return cached;
+    }
+
+    return recipient.previewIssues.map((issue) => ({
+        section: issue.section,
+        error: issue.message,
+    }));
+};
 
 const currentPreviewErrors = computed(() => collectPreviewErrors(props.selectedRecipientPreview));
 
@@ -858,6 +882,13 @@ onBeforeUnmount(() => {
                                         />
                                     </div>
                                 </div>
+                                <div
+                                    v-if="dispatchError"
+                                    class="mt-4 rounded-[1rem] border px-4 py-3 text-sm"
+                                    :style="{ borderColor: 'rgba(239,68,68,0.28)', background: 'rgba(239,68,68,0.08)', color: 'var(--p-red-500)' }"
+                                >
+                                    {{ dispatchError }}
+                                </div>
                             </div>
 
                             <div
@@ -1179,6 +1210,25 @@ onBeforeUnmount(() => {
                                         <Tag :value="data.deliveryStatusLabel" :severity="data.deliveryStatus === 'failed' ? 'danger' : data.deliveryStatus === 'sent' ? 'success' : 'warn'" rounded />
                                     </template>
                                 </Column>
+                                <Column header="Kiểm tra preview">
+                                    <template #body="{ data }">
+                                        <div class="space-y-1">
+                                            <Tag
+                                                :value="data.previewIssueCount > 0 ? `Có lỗi (${data.previewIssueCount})` : 'Sẵn sàng'"
+                                                :severity="data.previewIssueCount > 0 ? 'danger' : 'success'"
+                                                :icon="data.previewIssueCount > 0 ? 'pi pi-exclamation-circle' : 'pi pi-check-circle'"
+                                                rounded
+                                            />
+                                            <p
+                                                v-if="data.previewIssueCount > 0"
+                                                class="line-clamp-2 text-xs leading-5"
+                                                :style="{ color: 'var(--dashboard-muted-text)' }"
+                                            >
+                                                {{ data.previewIssues[0]?.section }}: {{ data.previewIssues[0]?.message }}
+                                            </p>
+                                        </div>
+                                    </template>
+                                </Column>
                                 <Column header="Lỗi gần nhất">
                                     <template #body="{ data }">
                                         <div class="space-y-1">
@@ -1198,8 +1248,8 @@ onBeforeUnmount(() => {
                                                 type="button"
                                                 label="Xem trước email"
                                                 size="small"
-                                                :severity="previewErrorsCache.get(data.id)?.length ? 'danger' : undefined"
-                                                :icon="previewErrorsCache.get(data.id)?.length ? 'pi pi-exclamation-circle' : undefined"
+                                                :severity="resolveRecipientPreviewIssues(data).length ? 'danger' : undefined"
+                                                :icon="resolveRecipientPreviewIssues(data).length ? 'pi pi-exclamation-circle' : undefined"
                                                 outlined
                                                 @click="openRecipientPreview(data.id)"
                                             />
@@ -1423,7 +1473,22 @@ onBeforeUnmount(() => {
                     Chưa có bản ghi lỗi hoặc lịch sử retry cho người nhận này.
                 </div>
 
-                <div v-else class="space-y-3">
+                <div
+                    v-if="selectedRecipientErrorRow.previewIssueCount > 0"
+                    class="rounded-[1.25rem] border p-4"
+                    :style="{ borderColor: 'rgba(239,68,68,0.28)', background: 'rgba(239,68,68,0.08)' }"
+                >
+                    <p class="text-sm font-semibold text-red-500">
+                        Lỗi preview phát hiện trước khi gửi
+                    </p>
+                    <ul class="mt-2 space-y-1.5 text-sm leading-6" :style="{ color: 'var(--dashboard-strong-text)' }">
+                        <li v-for="issue in selectedRecipientErrorRow.previewIssues" :key="`${issue.section}-${issue.message}`">
+                            <span class="font-semibold">{{ issue.section }}:</span> {{ issue.message }}
+                        </li>
+                    </ul>
+                </div>
+
+                <div v-if="selectedRecipientErrorRow.attemptLogs.length > 0" class="space-y-3">
                     <div
                         v-for="attempt in selectedRecipientErrorRow.attemptLogs"
                         :key="attempt.id"

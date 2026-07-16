@@ -283,40 +283,107 @@ class MailCampaignPageService
             ->map(fn ($group): int => $group->count());
 
         return $recipients
-            ->map(fn (MailCampaignRecipient $recipient): array => [
-                'id' => $recipient->id,
-                'customerCode' => $recipient->customer_code,
-                'customerFullName' => $recipient->customer_full_name,
-                'recipientEmail' => $recipient->recipient_email,
-                'aggregatedEmails' => $this->extractAggregatedEmails($recipient),
-                'relatedRecipientCount' => $recipientGroupCounts->get($this->resolveRecipientGroupKey($recipient), 1),
-                'recipientGroupLabel' => $this->presentRecipientGroupLabel(
-                    $recipientGroupCounts->get($this->resolveRecipientGroupKey($recipient), 1),
-                ),
-                'sourceSheets' => $recipient->aggregatedRecord?->source_sheets ?? [],
-                'sourceSheetsLabel' => $this->presentSourceSheets($recipient->aggregatedRecord?->source_sheets),
-                'deliveryStatus' => $recipient->delivery_status,
-                'deliveryStatusLabel' => $this->presentRecipientStatus($recipient->delivery_status),
-                'latestErrorMessage' => $recipient->latest_error_message,
-                'latestFriendlyMessage' => $this->resolveLatestFriendlyMessage($recipient),
-                'attemptsCount' => $recipient->attempts_count,
-                'canExportPdf' => $this->canExportRecipientPdf($campaign, $recipient),
-                'canRetry' => $recipient->delivery_status === 'failed',
-                'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
-                'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
-                    'id' => $attempt->id,
-                    'eventType' => $attempt->event_type,
-                    'eventLabel' => $this->presentRecipientAttemptEvent($attempt->event_type),
-                    'status' => $attempt->status,
-                    'statusLabel' => $this->presentRecipientAttemptStatus($attempt->status),
-                    'message' => $attempt->message,
-                    'friendlyMessage' => $this->presentAttemptFriendlyMessage($attempt->event_type, $attempt->message),
-                    'createdAt' => optional($attempt->created_at)->toIso8601String(),
-                    'context' => $attempt->context ?? [],
-                ])->values()->all(),
-            ])
+            ->map(function (MailCampaignRecipient $recipient) use ($campaign, $recipientGroupCounts): array {
+                $previewIssues = $this->collectPreviewIssues($campaign, $recipient);
+
+                return [
+                    'id' => $recipient->id,
+                    'customerCode' => $recipient->customer_code,
+                    'customerFullName' => $recipient->customer_full_name,
+                    'recipientEmail' => $recipient->recipient_email,
+                    'aggregatedEmails' => $this->extractAggregatedEmails($recipient),
+                    'relatedRecipientCount' => $recipientGroupCounts->get($this->resolveRecipientGroupKey($recipient), 1),
+                    'recipientGroupLabel' => $this->presentRecipientGroupLabel(
+                        $recipientGroupCounts->get($this->resolveRecipientGroupKey($recipient), 1),
+                    ),
+                    'sourceSheets' => $recipient->aggregatedRecord?->source_sheets ?? [],
+                    'sourceSheetsLabel' => $this->presentSourceSheets($recipient->aggregatedRecord?->source_sheets),
+                    'deliveryStatus' => $recipient->delivery_status,
+                    'deliveryStatusLabel' => $this->presentRecipientStatus($recipient->delivery_status),
+                    'latestErrorMessage' => $recipient->latest_error_message,
+                    'latestFriendlyMessage' => $this->resolveLatestFriendlyMessage($recipient),
+                    'attemptsCount' => $recipient->attempts_count,
+                    'previewIssues' => $previewIssues,
+                    'previewIssueCount' => count($previewIssues),
+                    'canExportPdf' => $this->hasSentSnapshot($recipient)
+                        || ($previewIssues === [] && $this->canExportRecipientPdf($campaign, $recipient)),
+                    'canRetry' => $recipient->delivery_status === 'failed',
+                    'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
+                    'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
+                        'id' => $attempt->id,
+                        'eventType' => $attempt->event_type,
+                        'eventLabel' => $this->presentRecipientAttemptEvent($attempt->event_type),
+                        'status' => $attempt->status,
+                        'statusLabel' => $this->presentRecipientAttemptStatus($attempt->status),
+                        'message' => $attempt->message,
+                        'friendlyMessage' => $this->presentAttemptFriendlyMessage($attempt->event_type, $attempt->message),
+                        'createdAt' => optional($attempt->created_at)->toIso8601String(),
+                        'context' => $attempt->context ?? [],
+                    ])->values()->all(),
+                ];
+            })
             ->values()
             ->all();
+    }
+
+    /**
+     * @return list<array{section: string, message: string}>
+     */
+    private function collectPreviewIssues(MailCampaign $campaign, MailCampaignRecipient $recipient): array
+    {
+        $preview = $this->buildMailCampaignRecipientPreviewService->build($campaign, $recipient->id);
+
+        if (! is_array($preview)) {
+            return [[
+                'section' => 'Chung',
+                'message' => sprintf('Không dựng được preview cho khách hàng %s.', $recipient->customer_code),
+            ]];
+        }
+
+        $issues = [];
+
+        foreach ($preview['errors'] ?? [] as $message) {
+            $this->appendPreviewIssue($issues, 'Chung', $message);
+        }
+
+        foreach ($preview['subject']['errors'] ?? [] as $message) {
+            $this->appendPreviewIssue($issues, 'Tiêu đề', $message);
+        }
+
+        foreach ($preview['greeting']['errors'] ?? [] as $message) {
+            $this->appendPreviewIssue($issues, 'Lời chào', $message);
+        }
+
+        foreach ($preview['tables'] ?? [] as $table) {
+            if (! is_array($table)) {
+                continue;
+            }
+
+            $section = trim((string) ($table['label'] ?? 'Bảng dữ liệu'));
+
+            foreach ($table['errors'] ?? [] as $message) {
+                $this->appendPreviewIssue($issues, $section !== '' ? $section : 'Bảng dữ liệu', $message);
+            }
+        }
+
+        return $issues;
+    }
+
+    /**
+     * @param  list<array{section: string, message: string}>  $issues
+     */
+    private function appendPreviewIssue(array &$issues, string $section, mixed $message): void
+    {
+        $message = trim((string) $message);
+
+        if ($message === '') {
+            return;
+        }
+
+        $issues[] = [
+            'section' => $section,
+            'message' => $message,
+        ];
     }
 
     private function resolveRecipientGroupKey(MailCampaignRecipient $recipient): string
@@ -363,6 +430,13 @@ class MailCampaignPageService
         } catch (RuntimeException) {
             return false;
         }
+    }
+
+    private function hasSentSnapshot(MailCampaignRecipient $recipient): bool
+    {
+        return filled($recipient->sent_subject_snapshot)
+            && filled($recipient->sent_html_snapshot)
+            && is_array($recipient->sent_signature_snapshot);
     }
 
     private function resolveLatestFriendlyMessage(MailCampaignRecipient $recipient): ?string
