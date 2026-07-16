@@ -7,6 +7,11 @@ use App\Models\MailTemplate;
 
 class BuildTemplateCamCaTablePreviewService
 {
+    /**
+     * @var array<int, list<string>>
+     */
+    private array $parsedValueHeadersCache = [];
+
     public function __construct(
         private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
         private readonly ResolveTemplateCanvasSectionService $resolveTemplateCanvasSectionService,
@@ -137,16 +142,22 @@ class BuildTemplateCamCaTablePreviewService
             return [];
         }
 
-        $importBatch = ImportBatch::query()->find((int) $batchId);
+        $batchKey = (int) $batchId;
+
+        if (array_key_exists($batchKey, $this->parsedValueHeadersCache)) {
+            return $this->parsedValueHeadersCache[$batchKey];
+        }
+
+        $importBatch = ImportBatch::query()->find($batchKey);
 
         if (! $importBatch) {
-            return [];
+            return $this->parsedValueHeadersCache[$batchKey] = [];
         }
 
         $sheetPreview = $importBatch->workbook_summary['sheetPreviews']['Cám cá'] ?? null;
 
         if (! is_array($sheetPreview)) {
-            return [];
+            return $this->parsedValueHeadersCache[$batchKey] = [];
         }
 
         $excludedFixedHeaders = [
@@ -173,7 +184,7 @@ class BuildTemplateCamCaTablePreviewService
             static fn (mixed $header): bool => is_string($header) && trim($header) !== '',
         ));
 
-        return array_values(array_unique([...$fixedHeaders, ...$discreteHeaders]));
+        return $this->parsedValueHeadersCache[$batchKey] = array_values(array_unique([...$fixedHeaders, ...$discreteHeaders]));
     }
 
     /**

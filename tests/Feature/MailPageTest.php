@@ -12,6 +12,7 @@ use App\Models\MailTemplateCanvas;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -568,6 +569,120 @@ class MailPageTest extends TestCase
                     'Dòng "Khuyến mại từ 25/5-30/5" chưa tìm thấy dữ liệu tương ứng trong sheet Tổng hợp đã aggregate.',
                 )
             );
+    }
+
+    public function test_mail_page_preflight_preview_issues_use_bounded_queries_for_recipient_list(): void
+    {
+        $user = User::query()->where('email', 'user@rebatemailer.test')->firstOrFail();
+
+        $mailTemplate = MailTemplate::query()->create([
+            'name' => 'Mẫu gửi mail query budget',
+            'subject_template' => 'Chế độ tháng {{tháng}}',
+            'structure_json' => [
+                'version' => '2.4-C',
+                'sections' => [
+                    ['type' => 'subject', 'content' => 'Chế độ tháng {{tháng}}'],
+                    ['type' => 'tong-hop-table', 'rows' => [
+                        [
+                            'content' => 'Chương trình chưa có trong dữ liệu aggregate',
+                            'rowType' => 'child',
+                            'columnKey' => 'Chương trình chưa có trong dữ liệu aggregate',
+                            'hideWhenValueZero' => true,
+                            'isBold' => false,
+                        ],
+                    ]],
+                ],
+            ],
+            'is_active' => false,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $canvas = MailTemplateCanvas::query()->create([
+            'name' => 'Canvas query budget',
+            'is_active' => false,
+            'legacy_mail_template_id' => $mailTemplate->id,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $batch = ImportBatch::query()->create([
+            'batch_code' => 'IMP-QUERY-BUDGET',
+            'name' => 'Data query budget',
+            'original_file_name' => 'query-budget.xlsx',
+            'stored_path' => 'imports/tmp/query-budget.xlsx',
+            'uploaded_by' => $user->id,
+            'status' => 'aggregated',
+            'workbook_summary' => [
+                'sheetPreviews' => [
+                    'Tổng hợp' => [
+                        'fixedHeaders' => ['Tổng cộng', 'Bằng chữ'],
+                        'dynamicHeaders' => [],
+                    ],
+                ],
+            ],
+        ]);
+
+        $campaign = MailCampaign::query()->create([
+            'name' => 'Gửi mail query budget',
+            'import_batch_id' => $batch->id,
+            'mail_template_canvas_id' => $canvas->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        foreach (range(1, 8) as $index) {
+            $customerCode = sprintf('QB%03d', $index);
+            $record = ImportBatchAggregatedRecord::query()->create([
+                'import_batch_id' => $batch->id,
+                'customer_code' => $customerCode,
+                'customer_type' => 'Khách thường',
+                'source_sheets' => ['Tổng hợp'],
+                'aggregated_payload' => [
+                    'customerCode' => $customerCode,
+                    'customerFullName' => $customerCode.' - Đại lý query budget',
+                    'customerType' => 'Khách thường',
+                    'tongHop' => [
+                        'month' => '06-2026',
+                        'customerCode' => $customerCode,
+                        'customerFullName' => $customerCode.' - Đại lý query budget',
+                        'grandTotal' => '1000000',
+                        'totalInWords' => 'Một triệu đồng chẵn.',
+                        'dynamicItems' => [],
+                    ],
+                ],
+            ]);
+
+            MailCampaignRecipient::query()->create([
+                'mail_campaign_id' => $campaign->id,
+                'import_batch_aggregated_record_id' => $record->id,
+                'customer_code' => $customerCode,
+                'customer_full_name' => $customerCode.' - Đại lý query budget',
+                'customer_type' => 'Khách thường',
+                'recipient_email' => 'customer'.$index.'@example.com',
+                'delivery_status' => 'pending',
+                'attempts_count' => 0,
+            ]);
+        }
+
+        $queryCount = 0;
+        DB::listen(static function () use (&$queryCount): void {
+            $queryCount++;
+        });
+
+        $this->actingAs($user)
+            ->get(route('mail.index', ['campaign' => $campaign->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Mail/Index')
+                ->where('selectedRecipientPreview', null)
+                ->has('recipientList', 8)
+                ->where('recipientList.0.previewIssueCount', 1)
+                ->where('recipientList.0.previewIssues.0.section', 'Bảng chế độ tháng')
+            );
+
+        $this->assertLessThan(180, $queryCount);
     }
 
     public function test_mail_page_explains_multiple_recipient_rows_for_same_customer(): void

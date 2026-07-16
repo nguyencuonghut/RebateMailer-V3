@@ -7,13 +7,11 @@ use App\Models\MailCampaign;
 use App\Models\MailCampaignExport;
 use App\Models\MailCampaignRecipient;
 use App\Models\MailTemplateCanvas;
-use RuntimeException;
 
 class MailCampaignPageService
 {
     public function __construct(
         private readonly BuildMailCampaignRecipientPreviewService $buildMailCampaignRecipientPreviewService,
-        private readonly BuildMailCampaignRecipientPdfPayloadService $buildMailCampaignRecipientPdfPayloadService,
     ) {
     }
 
@@ -48,7 +46,7 @@ class MailCampaignPageService
         $query = MailCampaign::query()
             ->with([
                 'importBatch',
-                'templateCanvas',
+                'templateCanvas.legacyMailTemplate',
                 'creator',
                 'recipients',
                 'exports' => fn ($query) => $query->latest('requested_at')->latest('id'),
@@ -274,7 +272,7 @@ class MailCampaignPageService
     {
         $recipients = MailCampaignRecipient::query()
             ->where('mail_campaign_id', $campaign->id)
-            ->with(['aggregatedRecord', 'attemptLogs' => fn ($q) => $q->latest()->limit(20)])
+            ->with(['aggregatedRecord.importBatch', 'attemptLogs' => fn ($q) => $q->latest()->limit(20)])
             ->orderBy('customer_code')
             ->get();
 
@@ -305,8 +303,7 @@ class MailCampaignPageService
                     'attemptsCount' => $recipient->attempts_count,
                     'previewIssues' => $previewIssues,
                     'previewIssueCount' => count($previewIssues),
-                    'canExportPdf' => $this->hasSentSnapshot($recipient)
-                        || ($previewIssues === [] && $this->canExportRecipientPdf($campaign, $recipient)),
+                    'canExportPdf' => $this->hasSentSnapshot($recipient) || $previewIssues === [],
                     'canRetry' => $recipient->delivery_status === 'failed',
                     'canResend' => $recipient->delivery_status === 'sent' && $campaign->status !== 'cancelled',
                     'attemptLogs' => $recipient->attemptLogs->map(fn ($attempt): array => [
@@ -331,7 +328,7 @@ class MailCampaignPageService
      */
     private function collectPreviewIssues(MailCampaign $campaign, MailCampaignRecipient $recipient): array
     {
-        $preview = $this->buildMailCampaignRecipientPreviewService->build($campaign, $recipient->id);
+        $preview = $this->buildMailCampaignRecipientPreviewService->buildForRecipient($campaign, $recipient, false);
 
         if (! is_array($preview)) {
             return [[
@@ -419,17 +416,6 @@ class MailCampaignPageService
         }
 
         return sprintf('%d địa chỉ nhận cho cùng khách hàng', $count);
-    }
-
-    private function canExportRecipientPdf(MailCampaign $campaign, MailCampaignRecipient $recipient): bool
-    {
-        try {
-            $this->buildMailCampaignRecipientPdfPayloadService->build($campaign, $recipient);
-
-            return true;
-        } catch (RuntimeException) {
-            return false;
-        }
     }
 
     private function hasSentSnapshot(MailCampaignRecipient $recipient): bool

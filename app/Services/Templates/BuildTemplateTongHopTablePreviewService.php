@@ -7,6 +7,11 @@ use App\Models\MailTemplate;
 
 class BuildTemplateTongHopTablePreviewService
 {
+    /**
+     * @var array<int, list<string>>
+     */
+    private array $parsedColumnHeadersCache = [];
+
     public function __construct(
         private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
         private readonly GenerateTemplateRowNumberingService $generateTemplateRowNumberingService,
@@ -167,16 +172,22 @@ class BuildTemplateTongHopTablePreviewService
             return [];
         }
 
-        $importBatch = ImportBatch::query()->find((int) $batchId);
+        $batchKey = (int) $batchId;
+
+        if (array_key_exists($batchKey, $this->parsedColumnHeadersCache)) {
+            return $this->parsedColumnHeadersCache[$batchKey];
+        }
+
+        $importBatch = ImportBatch::query()->find($batchKey);
 
         if (! $importBatch) {
-            return [];
+            return $this->parsedColumnHeadersCache[$batchKey] = [];
         }
 
         $sheetPreview = $importBatch->workbook_summary['sheetPreviews']['Tổng hợp'] ?? null;
 
         if (! is_array($sheetPreview)) {
-            return [];
+            return $this->parsedColumnHeadersCache[$batchKey] = [];
         }
 
         $fixedHeaders = array_values(array_filter(
@@ -189,7 +200,7 @@ class BuildTemplateTongHopTablePreviewService
             static fn (mixed $header): bool => is_string($header) && trim($header) !== '',
         ));
 
-        return array_values(array_unique([...$fixedHeaders, ...$dynamicHeaders]));
+        return $this->parsedColumnHeadersCache[$batchKey] = array_values(array_unique([...$fixedHeaders, ...$dynamicHeaders]));
     }
 
     /**

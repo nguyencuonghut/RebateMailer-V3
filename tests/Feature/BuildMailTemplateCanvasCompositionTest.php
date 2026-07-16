@@ -48,7 +48,7 @@ class BuildMailTemplateCanvasCompositionTest extends TestCase
         $this->assertNotNull($composition);
         $this->assertSame($canvas->id, $composition['canvasId']);
         $this->assertSame('composition-db', $composition['storageModel']);
-        $this->assertCount(6, $composition['partSelections']);
+        $this->assertCount(7, $composition['partSelections']);
         $this->assertSame('subject', $composition['partSelections'][0]['partType']);
         $this->assertSame(1, $composition['partSelections'][0]['maxActiveVersions']);
         $this->assertTrue($composition['partSelections'][0]['contentSummary']['hasContent']);
@@ -56,9 +56,11 @@ class BuildMailTemplateCanvasCompositionTest extends TestCase
         $this->assertArrayNotHasKey('content', $composition['partSelections'][0]);
         $this->assertSame('greeting', $composition['partSelections'][1]['partType']);
         $this->assertSame(2, $composition['partSelections'][1]['maxActiveVersions']);
-        $this->assertSame('tong-hop-table', $composition['partSelections'][2]['partType']);
-        $this->assertSame(2, $composition['partSelections'][2]['contentSummary']['rowCount']);
-        $this->assertFalse($composition['partSelections'][3]['isConfigured']);
-        $this->assertStringStartsWith('template-part-version-', $composition['partSelections'][2]['selectedVersion']['versionKey']);
+        $this->assertSame('representative-signature', $composition['partSelections'][2]['partType']);
+        $this->assertFalse($composition['partSelections'][2]['isConfigured']);
+        $this->assertSame('tong-hop-table', $composition['partSelections'][3]['partType']);
+        $this->assertSame(2, $composition['partSelections'][3]['contentSummary']['rowCount']);
+        $this->assertFalse($composition['partSelections'][4]['isConfigured']);
+        $this->assertStringStartsWith('template-part-version-', $composition['partSelections'][3]['selectedVersion']['versionKey']);
     }
 }

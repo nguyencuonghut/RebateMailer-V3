@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Templates\BuildTemplatePreviewSampleService;
+use App\Services\Templates\EnsureTemplatePartCatalogPersistedService;
 use App\Support\Authorization\RoleName;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -18,7 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(BuildTemplatePreviewSampleService::class);
+        $this->app->scoped(EnsureTemplatePartCatalogPersistedService::class);
     }
 
     /**

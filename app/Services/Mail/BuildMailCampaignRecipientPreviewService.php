@@ -9,6 +9,7 @@ use App\Services\Templates\BuildTemplateCamCaTablePreviewService;
 use App\Services\Templates\BuildTemplateGreetingPreviewService;
 use App\Services\Templates\BuildTemplateKeyAccountTablePreviewService;
 use App\Services\Templates\BuildTemplateKhoanNppTablePreviewService;
+use App\Services\Templates\BuildTemplatePreviewSampleService;
 use App\Services\Templates\BuildTemplateSubjectPreviewService;
 use App\Services\Templates\BuildTemplateTongHopTablePreviewService;
 
@@ -22,24 +23,44 @@ class BuildMailCampaignRecipientPreviewService
         private readonly BuildTemplateKhoanNppTablePreviewService $buildTemplateKhoanNppTablePreviewService,
         private readonly BuildTemplateCamCaTablePreviewService $buildTemplateCamCaTablePreviewService,
         private readonly BuildTemplateKeyAccountTablePreviewService $buildTemplateKeyAccountTablePreviewService,
+        private readonly BuildTemplatePreviewSampleService $buildTemplatePreviewSampleService,
     ) {
     }
 
     /**
      * @return array<string, mixed>|null
      */
-    public function build(MailCampaign $campaign, ?int $recipientId = null): ?array
+    public function build(MailCampaign $campaign, ?int $recipientId = null, bool $includeHtml = true): ?array
     {
         if ($recipientId === null) {
             return null;
         }
 
         $recipient = $campaign->recipients()
-            ->with(['aggregatedRecord', 'campaign.templateCanvas.legacyMailTemplate'])
+            ->with('aggregatedRecord')
             ->find($recipientId);
 
         if (! $recipient) {
             return null;
+        }
+
+        return $this->buildForRecipient($campaign, $recipient, $includeHtml);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function buildForRecipient(MailCampaign $campaign, MailCampaignRecipient $recipient, bool $includeHtml = true): ?array
+    {
+        if ((int) $recipient->mail_campaign_id !== (int) $campaign->getKey()) {
+            return null;
+        }
+
+        $recipient->loadMissing('aggregatedRecord');
+        $campaign->loadMissing('templateCanvas.legacyMailTemplate');
+
+        if ($recipient->aggregatedRecord) {
+            $this->buildTemplatePreviewSampleService->rememberSelectedRecord($recipient->aggregatedRecord);
         }
 
         $mailTemplate = $campaign->templateCanvas?->legacyMailTemplate;
@@ -59,7 +80,9 @@ class BuildMailCampaignRecipientPreviewService
                 'errors' => ['Template canvas hiện chưa có liên kết legacy mail template để dựng preview đầy đủ.'],
             ];
 
-            $preview['html'] = $this->buildMailCampaignRecipientEmailHtmlService->build($preview, $campaign->name);
+            if ($includeHtml) {
+                $preview['html'] = $this->buildMailCampaignRecipientEmailHtmlService->build($preview, $campaign->name);
+            }
 
             return $preview;
         }
@@ -88,7 +111,9 @@ class BuildMailCampaignRecipientPreviewService
             'errors' => [],
         ];
 
-        $preview['html'] = $this->buildMailCampaignRecipientEmailHtmlService->build($preview, $campaign->name);
+        if ($includeHtml) {
+            $preview['html'] = $this->buildMailCampaignRecipientEmailHtmlService->build($preview, $campaign->name);
+        }
 
         return $preview;
     }

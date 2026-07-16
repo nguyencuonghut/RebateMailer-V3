@@ -34,7 +34,7 @@ class TemplatePageService
         ?int $selectedPreviewRecordId = null,
     ): array
     {
-        $this->syncLegacyMailTemplateToCompositionService->syncAll();
+        $this->syncLegacyMailTemplateToCompositionService->syncMissingComposition();
 
         $resolvedPreviewBatchId = $this->buildTemplatePreviewSampleService->resolveSelectedBatchId($selectedPreviewBatchId);
         $builderTemplate = $this->buildBuilderTemplate();

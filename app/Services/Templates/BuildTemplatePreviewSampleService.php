@@ -9,6 +9,21 @@ use Illuminate\Support\Collection;
 class BuildTemplatePreviewSampleService
 {
     /**
+     * @var array<string, Collection<int, ImportBatchAggregatedRecord>>
+     */
+    private array $eligibleRecordsCache = [];
+
+    /**
+     * @var array<string, ImportBatchAggregatedRecord|null>
+     */
+    private array $selectedRecordCache = [];
+
+    /**
+     * @var array<int, array<string, mixed>>
+     */
+    private array $samplePayloadCache = [];
+
+    /**
      * @return array<int, string>
      */
     private function readyStatuses(): array
@@ -22,10 +37,9 @@ class BuildTemplatePreviewSampleService
     public function build(?string $requiredSource = null, ?int $previewBatchId = null, ?int $aggregatedRecordId = null): ?array
     {
         if ($aggregatedRecordId !== null) {
-            $selectedRecord = $this->eligibleRecords($requiredSource, $previewBatchId)
-                ->firstWhere('id', $aggregatedRecordId);
+            $selectedRecord = $this->findSelectedRecord($aggregatedRecordId, $previewBatchId);
 
-            if ($selectedRecord) {
+            if ($selectedRecord && $this->recordHasSource($selectedRecord, $requiredSource)) {
                 return $this->buildSamplePayload($selectedRecord);
             }
 
@@ -72,14 +86,29 @@ class BuildTemplatePreviewSampleService
      */
     public function buildBatchOptions(): array
     {
-        return ImportBatch::query()
+        $batches = ImportBatch::query()
             ->whereIn('status', $this->readyStatuses())
             ->whereHas('aggregatedRecords')
-            ->with(['aggregatedRecords' => fn ($query) => $query->orderBy('customer_code')])
+            ->withCount('aggregatedRecords')
             ->orderByDesc('id')
+            ->get();
+
+        $firstRecordIds = ImportBatchAggregatedRecord::query()
+            ->selectRaw('MIN(id) as id')
+            ->whereIn('import_batch_id', $batches->pluck('id')->all())
+            ->groupBy('import_batch_id')
+            ->pluck('id')
+            ->filter()
+            ->values();
+
+        $firstRecordsByBatch = ImportBatchAggregatedRecord::query()
+            ->whereKey($firstRecordIds)
             ->get()
-            ->map(function (ImportBatch $batch): array {
-                $firstRecord = $batch->aggregatedRecords->first();
+            ->keyBy('import_batch_id');
+
+        return $batches
+            ->map(function (ImportBatch $batch) use ($firstRecordsByBatch): array {
+                $firstRecord = $firstRecordsByBatch->get($batch->getKey());
                 $payload = is_array($firstRecord?->aggregated_payload) ? $firstRecord->aggregated_payload : [];
                 $month = $this->resolveField($payload, 'month');
 
@@ -88,7 +117,7 @@ class BuildTemplatePreviewSampleService
                     'batchCode' => (string) $batch->batch_code,
                     'batchName' => (string) $batch->name,
                     'month' => $month,
-                    'recordCount' => $batch->aggregatedRecords->count(),
+                    'recordCount' => (int) $batch->aggregated_records_count,
                     'label' => collect([
                         trim((string) $batch->batch_code),
                         trim((string) $batch->name),
@@ -101,15 +130,35 @@ class BuildTemplatePreviewSampleService
 
     public function resolveSelectedBatchId(?int $previewBatchId = null, ?string $requiredSource = null): ?int
     {
-        $eligibleRecords = $this->eligibleRecords($requiredSource);
+        if ($requiredSource !== null) {
+            $eligibleRecords = $this->eligibleRecords($requiredSource);
 
-        if ($previewBatchId !== null && $eligibleRecords->contains(
-            fn (ImportBatchAggregatedRecord $record): bool => (int) $record->import_batch_id === $previewBatchId,
-        )) {
+            if ($previewBatchId !== null && $eligibleRecords->contains(
+                fn (ImportBatchAggregatedRecord $record): bool => (int) $record->import_batch_id === $previewBatchId,
+            )) {
+                return $previewBatchId;
+            }
+
+            return $eligibleRecords->first()?->import_batch_id;
+        }
+
+        if ($previewBatchId !== null && $this->hasEligibleRecordsForBatch($previewBatchId)) {
             return $previewBatchId;
         }
 
-        return $eligibleRecords->first()?->import_batch_id;
+        return $this->firstEligibleRecord()?->import_batch_id;
+    }
+
+    public function rememberSelectedRecord(ImportBatchAggregatedRecord $record): void
+    {
+        $record->loadMissing('importBatch');
+
+        foreach ([
+            '*|'.$record->getKey(),
+            $record->import_batch_id.'|'.$record->getKey(),
+        ] as $cacheKey) {
+            $this->selectedRecordCache[$cacheKey] = $record;
+        }
     }
 
     /**
@@ -117,7 +166,13 @@ class BuildTemplatePreviewSampleService
      */
     private function eligibleRecords(?string $requiredSource = null, ?int $previewBatchId = null): Collection
     {
-        return ImportBatchAggregatedRecord::query()
+        $cacheKey = ($requiredSource ?? '*').'|'.($previewBatchId ?? '*');
+
+        if (array_key_exists($cacheKey, $this->eligibleRecordsCache)) {
+            return $this->eligibleRecordsCache[$cacheKey];
+        }
+
+        return $this->eligibleRecordsCache[$cacheKey] = ImportBatchAggregatedRecord::query()
             ->with('importBatch')
             ->whereHas('importBatch', fn ($query) => $query
                 ->whereIn('status', $this->readyStatuses()))
@@ -136,11 +191,61 @@ class BuildTemplatePreviewSampleService
             ->values();
     }
 
+    private function findSelectedRecord(int $aggregatedRecordId, ?int $previewBatchId = null): ?ImportBatchAggregatedRecord
+    {
+        $cacheKey = ($previewBatchId ?? '*').'|'.$aggregatedRecordId;
+
+        if (array_key_exists($cacheKey, $this->selectedRecordCache)) {
+            return $this->selectedRecordCache[$cacheKey];
+        }
+
+        return $this->selectedRecordCache[$cacheKey] = ImportBatchAggregatedRecord::query()
+            ->with('importBatch')
+            ->whereKey($aggregatedRecordId)
+            ->whereHas('importBatch', fn ($query) => $query->whereIn('status', $this->readyStatuses()))
+            ->when($previewBatchId !== null, fn ($query) => $query->where('import_batch_id', $previewBatchId))
+            ->first();
+    }
+
+    private function hasEligibleRecordsForBatch(int $previewBatchId): bool
+    {
+        return ImportBatchAggregatedRecord::query()
+            ->where('import_batch_id', $previewBatchId)
+            ->whereHas('importBatch', fn ($query) => $query->whereIn('status', $this->readyStatuses()))
+            ->exists();
+    }
+
+    private function firstEligibleRecord(): ?ImportBatchAggregatedRecord
+    {
+        return ImportBatchAggregatedRecord::query()
+            ->with('importBatch')
+            ->whereHas('importBatch', fn ($query) => $query->whereIn('status', $this->readyStatuses()))
+            ->orderByDesc('import_batch_id')
+            ->orderBy('customer_code')
+            ->first();
+    }
+
+    private function recordHasSource(ImportBatchAggregatedRecord $record, ?string $requiredSource): bool
+    {
+        if ($requiredSource === null) {
+            return true;
+        }
+
+        return is_array($record->aggregated_payload)
+            && data_get($record->aggregated_payload, $requiredSource) !== null;
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function buildSamplePayload(ImportBatchAggregatedRecord $sampleRecord): array
     {
+        $recordId = (int) $sampleRecord->getKey();
+
+        if (array_key_exists($recordId, $this->samplePayloadCache)) {
+            return $this->samplePayloadCache[$recordId];
+        }
+
         $payload = is_array($sampleRecord->aggregated_payload) ? $sampleRecord->aggregated_payload : [];
         $importBatch = $sampleRecord->importBatch;
 
@@ -149,7 +254,7 @@ class BuildTemplatePreviewSampleService
         $address = $this->resolveField($payload, 'address');
         $feedCategory = $this->resolveField($payload, 'feedCategory');
 
-        return [
+        return $this->samplePayloadCache[$recordId] = [
             'recordId' => $sampleRecord->getKey(),
             'batchId' => $importBatch?->getKey(),
             'batchCode' => (string) ($importBatch?->batch_code ?? ''),

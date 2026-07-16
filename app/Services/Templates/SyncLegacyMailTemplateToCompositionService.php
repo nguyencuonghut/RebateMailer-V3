@@ -28,6 +28,21 @@ class SyncLegacyMailTemplateToCompositionService
             ->each(fn (MailTemplate $mailTemplate) => $this->syncMailTemplate($mailTemplate, $partsByType));
     }
 
+    public function syncMissingComposition(): void
+    {
+        $partsByType = $this->ensureTemplatePartCatalogPersistedService->ensure();
+
+        MailTemplate::query()
+            ->where(function ($query): void {
+                $query
+                    ->whereDoesntHave('canvas')
+                    ->orWhereHas('canvas', fn ($canvasQuery) => $canvasQuery->whereDoesntHave('partBindings'));
+            })
+            ->orderBy('id')
+            ->get()
+            ->each(fn (MailTemplate $mailTemplate) => $this->syncMailTemplate($mailTemplate, $partsByType));
+    }
+
     /**
      * @param  array<string, TemplatePart>|null  $partsByType
      */
